@@ -3,7 +3,7 @@
 const page = () => {
     return (
         <div>
-            Hello! SOOQRA ONE
+            Hello! SOOQRA ONE !!
         </div>
     );
 };
