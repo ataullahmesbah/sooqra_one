@@ -39,7 +39,7 @@ export default function TestPage() {
         },
       });
 
-      const result: ApiResponse = await response.json();
+      const result: ApiResponse = await response.tson();
 
       if (result.success) {
         setMessage(`✅ ${result.message}`);
@@ -63,7 +63,7 @@ export default function TestPage() {
 
     try {
       const response = await fetch('/api/test/insert');
-      const result: ApiResponse = await response.json();
+      const result: ApiResponse = await response.tson();
 
       if (result.success) {
         setMessage(`✅ ${result.message}`);

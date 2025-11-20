@@ -12,7 +12,7 @@ export async function GET() {
         // Find all test documents
         const tests = await Test.find({}).sort({ createdAt: -1 });
 
-        return NextResponse.json({
+        return NextResponse.tson({
             success: true,
             message: 'Database connection successful!',
             data: tests,
@@ -21,7 +21,7 @@ export async function GET() {
 
     } catch (error) {
         console.error('❌ API Error:', error);
-        return NextResponse.json({
+        return NextResponse.tson({
             success: false,
             error: 'Database connection failed',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -44,7 +44,7 @@ export async function POST() {
         // Create new test document
         const newTest = await Test.create(sampleData);
 
-        return NextResponse.json({
+        return NextResponse.tson({
             success: true,
             message: 'Test data created successfully!',
             data: newTest
@@ -52,7 +52,7 @@ export async function POST() {
 
     } catch (error) {
         console.error('❌ API Error:', error);
-        return NextResponse.json({
+        return NextResponse.tson({
             success: false,
             error: 'Failed to create test data',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -67,7 +67,7 @@ export async function DELETE() {
 
         const result = await Test.deleteMany({});
 
-        return NextResponse.json({
+        return NextResponse.tson({
             success: true,
             message: 'Test data cleared successfully!',
             deletedCount: result.deletedCount
@@ -75,7 +75,7 @@ export async function DELETE() {
 
     } catch (error) {
         console.error('❌ API Error:', error);
-        return NextResponse.json({
+        return NextResponse.tson({
             success: false,
             error: 'Failed to clear test data'
         }, { status: 500 });

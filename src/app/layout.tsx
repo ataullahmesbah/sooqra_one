@@ -5,7 +5,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "SOOQRA ONE",
-  description: "SOOQRA ONE - Modern Next.js 13+ Website with Tailwind CSS",
+  description: "SOOQRA ONE - Modern Next.ts 13+ Website with Tailwind CSS",
 };
 
 export default function RootLayout({

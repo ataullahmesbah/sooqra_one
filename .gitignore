@@ -1,7 +1,7 @@
 # Node modules
 node_modules/
 
-# Next.js build output
+# Next.ts build output
 .next/
 out/
 
