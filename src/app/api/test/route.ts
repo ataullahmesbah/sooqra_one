@@ -1,8 +1,7 @@
-// app/api/test/route.ts
+// src/app/api/test/route.ts
 import dbConnect from '@/src/lib/dbConnect';
 import Test from '@/src/models/Test';
 import { NextResponse } from 'next/server';
-
 
 // GET request - Fetch all test data
 export async function GET() {
@@ -12,7 +11,7 @@ export async function GET() {
         // Find all test documents
         const tests = await Test.find({}).sort({ createdAt: -1 });
 
-        return NextResponse.tson({
+        return NextResponse.json({
             success: true,
             message: 'Database connection successful!',
             data: tests,
@@ -21,7 +20,7 @@ export async function GET() {
 
     } catch (error) {
         console.error('❌ API Error:', error);
-        return NextResponse.tson({
+        return NextResponse.json({
             success: false,
             error: 'Database connection failed',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -44,15 +43,15 @@ export async function POST() {
         // Create new test document
         const newTest = await Test.create(sampleData);
 
-        return NextResponse.tson({
+        return NextResponse.json({
             success: true,
             message: 'Test data created successfully!',
             data: newTest
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ API Error:', error);
-        return NextResponse.tson({
+        return NextResponse.json({
             success: false,
             error: 'Failed to create test data',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -67,15 +66,15 @@ export async function DELETE() {
 
         const result = await Test.deleteMany({});
 
-        return NextResponse.tson({
+        return NextResponse.json({
             success: true,
             message: 'Test data cleared successfully!',
             deletedCount: result.deletedCount
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ API Error:', error);
-        return NextResponse.tson({
+        return NextResponse.json({
             success: false,
             error: 'Failed to clear test data'
         }, { status: 500 });

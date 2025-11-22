@@ -39,7 +39,7 @@ export default function TestPage() {
         },
       });
 
-      const result: ApiResponse = await response.tson();
+      const result: ApiResponse = await response.json();
 
       if (result.success) {
         setMessage(`✅ ${result.message}`);
@@ -63,7 +63,7 @@ export default function TestPage() {
 
     try {
       const response = await fetch('/api/test/insert');
-      const result: ApiResponse = await response.tson();
+      const result: ApiResponse = await response.json();
 
       if (result.success) {
         setMessage(`✅ ${result.message}`);
@@ -130,7 +130,7 @@ export default function TestPage() {
           {/* Status Message */}
           {message && (
             <div className={`p-4 rounded-lg mb-4 ${message.includes('✅') ? 'bg-green-50 text-green-800 border border-green-200' :
-                'bg-red-50 text-red-800 border border-red-200'
+              'bg-red-50 text-red-800 border border-red-200'
               }`}>
               {message}
             </div>
@@ -160,8 +160,8 @@ export default function TestPage() {
                       <p className="text-gray-600 mt-1">{item.description}</p>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
                       }`}>
                       {item.status}
                     </span>
