@@ -1,8 +1,13 @@
+// src/app/api/products/district-thanas/route.ts
 import { NextResponse } from 'next/server';
+
+interface DistrictsThanas {
+    [key: string]: string[];
+}
 
 export async function GET() {
     try {
-        const districtsThanas = {
+        const districtsThanas: DistrictsThanas = {
             Dhaka: [
                 'Adabor', 'Badda', 'Banani', 'Cantonment', 'Dakshinkhan', 'Darus Salam', 'Demra', 'Dhamrai', 'Dohar', 'Gulshan', 'Jatrabari', 'Kadamtali', 'Kafrul', 'Kalabagan', 'Kamrangirchar', 'Keraniganj', 'Khilgaon', 'Khilkhet', 'Lalbagh', 'Mirpur', 'Mohammadpur', 'Motijheel', 'Nawabganj', 'Pallabi', 'Paltan', 'Ramna', 'Rampura', 'Sabujbagh', 'Savar', 'Shah Ali', 'Shahbagh', 'Sher-e-Bangla Nagar', 'Shyampur', 'Sutrapur', 'Tejgaon', 'Turag', 'Uttar Khan', 'Uttara', 'Wari'
             ],
@@ -72,9 +77,9 @@ export async function GET() {
             Jamalpur: ['Baksiganj', 'Dewanganj', 'Hakimpur', 'Jamalpur Sadar', 'Madan', 'Mohanganj', 'Sharishabari'],
             Sherpur: ['Jhenaigati', 'Nakla', 'Nalitabari', 'Sherpur Sadar', 'Sreebardi'],
         };
-        return NextResponse.tson(districtsThanas, { status: 200 });
-    } catch (error) {
+        return NextResponse.json(districtsThanas, { status: 200 });
+    } catch (error: any) {
         console.error('Error fetching districts and thanas:', error);
-        return NextResponse.tson({ error: 'Failed to fetch districts and thanas' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to fetch districts and thanas' }, { status: 500 });
     }
 }

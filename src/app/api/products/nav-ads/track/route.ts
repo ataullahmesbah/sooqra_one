@@ -1,14 +1,19 @@
-// app/api/products/nav-ads/track/route.ts
+// src/app/api/products/nav-ads/track/route.ts
 
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbMongoose';
-import NavAd from '@/models/NavAd';
+import dbConnect from '@/src/lib/dbConnect';
+import NavAd from '@/src/models/NavAd';
 
-export async function POST(req) {
+interface TrackRequestBody {
+    adId: string;
+    type: 'impression' | 'click';
+}
+
+export async function POST(request: Request) {
     await dbConnect();
 
     try {
-        const { adId, type } = await req.tson();
+        const { adId, type }: TrackRequestBody = await request.json();
 
         const update = type === 'impression'
             ? { $inc: { impressions: 1 } }
@@ -16,13 +21,13 @@ export async function POST(req) {
 
         await NavAd.findByIdAndUpdate(adId, update);
 
-        return NextResponse.tson({
+        return NextResponse.json({
             success: true,
             message: `${type} tracked successfully`
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error tracking nav ad:', error);
-        return NextResponse.tson({
+        return NextResponse.json({
             success: false,
             error: 'Failed to track'
         }, { status: 500 });

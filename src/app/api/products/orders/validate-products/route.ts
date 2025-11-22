@@ -1,21 +1,33 @@
-// In your /api/products/orders/validate-products/route.ts
+// src/app/api/products/orders/validate-products/route.ts
 
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbMongoose';
-import Product from '@/models/Products';
+import dbConnect from '@/src/lib/dbConnect';
+import Product from '@/src/models/Products';
 
+// Interface definitions
+interface ProductItem {
+    productId: string;
+    title: string;
+    quantity: number;
+    size?: string;
+}
 
-export async function POST(request) {
+interface ValidateRequestBody {
+    orderId: string;
+    products: ProductItem[];
+}
+
+export async function POST(request: Request) {
     await dbConnect();
 
     try {
-        const { orderId, products } = await request.tson();
+        const { orderId, products }: ValidateRequestBody = await request.json();
 
         if (!orderId || !Array.isArray(products)) {
-            return NextResponse.tson({ error: 'Invalid request data' }, { status: 400 });
+            return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
         }
 
-        const validationResults = [];
+        const validationResults: string[] = [];
         let isValid = true;
 
         for (const item of products) {
@@ -34,7 +46,7 @@ export async function POST(request) {
             }
 
             if (item.size && product.sizeRequirement === 'Mandatory') {
-                const sizeData = product.sizes.find((s) => s.name === item.size);
+                const sizeData = product.sizes.find((s: any) => s.name === item.size);
                 if (!sizeData) {
                     validationResults.push(`❌ Size "${item.size}" not found for "${item.title}"`);
                     isValid = false;
@@ -62,15 +74,15 @@ export async function POST(request) {
             }
         }
 
-        return NextResponse.tson({
+        return NextResponse.json({
             isValid,
             issues: validationResults,
             orderId
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Product validation error:', error);
-        return NextResponse.tson(
+        return NextResponse.json(
             { error: 'Failed to validate products. Please try again.' },
             { status: 500 }
         );

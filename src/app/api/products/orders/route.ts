@@ -1,4 +1,4 @@
-// app/api/products/orders/route.ts
+// src/app/api/products/orders/route.ts
 import { NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/dbConnect';
 import Order from '@/src/models/Order';
@@ -6,6 +6,40 @@ import Products from '@/src/models/Products';
 import Config from '@/src/models/Config';
 import UsedCoupon from '@/src/models/UsedCoupon';
 import Coupon from '@/src/models/Coupon';
+
+// Interface definitions
+interface CustomerInfo {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    country: string;
+    district?: string;
+    thana?: string;
+    bkashNumber?: string;
+    transactionId?: string;
+}
+
+interface ProductItem {
+    productId: string;
+    title: string;
+    quantity: number;
+    price: number;
+    mainImage?: string;
+    size?: string;
+}
+
+interface CreateOrderRequestBody {
+    orderId: string;
+    products: ProductItem[];
+    customerInfo: CustomerInfo;
+    paymentMethod: string;
+    status: string;
+    total: number;
+    discount?: number;
+    shippingCharge?: number;
+    couponCode?: string;
+}
 
 export async function GET(request: Request) {
     try {
@@ -15,7 +49,6 @@ export async function GET(request: Request) {
         const status = searchParams.get('status');
         const date = searchParams.get('date');
 
-        // Fixed: Use const instead of let
         const query: any = {};
         if (orderId) {
             query.orderId = orderId;
@@ -50,7 +83,7 @@ export async function POST(request: Request) {
             discount,
             shippingCharge,
             couponCode,
-        } = await request.json();
+        }: CreateOrderRequestBody = await request.json();
 
         // Validate required fields
         if (!orderId || !products || !customerInfo || !paymentMethod || !status || total == null) {
@@ -165,9 +198,9 @@ export async function POST(request: Request) {
             couponCode: couponCode || null,
         });
 
-        // Fixed: Update product quantities after successful order
+        // Update product quantities after successful order
         for (const item of products) {
-            const product = await Products.findById(item.productId); // Fixed: Use Products instead of Product
+            const product = await Products.findById(item.productId);
             if (product) {
                 if (item.size && product.sizeRequirement === 'Mandatory') {
                     const sizeIndex = product.sizes.findIndex((s: any) => s.name === item.size);
@@ -192,10 +225,10 @@ export async function POST(request: Request) {
             });
         }
 
-        return NextResponse.json({ 
-            message: 'Order created successfully', 
+        return NextResponse.json({
+            message: 'Order created successfully',
             orderId: order.orderId,
-            order: order 
+            order: order
         }, { status: 201 });
 
     } catch (error: any) {

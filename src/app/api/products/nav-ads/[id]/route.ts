@@ -1,11 +1,13 @@
-// api/products/nav-ads/[id]/route.ts
-
-
+// src/app/api/products/nav-ads/[id]/route.ts
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbMongoose';
-import NavAd from '@/models/NavAd';
+import dbConnect from '@/src/lib/dbConnect';
+import NavAd from '@/src/models/NavAd';
 
-export async function DELETE(req, { params }) {
+interface Params {
+    id: string;
+}
+
+export async function DELETE(request: Request, { params }: { params: Params }) {
     await dbConnect();
     const { id } = params;
 
@@ -13,19 +15,19 @@ export async function DELETE(req, { params }) {
         const navAd = await NavAd.findByIdAndDelete(id);
 
         if (!navAd) {
-            return NextResponse.tson(
+            return NextResponse.json(
                 { success: false, error: 'Nav ad not found' },
                 { status: 404 }
             );
         }
 
-        return NextResponse.tson({
+        return NextResponse.json({
             success: true,
             message: 'Nav ad deleted successfully'
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error deleting nav ad:', error);
-        return NextResponse.tson(
+        return NextResponse.json(
             { success: false, error: 'Failed to delete nav ad' },
             { status: 500 }
         );

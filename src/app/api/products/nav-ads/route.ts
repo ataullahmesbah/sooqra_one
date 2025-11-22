@@ -1,9 +1,17 @@
-// app/api/products/nav-ads/route.ts
-
-
+// src/app/api/products/nav-ads/route.ts
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbMongoose';
-import NavAd from '@/models/NavAd';
+import dbConnect from '@/src/lib/dbConnect';
+import NavAd from '@/src/models/NavAd';
+
+interface CreateNavAdRequestBody {
+    title: string;
+    image: string;
+    link: string;
+    isActive: boolean;
+    startDate: Date;
+    endDate: Date;
+    // Add other fields as per your NavAd model
+}
 
 export async function GET() {
     await dbConnect();
@@ -20,45 +28,45 @@ export async function GET() {
             createdAt: -1 // Show newest first
         });
 
-        return NextResponse.tson({
+        return NextResponse.json({
             success: true,
             data: activeAds
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching nav ads:', error);
-        return NextResponse.tson({
+        return NextResponse.json({
             success: false,
             error: 'Failed to fetch nav ads'
         }, { status: 500 });
     }
 }
 
-export async function POST(req) {
+export async function POST(request: Request) {
     await dbConnect();
 
     try {
-        const body = await req.tson();
+        const body: CreateNavAdRequestBody = await request.json();
 
         const navAd = new NavAd(body);
         await navAd.save();
 
-        return NextResponse.tson({
+        return NextResponse.json({
             success: true,
             message: 'Nav ad created successfully',
             data: navAd
         }, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating nav ad:', error);
 
         if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map(err => err.message);
-            return NextResponse.tson(
+            const errors = Object.values(error.errors).map((err: any) => err.message);
+            return NextResponse.json(
                 { success: false, error: errors.join(', ') },
                 { status: 400 }
             );
         }
 
-        return NextResponse.tson(
+        return NextResponse.json(
             { success: false, error: 'Internal server error' },
             { status: 500 }
         );

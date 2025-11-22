@@ -2,166 +2,213 @@
 
 //app/api/products/[id]/route.ts
 
-import Product from '@/models/Products';
-import { getServerSession } from 'next-auth/next';
-import Category from '@/models/Category';
-import slugify from 'slugify';
-import { authOptions } from '../../auth/[...nextauth]/route';
+
+import { getServerSession } from 'next-auth';
 import mongoose from 'mongoose';
-import cloudinary from '@/utils/cloudinary';
-import dbConnect from '@/lib/dbMongoose';
+import cloudinary from '@/src/utils/cloudinary';
+import Category from '@/src/models/Category';
+import Product from '@/src/models/Products';
+import dbConnect from '@/src/lib/dbConnect';
+import { authOptions } from '../../auth/[...nextauth]/route';
 
 
+// Interface definitions
+interface Size {
+    name: string;
+    quantity: number;
+}
+
+interface AdditionalImage {
+    url: string;
+    alt: string;
+}
+
+interface FAQ {
+    question: string;
+    answer: string;
+}
+
+interface Specification {
+    name: string;
+    value: string;
+}
+
+interface AggregateRating {
+    ratingValue: number;
+    reviewCount: number;
+}
+
+interface Price {
+    currency: string;
+    amount: number;
+    exchangeRate?: number;
+}
 
 // Sort function for additional images by lastModified date
-// Sort function for additional images by lastModified date
-const ascendingSort = (a, b) => {
-    if (a instanceof File && b instanceof File) {
-        return b.lastModified - a.lastModified;
-    }
-    return 0;
+const ascendingSort = (a: File, b: File): number => {
+    return b.lastModified - a.lastModified;
 };
 
+interface Params {
+    id: string;
+}
 
-export async function GET(request, { params }) {
+export async function GET(request: Request, { params }: { params: Params }) {
     await dbConnect();
     try {
         const productId = params.id;
         if (!mongoose.Types.ObjectId.isValid(productId)) {
-            return Response.tson({ error: 'Invalid product ID' }, { status: 400 });
+            return Response.json({ error: 'Invalid product ID' }, { status: 400 });
         }
+
         const product = await Product.findById(productId).populate('category').lean();
         if (!product) {
-            return Response.tson({ error: 'Product not found' }, { status: 404 });
+            return Response.json({ error: 'Product not found' }, { status: 404 });
         }
-        if (product.sizeRequirement === 'Mandatory' && product.sizes?.length > 0) {
-            product.sizes = product.sizes.filter((size) => size.quantity > 0);
+
+        // Type assertion for the product object
+        const productData = product as any;
+
+        if (productData.sizeRequirement === 'Mandatory' && productData.sizes?.length > 0) {
+            productData.sizes = productData.sizes.filter((size: Size) => size.quantity > 0);
         }
-        return Response.tson(product, { status: 200 });
-    } catch (error) {
+
+        return Response.json(productData, { status: 200 });
+    } catch (error: any) {
         console.error('Error fetching product:', error);
-        return Response.tson({ error: `Failed to fetch product: ${error.message}` }, { status: 500 });
+        return Response.json({ error: `Failed to fetch product: ${error.message}` }, { status: 500 });
     }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request: Request, { params }: { params: Params }) {
     await dbConnect();
     const session = await getServerSession(authOptions);
     if (!session) {
-        return Response.tson({ error: 'Unauthorized' }, { status: 401 });
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
         const productId = params.id;
         if (!mongoose.Types.ObjectId.isValid(productId)) {
-            return Response.tson({ error: 'Invalid product ID' }, { status: 400 });
+            return Response.json({ error: 'Invalid product ID' }, { status: 400 });
         }
         const product = await Product.findById(productId);
         if (!product) {
-            return Response.tson({ error: 'Product not found' }, { status: 404 });
+            return Response.json({ error: 'Product not found' }, { status: 404 });
         }
 
         // Delete images from Cloudinary
         if (product.mainImage) {
-            const publicId = product.mainImage.split('/').pop().split('.')[0];
-            await cloudinary.uploader.destroy(`products/${publicId}`);
+            const publicId = product.mainImage.split('/').pop()?.split('.')[0];
+            if (publicId) {
+                await cloudinary.uploader.destroy(`products/${publicId}`);
+            }
         }
+
         for (const img of product.additionalImages) {
-            const publicId = img.url.split('/').pop().split('.')[0];
-            await cloudinary.uploader.destroy(`products/additional/${publicId}`);
+            const publicId = img.url.split('/').pop()?.split('.')[0];
+            if (publicId) {
+                await cloudinary.uploader.destroy(`products/additional/${publicId}`);
+            }
         }
 
         await Product.findByIdAndDelete(productId);
-        return Response.tson({ message: 'Product deleted' }, { status: 200 });
-    } catch (error) {
-        return Response.tson({ error: `Failed to delete product: ${error.message}` }, { status: 500 });
+        return Response.json({ message: 'Product deleted' }, { status: 200 });
+    } catch (error: any) {
+        return Response.json({ error: `Failed to delete product: ${error.message}` }, { status: 500 });
     }
 }
 
-export async function PUT(request, { params }) {
+export async function PUT(request: Request, { params }: { params: Params }) {
     await dbConnect();
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.name) {
-        return Response.tson({ error: 'Unauthorized' }, { status: 401 });
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
         const productId = params.id;
         if (!mongoose.Types.ObjectId.isValid(productId)) {
-            return Response.tson({ error: 'Invalid product ID' }, { status: 400 });
+            return Response.json({ error: 'Invalid product ID' }, { status: 400 });
         }
 
         const existingProduct = await Product.findById(productId);
         if (!existingProduct) {
-            return Response.tson({ error: 'Product not found' }, { status: 404 });
+            return Response.json({ error: 'Product not found' }, { status: 404 });
         }
 
         const formData = await request.formData();
         console.log('Received formData keys:', [...formData.keys()]);
 
-        // Extract form data
-        const title = formData.get('title');
-        const bdtPrice = parseFloat(formData.get('bdtPrice'));
-        const usdPrice = formData.get('usdPrice') ? parseFloat(formData.get('usdPrice')) : null;
-        const eurPrice = formData.get('eurPrice') ? parseFloat(formData.get('eurPrice')) : null;
-        const usdExchangeRate = formData.get('usdExchangeRate') ? parseFloat(formData.get('usdExchangeRate')) : null;
-        const eurExchangeRate = formData.get('eurExchangeRate') ? parseFloat(formData.get('eurExchangeRate')) : null;
-        const description = formData.get('description');
-        const shortDescription = formData.get('shortDescription');
-        const product_code = formData.get('product_code');
-        const descriptions = formData.get('descriptions')?.split('|||')?.filter((desc) => desc.trim()) || [];
-        const bulletPoints = formData.get('bulletPoints')?.split(',').map((point) => point.trim()).filter(Boolean) || [];
-        const productType = formData.get('productType');
-        const affiliateLink = formData.get('productType') === 'Affiliate' ? formData.get('affiliateLink') || null : null;
-        const categoryId = formData.get('category');
-        const newCategory = formData.get('newCategory');
-        const mainImage = formData.get('mainImage');
-        const mainImageAlt = formData.get('mainImageAlt');
-        const existingMainImage = formData.get('existingMainImage');
-        const additionalImages = formData.getAll('additionalImages').filter((img) => img instanceof File && img.size > 0);
-        additionalImages.sort(ascendingSort);
-        const additionalAlts = formData.getAll('additionalAlts') || [];
+        // Extract form data with proper type handling
+        const title = formData.get('title') as string;
+        const bdtPrice = parseFloat(formData.get('bdtPrice') as string);
+        const usdPrice = formData.get('usdPrice') ? parseFloat(formData.get('usdPrice') as string) : null;
+        const eurPrice = formData.get('eurPrice') ? parseFloat(formData.get('eurPrice') as string) : null;
+        const usdExchangeRate = formData.get('usdExchangeRate') ? parseFloat(formData.get('usdExchangeRate') as string) : null;
+        const eurExchangeRate = formData.get('eurExchangeRate') ? parseFloat(formData.get('eurExchangeRate') as string) : null;
+        const description = formData.get('description') as string;
+        const shortDescription = formData.get('shortDescription') as string;
+        const product_code = formData.get('product_code') as string;
+        const descriptions = (formData.get('descriptions') as string)?.split('|||')?.filter((desc: string) => desc.trim()) || [];
+        const bulletPoints = (formData.get('bulletPoints') as string)?.split(',').map((point: string) => point.trim()).filter(Boolean) || [];
+        const productType = formData.get('productType') as string;
+        const affiliateLink = productType === 'Affiliate' ? (formData.get('affiliateLink') as string) || null : null;
+        const categoryId = formData.get('category') as string;
+        const newCategory = formData.get('newCategory') as string;
+        const mainImage = formData.get('mainImage') as File;
+        const mainImageAlt = formData.get('mainImageAlt') as string;
+        const existingMainImage = formData.get('existingMainImage') as string;
+        const additionalImages = formData.getAll('additionalImages').filter((img) => img instanceof File && img.size > 0) as File[];
+        const additionalAlts = formData.getAll('additionalAlts') as string[] || [];
         const existingAdditionalImages = formData.get('existingAdditionalImages')
-            ? JSON.parse(formData.get('existingAdditionalImages'))
+            ? JSON.parse(formData.get('existingAdditionalImages') as string) as AdditionalImage[]
             : [];
-        const brand = formData.get('brand');
-        const availability = formData.get('availability');
-        const metaTitle = formData.get('metaTitle');
-        const metaDescription = formData.get('metaDescription');
-        const keywords = formData.get('keywords')?.split(',').map((kw) => kw.trim()).filter(Boolean) || [];
+        const brand = formData.get('brand') as string;
+        const availability = formData.get('availability') as string;
+        const metaTitle = formData.get('metaTitle') as string;
+        const metaDescription = formData.get('metaDescription') as string;
+        const keywords = (formData.get('keywords') as string)?.split(',').map((kw: string) => kw.trim()).filter(Boolean) || [];
         const isGlobal = formData.get('isGlobal') === 'true';
-        const targetCountry = formData.get('targetCountry')?.trim().replace(/[^a-zA-Z\s-]/g, '') || '';
-        const targetCity = formData.get('targetCity')?.trim().replace(/[^a-zA-Z\s-]/g, '') || '';
-        const quantityRaw = formData.get('quantity');
+        const targetCountry = (formData.get('targetCountry') as string)?.trim().replace(/[^a-zA-Z\s-]/g, '') || '';
+        const targetCity = (formData.get('targetCity') as string)?.trim().replace(/[^a-zA-Z\s-]/g, '') || '';
+        const quantityRaw = formData.get('quantity') as string;
         const quantity = parseInt(quantityRaw, 10);
-        const sizeRequirement = formData.get('sizeRequirement') || 'Optional';
-        let sizes = [];
-        if (formData.get('sizes')) {
+        const sizeRequirement = (formData.get('sizeRequirement') as string) || 'Optional';
+
+        let sizes: Size[] = [];
+        const sizesInput = formData.get('sizes') as string;
+        if (sizesInput) {
             try {
-                sizes = JSON.parse(formData.get('sizes')).filter((size) => size.name.trim() && size.quantity >= 0);
+                sizes = JSON.parse(sizesInput).filter((size: Size) => size.name.trim() && size.quantity >= 0);
             } catch {
-                return Response.tson({ error: 'Invalid sizes format' }, { status: 400 });
+                return Response.json({ error: 'Invalid sizes format' }, { status: 400 });
             }
         }
-        let faqs = [];
-        if (formData.get('faqs')) {
+
+        let faqs: FAQ[] = [];
+        const faqsInput = formData.get('faqs') as string;
+        if (faqsInput) {
             try {
-                faqs = JSON.parse(formData.get('faqs'));
+                faqs = JSON.parse(faqsInput);
             } catch {
-                return Response.tson({ error: 'Invalid FAQs format' }, { status: 400 });
+                return Response.json({ error: 'Invalid FAQs format' }, { status: 400 });
             }
         }
-        let specifications = [];
-        if (formData.get('specifications')) {
+
+        let specifications: Specification[] = [];
+        const specificationsInput = formData.get('specifications') as string;
+        if (specificationsInput) {
             try {
-                specifications = JSON.parse(formData.get('specifications'));
+                specifications = JSON.parse(specificationsInput);
             } catch {
-                return Response.tson({ error: 'Invalid specifications format' }, { status: 400 });
+                return Response.json({ error: 'Invalid specifications format' }, { status: 400 });
             }
         }
-        const aggregateRating = {
-            ratingValue: parseFloat(formData.get('aggregateRating.ratingValue')) || 0,
-            reviewCount: parseInt(formData.get('aggregateRating.reviewCount')) || 0,
+
+        const aggregateRating: AggregateRating = {
+            ratingValue: parseFloat(formData.get('aggregateRating.ratingValue') as string) || 0,
+            reviewCount: parseInt(formData.get('aggregateRating.reviewCount') as string) || 0,
         };
 
         // Validate required fields
@@ -169,8 +216,14 @@ export async function PUT(request, { params }) {
         if (!isGlobal) {
             requiredFields.push('targetCountry', 'targetCity');
         }
-        const missingFields = requiredFields.filter((field) => !formData.get(field) && formData.get(field) !== '');
-        const errors = {};
+
+        const missingFields = requiredFields.filter((field) => {
+            const value = formData.get(field);
+            return !value || value.toString().trim() === '';
+        });
+
+        const errors: Record<string, string> = {};
+
         if (missingFields.length > 0) {
             errors.missingFields = `Missing required fields: ${missingFields.join(', ')}`;
         }
@@ -201,10 +254,10 @@ export async function PUT(request, { params }) {
         if (productType === 'Affiliate' && !affiliateLink) {
             errors.affiliateLink = 'Affiliate link is required for affiliate products';
         }
-        if (metaTitle.length > 60) {
+        if (metaTitle && metaTitle.length > 60) {
             errors.metaTitle = 'Meta Title must be 60 characters or less';
         }
-        if (metaDescription.length > 160) {
+        if (metaDescription && metaDescription.length > 160) {
             errors.metaDescription = 'Meta Description must be 160 characters or less';
         }
         if (!isGlobal && !targetCountry.trim()) {
@@ -219,6 +272,7 @@ export async function PUT(request, { params }) {
         if (sizeRequirement === 'Mandatory' && sizes.reduce((sum, size) => sum + size.quantity, 0) !== quantity) {
             errors.sizes = 'Sum of size quantities must equal total quantity';
         }
+
         sizes.forEach((size, index) => {
             if (!size.name.trim()) {
                 errors[`sizeName${index}`] = `Size name at index ${index} is required`;
@@ -227,8 +281,9 @@ export async function PUT(request, { params }) {
                 errors[`sizeQuantity${index}`] = `Quantity for size ${size.name} must be a non-negative integer`;
             }
         });
+
         if (Object.keys(errors).length > 0) {
-            return Response.tson({ error: errors }, { status: 400 });
+            return Response.json({ error: errors }, { status: 400 });
         }
 
         // Handle category
@@ -239,18 +294,22 @@ export async function PUT(request, { params }) {
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/(^-|-$)/g, '');
-            category = await Category.findOneAndUpdate(
-                { slug },
-                { name: newCategory.trim(), slug },
-                { upsert: true, new: true }
-            );
+
+            category = await Category.findOne({ slug });
+            if (!category) {
+                category = new Category({
+                    name: newCategory.trim(),
+                    slug,
+                });
+                await category.save();
+            }
         } else {
             if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-                return Response.tson({ error: 'Invalid category ID' }, { status: 400 });
+                return Response.json({ error: 'Invalid category ID' }, { status: 400 });
             }
             category = await Category.findById(categoryId);
             if (!category) {
-                return Response.tson({ error: 'Category not found' }, { status: 404 });
+                return Response.json({ error: 'Category not found' }, { status: 404 });
             }
         }
 
@@ -258,13 +317,16 @@ export async function PUT(request, { params }) {
         let mainImageUrl = existingMainImage;
         if (mainImage && mainImage.size > 0) {
             if (!mainImage.type.startsWith('image/')) {
-                return Response.tson({ error: 'Main image must be an image file' }, { status: 400 });
+                return Response.json({ error: 'Main image must be an image file' }, { status: 400 });
             }
             if (mainImage.size > 5 * 1024 * 1024) {
-                return Response.tson({ error: 'Main image size must be less than 5MB' }, { status: 400 });
+                return Response.json({ error: 'Main image size must be less than 5MB' }, { status: 400 });
             }
-            const mainImageBuffer = Buffer.from(await mainImage.arrayBuffer());
-            const mainImageResult = await new Promise((resolve, reject) => {
+
+            const mainImageArrayBuffer = await mainImage.arrayBuffer();
+            const mainImageBuffer = Buffer.from(mainImageArrayBuffer);
+
+            const mainImageResult = await new Promise<any>((resolve, reject) => {
                 cloudinary.uploader.upload_stream(
                     {
                         folder: 'products',
@@ -277,34 +339,46 @@ export async function PUT(request, { params }) {
                     (error, result) => (error ? reject(error) : resolve(result))
                 ).end(mainImageBuffer);
             });
+
             mainImageUrl = mainImageResult.secure_url;
 
             // Delete old main image from Cloudinary if it exists
             if (existingProduct.mainImage) {
-                const publicId = existingProduct.mainImage.split('/').pop().split('.')[0];
-                await cloudinary.uploader.destroy(`products/${publicId}`);
+                const publicId = existingProduct.mainImage.split('/').pop()?.split('.')[0];
+                if (publicId) {
+                    await cloudinary.uploader.destroy(`products/${publicId}`);
+                }
             }
         }
 
         // Handle additional images
-        let additionalImageUrls = [...existingAdditionalImages];
+        let additionalImageUrls: AdditionalImage[] = [...existingAdditionalImages];
+
+        // Delete removed images from Cloudinary
         const deletedImages = existingProduct.additionalImages.filter(
-            (img) => !existingAdditionalImages.some((existing) => existing.url === img.url)
+            (img: AdditionalImage) => !existingAdditionalImages.some((existing: AdditionalImage) => existing.url === img.url)
         );
+
         for (const img of deletedImages) {
-            const publicId = img.url.split('/').pop().split('.')[0];
-            await cloudinary.uploader.destroy(`products/additional/${publicId}`);
+            const publicId = img.url.split('/').pop()?.split('.')[0];
+            if (publicId) {
+                await cloudinary.uploader.destroy(`products/additional/${publicId}`);
+            }
         }
 
+        // Upload new additional images
         for (const [index, image] of additionalImages.entries()) {
             if (!image.type.startsWith('image/')) {
-                return Response.tson({ error: `Additional image ${image.name} must be an image file` }, { status: 400 });
+                return Response.json({ error: `Additional image ${image.name} must be an image file` }, { status: 400 });
             }
             if (image.size > 5 * 1024 * 1024) {
-                return Response.tson({ error: `Additional image ${image.name} size must be less than 5MB` }, { status: 400 });
+                return Response.json({ error: `Additional image ${image.name} size must be less than 5MB` }, { status: 400 });
             }
-            const buffer = Buffer.from(await image.arrayBuffer());
-            const uploadResult = await new Promise((resolve, reject) => {
+
+            const arrayBuffer = await image.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            const uploadResult = await new Promise<any>((resolve, reject) => {
                 cloudinary.uploader.upload_stream(
                     {
                         folder: 'products/additional',
@@ -317,6 +391,7 @@ export async function PUT(request, { params }) {
                     (error, result) => (error ? reject(error) : resolve(result))
                 ).end(buffer);
             });
+
             additionalImageUrls.push({
                 url: uploadResult.secure_url,
                 alt: additionalAlts[index] || `Additional image ${index + 1} for ${title}`,
@@ -324,12 +399,12 @@ export async function PUT(request, { params }) {
         }
 
         // Prepare prices
-        const prices = [{ currency: 'BDT', amount: bdtPrice }];
+        const prices: Price[] = [{ currency: 'BDT', amount: bdtPrice }];
         if (usdPrice) {
-            prices.push({ currency: 'USD', amount: usdPrice, exchangeRate: usdExchangeRate });
+            prices.push({ currency: 'USD', amount: usdPrice, exchangeRate: usdExchangeRate || undefined });
         }
         if (eurPrice) {
-            prices.push({ currency: 'EUR', amount: eurPrice, exchangeRate: eurExchangeRate });
+            prices.push({ currency: 'EUR', amount: eurPrice, exchangeRate: eurExchangeRate || undefined });
         }
 
         // Generate slug
@@ -338,8 +413,10 @@ export async function PUT(request, { params }) {
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)/g, '');
+
         let slugCount = 0;
         let uniqueSlug = slug;
+
         const existingProductWithSlug = await Product.findOne({ slug, _id: { $ne: productId } });
         if (existingProductWithSlug) {
             slugCount++;
@@ -376,7 +453,7 @@ export async function PUT(request, { params }) {
         };
 
         // Update product
-        const product = await Product.findByIdAndUpdate(
+        const updatedProduct = await Product.findByIdAndUpdate(
             productId,
             {
                 title,
@@ -413,21 +490,21 @@ export async function PUT(request, { params }) {
             { new: true, runValidators: true }
         );
 
-        if (!product) {
-            return Response.tson({ error: 'Product not found' }, { status: 404 });
+        if (!updatedProduct) {
+            return Response.json({ error: 'Product not found' }, { status: 404 });
         }
 
-        console.log('Updated product:', JSON.stringify(product, null, 2));
-        return Response.tson({ message: 'Product updated', product }, { status: 200 });
-    } catch (error) {
+        console.log('Updated product:', JSON.stringify(updatedProduct, null, 2));
+        return Response.json({ message: 'Product updated', product: updatedProduct }, { status: 200 });
+    } catch (error: any) {
         console.error('Error updating product:', error);
         if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map((err) => err.message);
-            return Response.tson({ error: `Validation failed: ${errors.join(', ')}` }, { status: 400 });
+            const errors = Object.values(error.errors).map((err: any) => err.message);
+            return Response.json({ error: `Validation failed: ${errors.join(', ')}` }, { status: 400 });
         }
         if (error.message.includes('image')) {
-            return Response.tson({ error: error.message }, { status: 400 });
+            return Response.json({ error: error.message }, { status: 400 });
         }
-        return Response.tson({ error: `Failed to update product: ${error.message}` }, { status: 500 });
+        return Response.json({ error: `Failed to update product: ${error.message}` }, { status: 500 });
     }
 }
