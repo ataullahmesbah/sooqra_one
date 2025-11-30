@@ -56,8 +56,10 @@ interface Errors {
 }
 
 export default function CreateProduct() {
-    const { data: session } = useSession();
+    // All hooks at the top level - no conditional hooks
+    const { data: session, status } = useSession();
     const router = useRouter();
+    const [isClient, setIsClient] = useState(false);
     const [formData, setFormData] = useState<FormData>({
         title: '',
         bdtPrice: '',
@@ -103,8 +105,32 @@ export default function CreateProduct() {
     const mainImageInputRef = useRef<HTMLInputElement>(null);
     const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-    // Fetch categories on mount
+    // Set isClient to true on mount
     useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    // Consolidated authentication and data fetching useEffect
+    useEffect(() => {
+        if (status === 'loading' || !isClient) return;
+
+        // Authentication check
+        if (!session) {
+            router.push('/auth/signin');
+            return;
+        }
+
+        if (session.user.role !== 'admin') {
+            router.push('/unauthorized');
+            return;
+        }
+
+        if (!session.user.isActive) {
+            router.push('/auth/signin?error=Account deactivated');
+            return;
+        }
+
+        // Fetch categories only when authenticated
         const fetchCategories = async () => {
             try {
                 const res = await fetch('/api/products?type=categories');
@@ -112,18 +138,37 @@ export default function CreateProduct() {
                 const data = await res.json();
                 setCategories(data);
             } catch (err: any) {
-                setErrors({ general: err.message });
+                setErrors(prev => ({ ...prev, general: err.message }));
             }
         };
-        fetchCategories();
-    }, []);
 
+        fetchCategories();
+    }, [session, status, router, isClient]);
+
+    // Cleanup effect for image URLs - moved to proper position
     useEffect(() => {
         return () => {
             if (imagePreviews.mainImage) URL.revokeObjectURL(imagePreviews.mainImage);
             imagePreviews.additionalImages.forEach((url) => url && URL.revokeObjectURL(url));
         };
     }, [imagePreviews]);
+
+    // Loading state - moved after all hooks
+    if (status === 'loading' || !isClient) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-900">
+                <div className="text-white text-lg">Loading...</div>
+            </div>
+        );
+    }
+
+    // Authentication redirects - return null since useEffect will handle redirects
+    if (!session || session.user.role !== 'admin' || !session.user.isActive) {
+        return null;
+    }
+
+    // Remove duplicate useEffect - only keep one instance
+    // The duplicate was causing the hook order issue
 
     const validateForm = (): Errors => {
         const newErrors: Errors = {};
@@ -450,6 +495,7 @@ export default function CreateProduct() {
                         )}
                     </div>
                 </div>
+
 
                 <form onSubmit={handleSubmit} className="space-y-8">
                     {/* Basic Info */}

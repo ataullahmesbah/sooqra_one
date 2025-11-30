@@ -1,30 +1,35 @@
-// src/app/api/auth/[...nextauth]/route.js
-
+import dbConnect from '@/src/lib/dbConnect';
+import User from '@/src/models/User';
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+
 
 // Extended session types
 declare module 'next-auth' {
   interface Session {
     user: {
-      id?: string | null;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
+      id: string;
+      name: string;
+      email: string;
+      role: 'admin' | 'moderator' | 'user';
+      isActive: boolean;
     };
   }
 
   interface User {
-    id?: string | null;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
+    id: string;
+    name: string;
+    email: string;
+    role: 'admin' | 'moderator' | 'user';
+    isActive: boolean;
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
-    id?: string | null;
+    id: string;
+    role: 'admin' | 'moderator' | 'user';
+    isActive: boolean;
   }
 }
 
@@ -33,20 +38,42 @@ export const authOptions = {
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        username: { label: 'Username', type: 'text' },
+        email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials: any) {
-        // Add your authentication logic here
-        // This is a basic example - replace with your actual auth logic
-        if (credentials?.username === 'admin' && credentials?.password === 'admin') {
-          return {
-            id: '1',
-            name: 'Admin User',
-            email: 'admin@example.com',
-          };
+      async authorize(credentials: { email?: string; password?: string } = {}) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Email and password are required');
         }
-        return null;
+
+        await dbConnect();
+
+        // Find user by email
+        const user = await User.findOne({ email: credentials.email.toLowerCase() });
+
+        if (!user) {
+          throw new Error('Invalid email or password');
+        }
+
+        // Check if user is active
+        if (!user.isActive) {
+          throw new Error('Your account has been deactivated. Please contact administrator.');
+        }
+
+        // Verify password
+        const isPasswordValid = await user.comparePassword(credentials.password);
+
+        if (!isPasswordValid) {
+          throw new Error('Invalid email or password');
+        }
+
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+        };
       },
     }),
   ],
@@ -55,16 +82,20 @@ export const authOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }: { token: any; user?: any }) {
+      // Initial sign in
       if (user) {
         token.id = user.id;
+        token.role = user.role;
+        token.isActive = user.isActive;
       }
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
       if (token && session.user) {
         session.user.id = token.id;
-        session.user.name = token.name;
+        session.user.role = token.role;
+        session.user.isActive = token.isActive;
       }
       return session;
     },
