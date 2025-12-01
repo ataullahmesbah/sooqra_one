@@ -90,6 +90,7 @@ const AdminDashboardLayout = ({ children }: AdminDashboardLayoutProps) => {
             children: [
                 { label: 'ALL Products', link: '/admin-dashboard/shop/all-products' },
                 { label: 'Add Product', link: '/admin-dashboard/shop/create-products' },
+                { label: 'Banner Shop', link: '/admin-dashboard/shop/shop-banner' },
             ],
         },
     ];

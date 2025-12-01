@@ -53,15 +53,20 @@ interface Params {
     id: string;
 }
 
-export async function GET(request: Request, { params }: { params: Params }) {
+
+
+
+export async function GET(request: Request, { params }: { params: Promise<Params> }) {
     await dbConnect();
     try {
-        const productId = params.id;
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
+        // Await the params promise
+        const { id } = await params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
             return Response.json({ error: 'Invalid product ID' }, { status: 400 });
         }
 
-        const product = await Product.findById(productId).populate('category').lean();
+        const product = await Product.findById(id).populate('category').lean();
         if (!product) {
             return Response.json({ error: 'Product not found' }, { status: 404 });
         }

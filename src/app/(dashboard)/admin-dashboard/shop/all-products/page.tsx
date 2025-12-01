@@ -1,5 +1,5 @@
-import AllProducts from '@/app/Dashboard/Shop/AllProducts/AllProducts';
-import React from 'react';
+import AllProducts from "@/src/components/Share/Shop/AllProducts/AllProducts";
+
 
 const page = () => {
     return (

@@ -145,6 +145,9 @@ export default function ShopClient({ products, structuredData }: ShopClientProps
                                 <div key={product._id} className="group relative flex flex-col h-full">
                                     <Link
                                         href={`/shop/${product.slug || product._id}`}
+
+                                      
+
                                         className="flex flex-col h-full rounded-xl overflow-hidden bg-gray-800/50 hover:bg-gray-800/70 transition-all duration-300 border border-gray-700/50 hover:border-purple-500/30 shadow-lg hover:shadow-xl hover:shadow-purple-500/10"
                                     >
                                         {/* Product Image */}

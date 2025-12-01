@@ -1,101 +1,77 @@
-// src/app/(with-layout)/shop/[slug]/page.tsx
+// src/app/shop/[slug]/page.tsx
+
 import ProductDetailsClient from '@/src/components/Share/Shop/ProductDetailsClient/ProductDetailsClient';
 import { Suspense } from 'react';
+import { Metadata } from 'next';
 
-// Interface definitions - Must match ProductDetailsClient's Product interface
-interface Product {
+type Params = {
+    slug: string;
+};
+
+type Product = {
     _id: string;
     title: string;
-    slug: string;
-    metaTitle?: string;
-    metaDescription?: string;
-    shortDescription?: string;
-    description: string;
+    slug?: string;
     mainImage: string;
     mainImageAlt?: string;
-    additionalImages: Array<{
-        url: string;
-        alt?: string;
-    }>;
-    category?: {
-        name: string;
-    };
-    brand?: string;
+    additionalImages: { url: string; alt: string }[];
+    prices: { currency: string; amount: number }[];
+    description: string;
+    shortDescription?: string;
+    metaTitle?: string;
+    metaDescription?: string;
     keywords: string[];
-    aggregateRating?: {
-        ratingValue: number;
-        reviewCount: number;
-    };
-    specifications?: Array<{
-        name: string;
-        value: string;
-    }>;
-    faqs?: Array<{
-        question: string;
-        answer: string;
-    }>;
-    // Add missing properties that ProductDetailsClient expects
-    prices: Array<{
-        currency: string;
-        amount: number;
-        exchangeRate?: number;
-    }>;
-    quantity: number;
+    category?: { name: string };
     availability: string;
-    productType: 'Own' | 'Affiliate';
-    affiliateLink?: string;
-    owner?: string;
-    product_code: string;
-    descriptions?: string[];
-    bulletPoints?: string[];
-    sizeRequirement?: 'Optional' | 'Mandatory';
-    sizes?: Array<{
-        name: string;
-        quantity: number;
-    }>;
-    targetCountry?: string;
-    targetCity?: string;
+    quantity: number;
+    productType: string;
+    sizeRequirement?: string;
+    sizes?: { name: string; quantity: number }[];
+    faqs?: { question: string; answer: string }[];
+    specifications?: { name: string; value: string }[];
+    aggregateRating?: { ratingValue: number; reviewCount: number };
+    brand?: string;
+    product_code?: string;
     isGlobal?: boolean;
-    schemaMarkup?: any;
-    createdAt: string;
-    updatedAt: string;
-}
+    targetCity?: string;
+    targetCountry?: string;
+    affiliateLink?: string;
+};
 
-interface Params {
-    slug: string;
-}
+export const dynamic = 'force-dynamic';
 
-interface GenerateMetadataProps {
-    params: Params;
-}
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+    // Await the params promise
+    const { slug } = await params;
 
-export async function generateMetadata({ params }: GenerateMetadataProps) {
-    const { slug } = params;
     try {
         const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products/slug/${slug}`, {
             cache: 'no-store',
         });
+
         if (!res.ok) {
             return {
-                title: 'Product Not Found - Ataullah Mesbah',
-                description: 'The requested product could not be found.',
-                robots: 'noindex, nofollow',
+                title: 'Product Not Found | Ataullah Mesbah',
+                description: 'The product you are looking for does not exist.',
             };
         }
+
         const product: Product = await res.json();
 
         return {
             title: product.metaTitle || `${product.title} - Ataullah Mesbah`,
-            description: product.metaDescription || product.shortDescription || product.description.substring(0, 160),
-            keywords: product.keywords.length > 0 ? product.keywords.join(', ') : `${product.title}, ${product.category?.name || ''}, Ataullah Mesbah`,
+            description:
+                product.metaDescription ||
+                product.shortDescription ||
+                product.description.slice(0, 160),
+            keywords: product.keywords?.join(', ') || undefined,
             alternates: {
                 canonical: `${process.env.NEXTAUTH_URL}/shop/${slug}`,
             },
             openGraph: {
-                title: product.metaTitle || `${product.title} - Ataullah Mesbah`,
-                description: product.metaDescription || product.shortDescription || product.description.substring(0, 160),
+                title: product.metaTitle || product.title,
+                description: product.shortDescription || product.description.slice(0, 160),
                 url: `${process.env.NEXTAUTH_URL}/shop/${slug}`,
-                type: 'website',
                 images: [
                     {
                         url: product.mainImage,
@@ -103,100 +79,86 @@ export async function generateMetadata({ params }: GenerateMetadataProps) {
                         height: 800,
                         alt: product.mainImageAlt || product.title,
                     },
-                    ...product.additionalImages.map((img) => ({
-                        url: img.url,
-                        width: 800,
-                        height: 800,
-                        alt: img.alt || `${product.title} additional image`,
-                    })),
                 ],
-            },
-            twitter: {
-                card: 'summary_large_image',
-                title: product.metaTitle || `${product.title} - Ataullah Mesbah`,
-                description: product.metaDescription || product.shortDescription || product.description.substring(0, 160),
-                images: [product.mainImage, ...product.additionalImages.map((img) => img.url)],
             },
         };
     } catch (error) {
-        console.error('Error generating metadata:', error);
         return {
-            title: 'Error - Ataullah Mesbah',
-            description: 'An error occurred while fetching product details.',
-            robots: 'noindex, nofollow',
+            title: 'Error | Ataullah Mesbah',
+            description: 'description',
         };
     }
 }
 
-async function getProduct(slug: string): Promise<Product> {
-    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products/slug/${slug}`, {
-        cache: 'no-store',
-    });
+async function getProduct(slugOrId: string): Promise<Product> {
+    const res = await fetch(
+        `${process.env.NEXTAUTH_URL}/api/products/slug/${slugOrId}`,
+        { cache: 'no-store' }
+    );
+
     if (!res.ok) {
-        throw new Error('Failed to fetch product');
+        const err = await res.json();
+        throw new Error(err.error || 'Product not found');
     }
+
     return res.json();
 }
 
 async function getLatestProducts(): Promise<Product[]> {
-    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products?sort=createdAt&order=desc&limit=5`, {
-        next: { tags: ['products'], revalidate: 60 },
-    });
-    if (!res.ok) {
-        throw new Error('Failed to fetch products');
-    }
+    const res = await fetch(
+        `${process.env.NEXTAUTH_URL}/api/products?sort=createdAt&order=desc&limit=5`,
+        { next: { revalidate: 60 } }
+    );
+    if (!res.ok) return [];
     return res.json();
 }
 
-interface ProductDetailsProps {
-    params: Params;
-}
+export default async function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
+    // Await the params promise
+    const { slug } = await params;
 
-export default async function ProductDetails({ params }: ProductDetailsProps) {
-    const { slug } = params;
-    let product: Product, latestProducts: Product[];
+    let product: Product | null = null;
+    let latestProducts: Product[] = [];
+
     try {
-        [product, latestProducts] = await Promise.all([getProduct(slug), getLatestProducts()]);
-    } catch (error) {
-        console.error('Error fetching data:', error);
+        [product, latestProducts] = await Promise.all([
+            getProduct(slug),
+            getLatestProducts(),
+        ]);
+    } catch (error: any) {
         return (
-            <div className="min-h-screen bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
-                    <h1 className="text-4xl font-bold mb-8">Product Not Found</h1>
-                    <p className="text-red-400 text-lg">Failed to load product details.</p>
+            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
+                <div className="text-center">
+                    <h1 className="text-4xl font-bold mb-4">Product Not Found</h1>
+                    <p className="text-red-400 mb-6">{error.message}</p>
+                    <a
+                        href="/shop"
+                        className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg hover:opacity-90"
+                    >
+                        ← Back to Shop
+                    </a>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white border-b border-b-gray-800 pb-8">
-            <Suspense fallback={<LoadingSkeleton />}>
-                <ProductDetailsClient product={product} latestProducts={latestProducts} />
-            </Suspense>
-        </div>
+        <Suspense fallback={<LoadingSkeleton />}>
+            <ProductDetailsClient product={product} latestProducts={latestProducts} />
+        </Suspense>
     );
 }
 
 function LoadingSkeleton() {
     return (
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            <div className="h-10 bg-gray-700 rounded w-3/4 mb-8 animate-pulse"></div>
-            <div className="bg-gray-800 rounded-xl shadow-lg p-6 md:p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <div className="w-full h-96 bg-gray-700 rounded-lg animate-pulse"></div>
-                        <div className="mt-4 grid grid-cols-2 gap-4">
-                            {[...Array(4)].map((_, index) => (
-                                <div key={index} className="h-24 bg-gray-700 rounded-lg animate-pulse"></div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="space-y-6">
-                        {[...Array(5)].map((_, index) => (
-                            <div key={index} className="h-6 bg-gray-700 rounded w-full animate-pulse"></div>
-                        ))}
-                    </div>
+        <div className="container mx-auto py-16 px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="bg-gray-800 h-96 rounded-xl animate-pulse" />
+                <div className="space-y-y-6">
+                    <div className="h-10 bg-gray-800 rounded w-3/4 animate-pulse mb-4" />
+                    <div className="h-6 bg-gray-800 rounded w-full animate-pulse" />
+                    <div className="h-6 bg-gray-800 rounded w-5/6 animate-pulse mt-2" />
+                    <div className="h-32 bg-gray-800 rounded mt-8 animate-pulse" />
                 </div>
             </div>
         </div>

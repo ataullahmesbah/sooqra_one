@@ -1,60 +1,90 @@
+// src/components/Share/Shop/ProductDetailsClient/ProductDetailsClient.tsx
+
 'use client';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import CartSlider from '../CartSlider/CartSlider';
 import axios from 'axios';
 import { CiDeliveryTruck } from "react-icons/ci";
-import CartSlider from '../CartSlider/CartSlider';
 
-// Interface definitions
+// Define proper interfaces
+interface ProductPrice {
+    currency: string;
+    amount: number;
+}
+
+interface ProductSize {
+    name: string;
+    quantity: number;
+}
+
+interface ProductImage {
+    url: string;
+    alt: string;
+}
+
+interface ProductFAQ {
+    question: string;
+    answer: string;
+}
+
+interface ProductSpecification {
+    name: string;
+    value: string;
+}
+
+interface ProductAggregateRating {
+    ratingValue: number;
+    reviewCount: number;
+}
+
+interface ProductCategory {
+    name: string;
+}
+
 interface Product {
     _id: string;
     title: string;
-    slug: string;
+    slug?: string;
     mainImage: string;
     mainImageAlt?: string;
-    additionalImages: Array<{
-        url: string;
-        alt?: string;
-    }>;
-    prices: Array<{
-        currency: string;
-        amount: number;
-    }>;
-    quantity: number;
+    additionalImages: ProductImage[];
+    prices: ProductPrice[];
+    description: string;
+    shortDescription?: string;
+    descriptions?: string[];
+    bulletPoints?: string[];
+    metaTitle?: string;
+    metaDescription?: string;
+    keywords: string[];
+    category?: ProductCategory;
     availability: string;
-    productType: 'Own' | 'Affiliate';
-    sizeRequirement?: 'Optional' | 'Mandatory';
-    sizes?: Array<{
-        name: string;
-        quantity: number;
-    }>;
+    quantity: number;
+    productType: string;
+    sizeRequirement?: string;
+    sizes?: ProductSize[];
+    faqs?: ProductFAQ[];
+    specifications?: ProductSpecification[];
+    aggregateRating?: ProductAggregateRating;
     brand?: string;
-    category?: {
-        name: string;
-    };
     product_code?: string;
     isGlobal?: boolean;
     targetCity?: string;
     targetCountry?: string;
-    aggregateRating?: {
-        ratingValue: number;
-        reviewCount: number;
-    };
-    shortDescription?: string;
-    description: string;
-    descriptions?: string[];
-    bulletPoints?: string[];
-    specifications?: Array<{
-        name: string;
-        value: string;
-    }>;
-    faqs?: Array<{
-        question: string;
-        answer: string;
-    }>;
     affiliateLink?: string;
+}
+
+interface Tab {
+    id: string;
+    label: string;
+    content: React.ReactNode;
+}
+
+interface ProductDetailsClientProps {
+    product: Product;
+    latestProducts: Product[];
 }
 
 interface ConversionRates {
@@ -62,11 +92,6 @@ interface ConversionRates {
     EUR: number;
     BDT: number;
     [key: string]: number;
-}
-
-interface ProductDetailsClientProps {
-    product: Product;
-    latestProducts: Product[];
 }
 
 interface CartItem {
@@ -81,18 +106,18 @@ interface CartItem {
 }
 
 export default function ProductDetailsClient({ product, latestProducts }: ProductDetailsClientProps) {
-    const [selectedImage, setSelectedImage] = useState(product.mainImage);
-    const [selectedImageAlt, setSelectedImageAlt] = useState(product.mainImageAlt || product.title);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currency, setCurrency] = useState('BDT');
-    const [quantity, setQuantity] = useState(1);
-    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string>(product.mainImage);
+    const [selectedImageAlt, setSelectedImageAlt] = useState<string>(product.mainImageAlt || product.title);
+    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [currency, setCurrency] = useState<string>('BDT');
+    const [quantity, setQuantity] = useState<number>(1);
+    const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
     const [conversionRates, setConversionRates] = useState<ConversionRates>({ USD: 123, EUR: 135, BDT: 1 });
     const [activeTab, setActiveTab] = useState<string | null>(null);
-    const [isMobile, setIsMobile] = useState(false);
+    const [isMobile, setIsMobile] = useState<boolean>(false);
     const router = useRouter();
-    const [selectedSize, setSelectedSize] = useState<{ name: string; quantity: number } | null>(null);
-    const [showSizeError, setShowSizeError] = useState(false);
+    const [selectedSize, setSelectedSize] = useState<ProductSize | null>(null);
+    const [showSizeError, setShowSizeError] = useState<boolean>(false);
 
     // Custom Toast Function
     const showCustomToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -175,16 +200,16 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
         '@context': 'https://schema.org',
         '@type': 'Product',
         name: product.title,
-        image: [product.mainImage, ...product.additionalImages.map((img) => img.url)],
+        image: [product.mainImage, ...(product.additionalImages?.map((img) => img.url) || [])],
         description: product.description,
         brand: { '@type': 'Brand', name: product.brand || 'Ataullah Mesbah' },
-        sku: product.product_code,
+        sku: product.product_code || product._id,
         offers: {
             '@type': 'Offer',
             priceCurrency: 'BDT',
             price: product.prices.find((p) => p.currency === 'BDT')?.amount || 0,
             availability: `https://schema.org/${product.availability || 'InStock'}`,
-            url: `${process.env.NEXTAUTH_URL}/shop/${product.slug}`,
+            url: `${process.env.NEXTAUTH_URL}/shop/${product.slug || product._id}`,
             areaServed: product.isGlobal ? 'Worldwide' : {
                 '@type': 'Place',
                 name: product.targetCity,
@@ -209,7 +234,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
         })),
     };
 
-    const faqStructuredData = product.faqs && product.faqs.length > 0
+    const faqStructuredData = (product.faqs && product.faqs.length > 0)
         ? {
             '@context': 'https://schema.org',
             '@type': 'FAQPage',
@@ -250,7 +275,10 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
             }
 
             const cart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
-            const existingItem = cart.find((item) => item._id === product._id && (!item.size || item.size === selectedSize?.name));
+            const existingItem = cart.find((item) =>
+                item._id === product._id &&
+                (item.size || null) === (selectedSize?.name || null)
+            );
             let newQuantity = quantity;
 
             if (existingItem) {
@@ -264,11 +292,17 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                     return;
                 }
                 cart.splice(cart.indexOf(existingItem), 1);
-                cart.push({ ...existingItem, quantity: newQuantity, size: selectedSize?.name });
+                cart.push({
+                    ...existingItem,
+                    quantity: newQuantity,
+                    size: selectedSize?.name
+                });
                 showCustomToast(`Cart updated with ${newQuantity} units of ${product.title}`, 'success');
             } else {
                 const priceObj = product.prices.find((p) => p.currency === 'BDT') || product.prices[0];
-                const priceInBDT = priceObj.currency === 'BDT' ? priceObj.amount : priceObj.amount * (conversionRates[priceObj.currency] || 1);
+                const priceInBDT = priceObj.currency === 'BDT'
+                    ? priceObj.amount
+                    : priceObj.amount * (conversionRates[priceObj.currency] || 1);
                 cart.push({
                     _id: product._id,
                     title: product.title,
@@ -303,7 +337,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
         }
 
         if (product.productType === 'Affiliate') {
-            window.open(product.affiliateLink, '_blank', 'noopener,noreferrer');
+            window.open(product.affiliateLink || '#', '_blank', 'noopener,noreferrer');
             showCustomToast('Redirecting to affiliate site', 'success');
             return;
         }
@@ -322,9 +356,14 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
             }
 
             const cart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
-            const filteredCart = cart.filter((item) => item._id !== product._id || (item.size && item.size !== selectedSize?.name));
+            const filteredCart = cart.filter((item) =>
+                item._id !== product._id ||
+                (item.size && item.size !== selectedSize?.name)
+            );
             const priceObj = product.prices.find((p) => p.currency === 'BDT') || product.prices[0];
-            const priceInBDT = priceObj.currency === 'BDT' ? priceObj.amount : priceObj.amount * (conversionRates[priceObj.currency] || 1);
+            const priceInBDT = priceObj.currency === 'BDT'
+                ? priceObj.amount
+                : priceObj.amount * (conversionRates[priceObj.currency] || 1);
 
             const updatedCart = [
                 ...filteredCart,
@@ -356,7 +395,9 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
 
     const getPriceDisplay = () => {
         const priceObj = product.prices.find((p) => p.currency === currency) || product.prices[0];
-        const priceInBDT = priceObj.currency === 'BDT' ? priceObj.amount : priceObj.amount * (conversionRates[priceObj.currency] || 1);
+        const priceInBDT = priceObj.currency === 'BDT'
+            ? priceObj.amount
+            : priceObj.amount * (conversionRates[priceObj.currency] || 1);
         const total = priceInBDT * quantity;
         const symbol = currency === 'BDT' ? '৳' : currency === 'USD' ? '$' : '€';
         return `${symbol}${new Intl.NumberFormat(undefined, {
@@ -364,12 +405,6 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
             maximumFractionDigits: 2,
         }).format(currency === 'BDT' ? total : total / (conversionRates[currency] || 1))}`;
     };
-
-    interface Tab {
-        id: string;
-        label: string;
-        content: React.ReactNode;
-    }
 
     const tabs: Tab[] = [
         {
@@ -430,7 +465,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                     </tbody>
                 </table>
             ),
-        }] : []),
+        } as Tab] : []),
         ...(product.faqs && product.faqs.length > 0 ? [{
             id: 'faqs',
             label: 'FAQs',
@@ -444,8 +479,10 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                     ))}
                 </div>
             ),
-        }] : [])
+        } as Tab] : [])
     ];
+
+    const activeTabData = tabs.find((tab) => tab.id === activeTab);
 
     return (
         <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -455,9 +492,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
             )}
 
             <nav className="flex mb-6" aria-label="Breadcrumb">
-                {/* Mobile View - Two Lines with proper responsive handling */}
                 <div className="block md:hidden w-full">
-                    {/* First Line - SOOQRA ONE > HOME > SHOP */}
                     <div className="flex items-center space-x-1 mb-2 flex-wrap">
                         <div className="flex items-center">
                             <h2 className="text-sm font-medium text-gray-200 whitespace-nowrap">SOOQRA ONE</h2>
@@ -476,7 +511,6 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                         </Link>
                     </div>
 
-                    {/* Second Line - Product Title with responsive text handling */}
                     <div className="flex items-center min-w-0">
                         <svg className="w-3 h-3 text-gray-400 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -490,7 +524,6 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                     </div>
                 </div>
 
-                {/* Desktop View - Original Single Line */}
                 <div className="hidden md:block">
                     <ol className="inline-flex items-center space-x-1 md:space-x-2 flex-wrap">
                         <li className="flex items-center">
@@ -560,7 +593,10 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                         {(product.additionalImages.length > 0 || product.mainImage) && (
                             <div className="w-full max-w-md mx-auto">
                                 <div className="grid grid-cols-5 gap-2">
-                                    {[{ url: product.mainImage, alt: product.mainImageAlt || product.title }, ...product.additionalImages].map(
+                                    {[
+                                        { url: product.mainImage, alt: product.mainImageAlt || product.title },
+                                        ...product.additionalImages
+                                    ].map(
                                         (img, index) => (
                                             <div
                                                 key={index}
@@ -568,7 +604,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                                                     }`}
                                                 onClick={() => {
                                                     setSelectedImage(img.url);
-                                                    setSelectedImageAlt(img.alt || '');
+                                                    setSelectedImageAlt(img.alt);
                                                 }}
                                             >
                                                 <Image
@@ -754,7 +790,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                 </div>
             </div>
 
-            {activeTab && (
+            {activeTab && activeTabData && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-50 z-40 md:bg-transparent md:right-0 md:top-0 md:bottom-0 md:w-1/3 md:min-w-[300px] md:max-w-[400px]"
                     onClick={() => (!isMobile ? setActiveTab(null) : null)}
@@ -768,7 +804,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                     >
                         <div className="flex justify-between items-center mb-4">
                             <h3 id={`drawer-title-${activeTab}`} className="text-lg amsfonts uppercase text-white">
-                                {tabs.find((tab) => tab.id === activeTab)?.label}
+                                {activeTabData.label}
                             </h3>
                             <button
                                 onClick={() => setActiveTab(null)}
@@ -780,7 +816,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                                 </svg>
                             </button>
                         </div>
-                        <div className="max-h-[90vh] overflow-y-auto">{tabs.find((tab) => tab.id === activeTab)?.content}</div>
+                        <div className="max-h-[90vh] overflow-y-auto">{activeTabData.content}</div>
                     </div>
                 </div>
             )}
@@ -836,7 +872,13 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                             </svg>
                         </button>
                         <div className="relative aspect-square w-full">
-                            <Image src={selectedImage} alt={selectedImageAlt} fill className="object-contain" sizes="100vw" />
+                            <Image
+                                src={selectedImage}
+                                alt={selectedImageAlt}
+                                fill
+                                className="object-contain"
+                                sizes="100vw"
+                            />
                         </div>
                     </div>
                 </div>

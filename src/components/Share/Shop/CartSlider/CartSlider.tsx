@@ -39,7 +39,17 @@ interface ValidationResponse {
 export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartSliderProps) {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const router = useRouter();
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     useEffect(() => {
         const updateCart = () => {
@@ -158,7 +168,7 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
         }
     };
 
-    // Custom Toast Function
+    // Custom Toast Function - Use global styles from ProductDetailsClient
     const showCustomToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
         // Remove existing toast
         const existingToast = document.querySelector('.custom-toast-slider');
@@ -267,7 +277,7 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
                             const response = await axios.get(`/api/products/${item._id}`);
                             const product = response.data;
                             if (item.size) {
-                                const sizeData = product.sizes.find((s: any) => s.name === item.size);
+                                const sizeData = product.sizes?.find((s: any) => s.name === item.size);
                                 if (!sizeData || item.quantity > sizeData.quantity) {
                                     return { ...item, quantity: Math.min(item.quantity, sizeData?.quantity || 0) };
                                 }
@@ -300,23 +310,42 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
         }
     };
 
+    const handleBackdropClick = () => {
+        setIsOpen(false);
+    };
+
     return (
         <AnimatePresence>
             {isOpen && (
                 <>
+                    {/* Backdrop Overlay */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={handleBackdropClick}
+                        className="fixed inset-0 bg-black/70 z-40 md:bg-black/50"
+                    />
+
+                    {/* Cart Slider */}
                     <motion.div
                         initial={{ x: '100%' }}
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                        className="fixed top-0 right-0 h-screen w-full sm:w-80 md:w-96 bg-gradient-to-b from-gray-900 to-gray-800 shadow-2xl z-50 overflow-hidden"
+                        className={`fixed top-0 right-0 h-screen bg-gradient-to-b from-gray-900 to-gray-800 shadow-2xl z-50 overflow-hidden flex flex-col
+                            ${isMobile ? 'w-full' : 'w-full sm:w-80 md:w-96'}`}
                     >
-                        <div className="flex justify-between items-center p-4 border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-white">Your Cart ({cart.length} items)</h2>
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-4 border-b border-gray-700 bg-gray-900/90 backdrop-blur-sm">
+                            <h2 className="text-lg font-semibold text-white">
+                                Your Cart ({cart.length} {cart.length === 1 ? 'item' : 'items'})
+                            </h2>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="text-gray-300 hover:text-white transition-colors"
+                                className="text-gray-300 hover:text-white transition-colors p-1 rounded-full hover:bg-gray-800"
                                 disabled={isLoading}
+                                aria-label="Close cart"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -324,9 +353,16 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
                             </button>
                         </div>
 
-                        <div className="p-4  space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
+                        {/* Cart Items */}
+                        <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                             {cart.length === 0 ? (
-                                <p className="text-gray-400 text-center text-sm font-medium">Your cart is empty</p>
+                                <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                                    <svg className="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <p className="text-gray-400 text-sm font-medium mb-2">Your cart is empty</p>
+                                    <p className="text-gray-500 text-xs">Add some products to get started</p>
+                                </div>
                             ) : (
                                 cart.map((item, index) => (
                                     <motion.div
@@ -334,44 +370,74 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.3 }}
-                                        className="flex items-start gap-3 border-b border-gray-700 pb-4"
+                                        className="flex items-start gap-3 pb-4 border-b border-gray-700 last:border-b-0"
                                     >
+                                        {/* Product Image */}
                                         <div className="relative w-16 h-16 flex-shrink-0">
                                             <Image
                                                 src={item.mainImage}
-                                                alt={item.title}
+                                                alt={item.mainImageAlt || item.title}
                                                 width={64}
                                                 height={64}
                                                 className="object-cover rounded-md shadow-sm"
                                                 sizes="64px"
                                             />
+                                            {item.quantity > 1 && (
+                                                <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                                                    {item.quantity}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex-1 space-y-1">
-                                            <h3 className="text-sm font-medium text-white line-clamp-2">{item.title}</h3>
-                                            {item.size && <p className="text-xs text-gray-300">Size: {item.size}</p>}
-                                            <p className="text-xs text-purple-300 font-semibold">৳{(item.price * item.quantity).toLocaleString()}</p>
+
+                                        {/* Product Details */}
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-sm font-medium text-white line-clamp-2 mb-1">{item.title}</h3>
+                                            {item.size && (
+                                                <p className="text-xs text-gray-300 mb-1">
+                                                    Size: <span className="text-purple-300">{item.size}</span>
+                                                </p>
+                                            )}
+                                            <p className="text-sm text-purple-300 font-semibold mb-2">
+                                                ৳{(item.price * item.quantity).toLocaleString()}
+                                            </p>
+
+                                            {/* Quantity Controls */}
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => handleQuantityChange(item._id, item.quantity - 1, item.size)}
                                                     disabled={item.quantity <= 1 || isLoading}
-                                                    className="px-2 py-1 bg-gray-700 text-white rounded-full text-xs hover:bg-purple-600 transition disabled:opacity-50"
+                                                    className="px-2 py-1 bg-gray-700 text-white rounded-full text-xs hover:bg-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    aria-label="Decrease quantity"
                                                 >
                                                     −
                                                 </button>
-                                                <span className="text-sm text-white font-medium">{item.quantity}/3</span>
+                                                <div className="relative">
+                                                    <span className="text-sm text-white font-medium px-2">{item.quantity}</span>
+                                                    <div className="absolute -bottom-1 left-0 right-0 text-center">
+                                                        <span className="text-[10px] text-gray-400">/3</span>
+                                                    </div>
+                                                </div>
                                                 <button
                                                     onClick={() => handleQuantityChange(item._id, item.quantity + 1, item.size)}
                                                     disabled={isLoading || item.quantity >= 3}
-                                                    className="px-2 py-1 bg-gray-700 text-white rounded-full text-xs hover:bg-purple-600 transition disabled:opacity-50"
+                                                    className="px-2 py-1 bg-gray-700 text-white rounded-full text-xs hover:bg-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    aria-label="Increase quantity"
                                                 >
-                                                    {isLoading ? '...' : '+'}
+                                                    {isLoading ? (
+                                                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                                    ) : (
+                                                        '+'
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>
+
+                                        {/* Remove Button */}
                                         <button
                                             onClick={() => handleRemoveItem(item._id, item.size)}
-                                            className="text-red-400 hover:text-red-600 transition"
+                                            className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded-full hover:bg-gray-800"
                                             disabled={isLoading}
+                                            aria-label="Remove item"
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -381,105 +447,63 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
                                 ))
                             )}
                         </div>
-                        <div className=" p-4 border-t border-gray-700 bg-gray-900/80 backdrop-blur-sm fixed bottom-0 w-full sm:w-80 md:w-96">
-                            <div className="flex justify-between text-sm font-semibold text-white mb-3">
-                                <span>Subtotal</span>
-                                <span>৳{getSubtotal().toLocaleString()}</span>
+
+                        {/* Footer with Totals */}
+                        {cart.length > 0 && (
+                            <div className="border-t border-gray-700 bg-gray-900/80 backdrop-blur-sm">
+                                <div className="p-4">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <span className="text-sm text-gray-300">Subtotal</span>
+                                        <span className="text-lg font-bold text-white">
+                                            ৳{getSubtotal().toLocaleString()}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <button
+                                            onClick={handleViewCart}
+                                            disabled={cart.length === 0 || isLoading}
+                                            className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-center rounded-lg font-medium text-sm hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        >
+                                            {isLoading ? (
+                                                <>
+                                                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                                    Validating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                                    </svg>
+                                                    View Cart
+                                                </>
+                                            )}
+                                        </button>
+
+                                        <Link
+                                            href="/shop"
+                                            onClick={() => setIsOpen(false)}
+                                            className="block w-full py-3 bg-gradient-to-r from-gray-800 to-gray-700 text-white text-center rounded-lg font-medium text-sm hover:from-gray-700 hover:to-gray-600 transition-all duration-200 shadow-md flex items-center justify-center gap-2"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                            </svg>
+                                            Continue Shopping
+                                        </Link>
+                                    </div>
+
+                                    {isMobile && (
+                                        <button
+                                            onClick={() => setIsOpen(false)}
+                                            className="w-full py-3 mt-2 text-gray-400 hover:text-white text-center text-sm transition-colors"
+                                        >
+                                            Close
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                            <button
-                                onClick={handleViewCart}
-                                disabled={cart.length === 0 || isLoading}
-                                className="block w-full py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-center rounded-lg font-medium text-sm hover:from-purple-700 hover:to-purple-800 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? 'Validating...' : 'View Cart'}
-                            </button>
-
-                            <Link
-                                href="/shop"
-                                className="block w-full py-2 mt-2 bg-gradient-to-r from-gray-700 to-gray-600 text-white text-center rounded-lg font-medium text-sm hover:from-gray-600 hover:to-gray-500 transition shadow-md"
-                                onClick={() => setIsOpen(false)}
-                            >
-                                Continue Shopping
-                            </Link>
-                        </div>
+                        )}
                     </motion.div>
-
-                    <style jsx>{`
-                    .custom-toast-slider {
-                        position: fixed;
-                        bottom: 24px;
-                        right: 24px;
-                        background: linear-gradient(135deg, #1a1a1a 0%, #2d1b4e 100%);
-                        color: #fff;
-                        padding: 16px 20px;
-                        border-radius: 12px;
-                        box-shadow: 0 10px 25px rgba(128, 0, 128, 0.3);
-                        border-left: 4px solid #8b5cf6;
-                        opacity: 0;
-                        transform: translateY(20px) scale(0.95);
-                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                        z-index: 1001;
-                        max-width: 320px;
-                        backdrop-filter: blur(10px);
-                    }
-                    
-                    .custom-toast-slider.show {
-                        opacity: 1;
-                        transform: translateY(0) scale(1);
-                    }
-                    
-                    .custom-toast-success {
-                        border-left-color: #10b981;
-                        background: linear-gradient(135deg, #1a1a1a 0%, #064e3b 100%);
-                    }
-                    
-                    .custom-toast-error {
-                        border-left-color: #ef4444;
-                        background: linear-gradient(135deg, #1a1a1a 0%, #7f1d1d 100%);
-                    }
-                    
-                    .toast-content {
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                    }
-                    
-                    .toast-icon {
-                        width: 20px;
-                        height: 20px;
-                        color: #8b5cf6;
-                        flex-shrink: 0;
-                    }
-                    
-                    .custom-toast-success .toast-icon {
-                        color: #10b981;
-                    }
-                    
-                    .custom-toast-error .toast-icon {
-                        color: #ef4444;
-                    }
-                    
-                    .toast-message {
-                        flex: 1;
-                        font-size: 14px;
-                        line-height: 1.4;
-                    }
-                    
-                    .toast-close {
-                        background: none;
-                        border: none;
-                        color: #9ca3af;
-                        cursor: pointer;
-                        padding: 4px;
-                        border-radius: 4px;
-                        transition: all 0.2s;
-                    }
-                    
-                    .toast-close:hover {
-                        color: #fff;
-                        background: rgba(255,255,255,0.1);
-                    }
-                `}</style>
                 </>
             )}
         </AnimatePresence>
