@@ -1,4 +1,5 @@
-import UpdateProduct from "@/app/Dashboard/Shop/UpdateProduct/UpdateProduct";
+// app/admin-dashboard/shop/update-product/[id]/page.tsx
+import UpdateProduct from "@/src/components/Share/Shop/UpdateProduct/UpdateProduct";
 
 
 const page = () => {

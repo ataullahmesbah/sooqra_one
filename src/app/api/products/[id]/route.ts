@@ -124,7 +124,7 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
     }
 }
 
-export async function PUT(request: Request, { params }: { params: Params }) {
+export async function PUT(request: Request, { params }: { params: Promise<Params> }) {
     await dbConnect();
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.name) {
@@ -132,7 +132,11 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     }
 
     try {
-        const productId = params.id;
+        // Await the params
+        const { id: productId } = await params;
+
+        console.log('Updating product ID:', productId);
+
         if (!mongoose.Types.ObjectId.isValid(productId)) {
             return Response.json({ error: 'Invalid product ID' }, { status: 400 });
         }
@@ -143,152 +147,145 @@ export async function PUT(request: Request, { params }: { params: Params }) {
         }
 
         const formData = await request.formData();
-        console.log('Received formData keys:', [...formData.keys()]);
+        console.log('FormData keys:', [...formData.keys()]);
 
-        // Extract form data with proper type handling
+        // Debug log
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}:`, typeof value, value);
+        }
+
+        // Extract ALL fields including aggregateRating
         const title = formData.get('title') as string;
-        const bdtPrice = parseFloat(formData.get('bdtPrice') as string);
-        const usdPrice = formData.get('usdPrice') ? parseFloat(formData.get('usdPrice') as string) : null;
-        const eurPrice = formData.get('eurPrice') ? parseFloat(formData.get('eurPrice') as string) : null;
-        const usdExchangeRate = formData.get('usdExchangeRate') ? parseFloat(formData.get('usdExchangeRate') as string) : null;
-        const eurExchangeRate = formData.get('eurExchangeRate') ? parseFloat(formData.get('eurExchangeRate') as string) : null;
+        const bdtPrice = formData.get('bdtPrice') as string;
+        const usdPrice = formData.get('usdPrice') as string;
+        const eurPrice = formData.get('eurPrice') as string;
+        const usdExchangeRate = formData.get('usdExchangeRate') as string;
+        const eurExchangeRate = formData.get('eurExchangeRate') as string;
         const description = formData.get('description') as string;
         const shortDescription = formData.get('shortDescription') as string;
         const product_code = formData.get('product_code') as string;
-        const descriptions = (formData.get('descriptions') as string)?.split('|||')?.filter((desc: string) => desc.trim()) || [];
-        const bulletPoints = (formData.get('bulletPoints') as string)?.split(',').map((point: string) => point.trim()).filter(Boolean) || [];
+        const descriptions = (formData.get('descriptions') as string)?.split('|||')?.filter(Boolean) || [];
+        const bulletPoints = (formData.get('bulletPoints') as string) || '';
         const productType = formData.get('productType') as string;
-        const affiliateLink = productType === 'Affiliate' ? (formData.get('affiliateLink') as string) || null : null;
+        const affiliateLink = productType === 'Affiliate' ? (formData.get('affiliateLink') as string) : '';
         const categoryId = formData.get('category') as string;
         const newCategory = formData.get('newCategory') as string;
         const mainImage = formData.get('mainImage') as File;
         const mainImageAlt = formData.get('mainImageAlt') as string;
         const existingMainImage = formData.get('existingMainImage') as string;
-        const additionalImages = formData.getAll('additionalImages').filter((img) => img instanceof File && img.size > 0) as File[];
-        const additionalAlts = formData.getAll('additionalAlts') as string[] || [];
-        const existingAdditionalImages = formData.get('existingAdditionalImages')
-            ? JSON.parse(formData.get('existingAdditionalImages') as string) as AdditionalImage[]
-            : [];
+
+        // Additional images handling
+        const additionalImages = formData.getAll('additionalImages')
+            .filter((img): img is File => img instanceof File && img.size > 0);
+
+        const additionalAlts = formData.getAll('additionalAlts') as string[];
+
+        const existingAdditionalImagesInput = formData.get('existingAdditionalImages') as string;
+        let existingAdditionalImages: AdditionalImage[] = [];
+        if (existingAdditionalImagesInput) {
+            try {
+                existingAdditionalImages = JSON.parse(existingAdditionalImagesInput);
+            } catch (error) {
+                console.error('Error parsing existingAdditionalImages:', error);
+            }
+        }
+
         const brand = formData.get('brand') as string;
         const availability = formData.get('availability') as string;
         const metaTitle = formData.get('metaTitle') as string;
         const metaDescription = formData.get('metaDescription') as string;
-        const keywords = (formData.get('keywords') as string)?.split(',').map((kw: string) => kw.trim()).filter(Boolean) || [];
+        const keywords = (formData.get('keywords') as string)?.split(',')?.map(k => k.trim()).filter(Boolean) || [];
         const isGlobal = formData.get('isGlobal') === 'true';
-        const targetCountry = (formData.get('targetCountry') as string)?.trim().replace(/[^a-zA-Z\s-]/g, '') || '';
-        const targetCity = (formData.get('targetCity') as string)?.trim().replace(/[^a-zA-Z\s-]/g, '') || '';
-        const quantityRaw = formData.get('quantity') as string;
-        const quantity = parseInt(quantityRaw, 10);
+        const targetCountry = (formData.get('targetCountry') as string) || '';
+        const targetCity = (formData.get('targetCity') as string) || '';
+        const quantity = parseInt(formData.get('quantity') as string || '0', 10);
         const sizeRequirement = (formData.get('sizeRequirement') as string) || 'Optional';
 
-        let sizes: Size[] = [];
-        const sizesInput = formData.get('sizes') as string;
-        if (sizesInput) {
-            try {
-                sizes = JSON.parse(sizesInput).filter((size: Size) => size.name.trim() && size.quantity >= 0);
-            } catch {
-                return Response.json({ error: 'Invalid sizes format' }, { status: 400 });
-            }
-        }
-
-        let faqs: FAQ[] = [];
-        const faqsInput = formData.get('faqs') as string;
-        if (faqsInput) {
-            try {
-                faqs = JSON.parse(faqsInput);
-            } catch {
-                return Response.json({ error: 'Invalid FAQs format' }, { status: 400 });
-            }
-        }
-
-        let specifications: Specification[] = [];
-        const specificationsInput = formData.get('specifications') as string;
-        if (specificationsInput) {
-            try {
-                specifications = JSON.parse(specificationsInput);
-            } catch {
-                return Response.json({ error: 'Invalid specifications format' }, { status: 400 });
-            }
-        }
-
+        // Handle aggregateRating correctly
         const aggregateRating: AggregateRating = {
-            ratingValue: parseFloat(formData.get('aggregateRating.ratingValue') as string) || 0,
-            reviewCount: parseInt(formData.get('aggregateRating.reviewCount') as string) || 0,
+            ratingValue: parseFloat(formData.get('aggregateRating.ratingValue') as string || '0'),
+            reviewCount: parseInt(formData.get('aggregateRating.reviewCount') as string || '0', 10)
         };
 
-        // Validate required fields
-        const requiredFields = ['title', 'bdtPrice', 'description', 'product_code', 'brand', 'metaTitle', 'metaDescription', 'mainImageAlt'];
-        if (!isGlobal) {
-            requiredFields.push('targetCountry', 'targetCity');
+        console.log('Aggregate Rating from form:', aggregateRating);
+
+        // Handle sizes
+        let sizes: Size[] = [];
+        const sizesInput = formData.get('sizes') as string;
+        if (sizesInput && sizesInput.trim()) {
+            try {
+                sizes = JSON.parse(sizesInput);
+            } catch (error) {
+                console.error('Error parsing sizes:', error);
+            }
         }
 
-        const missingFields = requiredFields.filter((field) => {
-            const value = formData.get(field);
-            return !value || value.toString().trim() === '';
-        });
+        // Handle FAQs
+        let faqs: FAQ[] = [];
+        const faqsInput = formData.get('faqs') as string;
+        if (faqsInput && faqsInput.trim()) {
+            try {
+                faqs = JSON.parse(faqsInput);
+            } catch (error) {
+                console.error('Error parsing FAQs:', error);
+            }
+        }
 
+        // Handle specifications
+        let specifications: Specification[] = [];
+        const specificationsInput = formData.get('specifications') as string;
+        if (specificationsInput && specificationsInput.trim()) {
+            try {
+                specifications = JSON.parse(specificationsInput);
+            } catch (error) {
+                console.error('Error parsing specifications:', error);
+            }
+        }
+
+        // Validate required fields
         const errors: Record<string, string> = {};
 
-        if (missingFields.length > 0) {
-            errors.missingFields = `Missing required fields: ${missingFields.join(', ')}`;
-        }
-        if (isNaN(bdtPrice) || bdtPrice <= 0) {
+        if (!title?.trim()) errors.title = 'Title is required';
+        if (!bdtPrice || isNaN(parseFloat(bdtPrice)) || parseFloat(bdtPrice) <= 0) {
             errors.bdtPrice = 'BDT price must be a positive number';
         }
-        if (usdPrice && (isNaN(usdPrice) || usdPrice <= 0)) {
-            errors.usdPrice = 'USD price must be a positive number';
+        if (!description?.trim()) errors.description = 'Description is required';
+        if (!product_code?.trim()) errors.product_code = 'Product code is required';
+        if (!brand?.trim()) errors.brand = 'Brand is required';
+        if (!metaTitle?.trim()) errors.metaTitle = 'Meta title is required';
+        if (!metaDescription?.trim()) errors.metaDescription = 'Meta description is required';
+        if (!mainImageAlt?.trim()) errors.mainImageAlt = 'Main image ALT text is required';
+        if (isNaN(quantity) || quantity < 0) errors.quantity = 'Quantity must be non-negative';
+        if (productType === 'Affiliate' && !affiliateLink?.trim()) {
+            errors.affiliateLink = 'Affiliate link is required for affiliate products';
         }
-        if (eurPrice && (isNaN(eurPrice) || eurPrice <= 0)) {
-            errors.eurPrice = 'EUR price must be a positive number';
-        }
-        if (usdPrice && usdExchangeRate && (isNaN(usdExchangeRate) || usdExchangeRate <= 0)) {
-            errors.usdExchangeRate = 'USD exchange rate must be a positive number';
-        }
-        if (eurPrice && eurExchangeRate && (isNaN(eurExchangeRate) || eurExchangeRate <= 0)) {
-            errors.eurExchangeRate = 'EUR exchange rate must be a positive number';
-        }
-        if (!categoryId && !newCategory) {
+        if (!categoryId && !newCategory?.trim()) {
             errors.category = 'Category or new category name is required';
         }
         if (!mainImage && !existingMainImage) {
             errors.mainImage = 'Main image is required';
         }
-        if (isNaN(quantity) || quantity < 0) {
-            errors.quantity = 'Quantity must be a non-negative integer';
-        }
-        if (productType === 'Affiliate' && !affiliateLink) {
-            errors.affiliateLink = 'Affiliate link is required for affiliate products';
-        }
-        if (metaTitle && metaTitle.length > 60) {
-            errors.metaTitle = 'Meta Title must be 60 characters or less';
-        }
-        if (metaDescription && metaDescription.length > 160) {
-            errors.metaDescription = 'Meta Description must be 160 characters or less';
-        }
-        if (!isGlobal && !targetCountry.trim()) {
-            errors.targetCountry = 'Target country is required when not global';
-        }
-        if (!isGlobal && !targetCity.trim()) {
-            errors.targetCity = 'Target city is required when not global';
-        }
-        if (sizeRequirement === 'Mandatory' && sizes.length === 0) {
-            errors.sizes = 'At least one size with quantity is required when size is Mandatory';
-        }
-        if (sizeRequirement === 'Mandatory' && sizes.reduce((sum, size) => sum + size.quantity, 0) !== quantity) {
-            errors.sizes = 'Sum of size quantities must equal total quantity';
-        }
+        if (!isGlobal && !targetCountry?.trim()) errors.targetCountry = 'Target country is required';
+        if (!isGlobal && !targetCity?.trim()) errors.targetCity = 'Target city is required';
 
-        sizes.forEach((size, index) => {
-            if (!size.name.trim()) {
-                errors[`sizeName${index}`] = `Size name at index ${index} is required`;
+        // Size validation
+        if (sizeRequirement === 'Mandatory') {
+            if (sizes.length === 0) {
+                errors.sizes = 'At least one size is required when size requirement is mandatory';
+            } else {
+                const totalSizeQuantity = sizes.reduce((sum, size) => sum + (size.quantity || 0), 0);
+                if (totalSizeQuantity !== quantity) {
+                    errors.sizes = `Sum of size quantities (${totalSizeQuantity}) must equal total quantity (${quantity})`;
+                }
             }
-            if (isNaN(size.quantity) || size.quantity < 0) {
-                errors[`sizeQuantity${index}`] = `Quantity for size ${size.name} must be a non-negative integer`;
-            }
-        });
+        }
 
         if (Object.keys(errors).length > 0) {
-            return Response.json({ error: errors }, { status: 400 });
+            console.log('Validation errors:', errors);
+            return Response.json({
+                error: 'Validation failed',
+                details: errors
+            }, { status: 400 });
         }
 
         // Handle category
@@ -300,116 +297,120 @@ export async function PUT(request: Request, { params }: { params: Params }) {
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/(^-|-$)/g, '');
 
-            category = await Category.findOne({ slug });
-            if (!category) {
-                category = new Category({
+            let existingCat = await Category.findOne({ slug });
+            if (!existingCat) {
+                existingCat = new Category({
                     name: newCategory.trim(),
                     slug,
                 });
-                await category.save();
+                await existingCat.save();
             }
-        } else {
-            if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-                return Response.json({ error: 'Invalid category ID' }, { status: 400 });
-            }
+            category = existingCat;
+        } else if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
             category = await Category.findById(categoryId);
             if (!category) {
-                return Response.json({ error: 'Category not found' }, { status: 404 });
+                return Response.json({ error: 'Category not found' }, { status: 400 });
             }
+        }
+
+        if (!category) {
+            return Response.json({ error: 'Category is required' }, { status: 400 });
         }
 
         // Handle main image
         let mainImageUrl = existingMainImage;
         if (mainImage && mainImage.size > 0) {
-            if (!mainImage.type.startsWith('image/')) {
-                return Response.json({ error: 'Main image must be an image file' }, { status: 400 });
-            }
-            if (mainImage.size > 5 * 1024 * 1024) {
-                return Response.json({ error: 'Main image size must be less than 5MB' }, { status: 400 });
-            }
+            try {
+                const mainImageArrayBuffer = await mainImage.arrayBuffer();
+                const mainImageBuffer = Buffer.from(mainImageArrayBuffer);
 
-            const mainImageArrayBuffer = await mainImage.arrayBuffer();
-            const mainImageBuffer = Buffer.from(mainImageArrayBuffer);
+                const mainImageResult = await new Promise<any>((resolve, reject) => {
+                    cloudinary.uploader.upload_stream(
+                        {
+                            folder: 'products',
+                            format: 'webp',
+                            width: 800,
+                            height: 800,
+                            crop: 'fill',
+                            quality: 'auto',
+                        },
+                        (error, result) => (error ? reject(error) : resolve(result))
+                    ).end(mainImageBuffer);
+                });
 
-            const mainImageResult = await new Promise<any>((resolve, reject) => {
-                cloudinary.uploader.upload_stream(
-                    {
-                        folder: 'products',
-                        format: 'webp',
-                        width: 800,
-                        height: 800,
-                        crop: 'fill',
-                        quality: 'auto',
-                    },
-                    (error, result) => (error ? reject(error) : resolve(result))
-                ).end(mainImageBuffer);
-            });
+                mainImageUrl = mainImageResult.secure_url;
 
-            mainImageUrl = mainImageResult.secure_url;
-
-            // Delete old main image from Cloudinary if it exists
-            if (existingProduct.mainImage) {
-                const publicId = existingProduct.mainImage.split('/').pop()?.split('.')[0];
-                if (publicId) {
-                    await cloudinary.uploader.destroy(`products/${publicId}`);
+                // Delete old image if exists
+                if (existingProduct.mainImage && existingProduct.mainImage !== existingMainImage) {
+                    const publicId = existingProduct.mainImage.split('/').pop()?.split('.')[0];
+                    if (publicId) {
+                        try {
+                            await cloudinary.uploader.destroy(`products/${publicId}`);
+                        } catch (error) {
+                            console.error('Error deleting old main image:', error);
+                        }
+                    }
                 }
+            } catch (error: any) {
+                return Response.json({ error: `Failed to upload main image: ${error.message}` }, { status: 400 });
             }
         }
 
         // Handle additional images
         let additionalImageUrls: AdditionalImage[] = [...existingAdditionalImages];
 
-        // Delete removed images from Cloudinary
-        const deletedImages = existingProduct.additionalImages.filter(
-            (img: AdditionalImage) => !existingAdditionalImages.some((existing: AdditionalImage) => existing.url === img.url)
-        );
-
-        for (const img of deletedImages) {
-            const publicId = img.url.split('/').pop()?.split('.')[0];
-            if (publicId) {
-                await cloudinary.uploader.destroy(`products/additional/${publicId}`);
-            }
-        }
-
         // Upload new additional images
         for (const [index, image] of additionalImages.entries()) {
-            if (!image.type.startsWith('image/')) {
-                return Response.json({ error: `Additional image ${image.name} must be an image file` }, { status: 400 });
+            try {
+                const arrayBuffer = await image.arrayBuffer();
+                const buffer = Buffer.from(arrayBuffer);
+
+                const uploadResult = await new Promise<any>((resolve, reject) => {
+                    cloudinary.uploader.upload_stream(
+                        {
+                            folder: 'products/additional',
+                            format: 'webp',
+                            width: 800,
+                            height: 800,
+                            crop: 'fill',
+                            quality: 'auto',
+                        },
+                        (error, result) => (error ? reject(error) : resolve(result))
+                    ).end(buffer);
+                });
+
+                additionalImageUrls.push({
+                    url: uploadResult.secure_url,
+                    alt: additionalAlts[index] || `Additional image for ${title}`,
+                });
+            } catch (error: any) {
+                return Response.json({ error: `Failed to upload additional image: ${error.message}` }, { status: 400 });
             }
-            if (image.size > 5 * 1024 * 1024) {
-                return Response.json({ error: `Additional image ${image.name} size must be less than 5MB` }, { status: 400 });
-            }
-
-            const arrayBuffer = await image.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-
-            const uploadResult = await new Promise<any>((resolve, reject) => {
-                cloudinary.uploader.upload_stream(
-                    {
-                        folder: 'products/additional',
-                        format: 'webp',
-                        width: 800,
-                        height: 800,
-                        crop: 'fill',
-                        quality: 'auto',
-                    },
-                    (error, result) => (error ? reject(error) : resolve(result))
-                ).end(buffer);
-            });
-
-            additionalImageUrls.push({
-                url: uploadResult.secure_url,
-                alt: additionalAlts[index] || `Additional image ${index + 1} for ${title}`,
-            });
         }
 
         // Prepare prices
-        const prices: Price[] = [{ currency: 'BDT', amount: bdtPrice }];
-        if (usdPrice) {
-            prices.push({ currency: 'USD', amount: usdPrice, exchangeRate: usdExchangeRate || undefined });
+        const prices: Price[] = [
+            { currency: 'BDT', amount: parseFloat(bdtPrice) }
+        ];
+
+        if (usdPrice && !isNaN(parseFloat(usdPrice)) && parseFloat(usdPrice) > 0) {
+            prices.push({
+                currency: 'USD',
+                amount: parseFloat(usdPrice),
+                exchangeRate: usdExchangeRate && !isNaN(parseFloat(usdExchangeRate))
+                    ? parseFloat(usdExchangeRate)
+                    : undefined
+            });
         }
-        if (eurPrice) {
-            prices.push({ currency: 'EUR', amount: eurPrice, exchangeRate: eurExchangeRate || undefined });
+
+        if (eurPrice && !isNaN(parseFloat(eurPrice)) && parseFloat(eurPrice) > 0) {
+            prices.push({
+                currency: 'EUR',
+                amount: parseFloat(eurPrice),
+                exchangeRate: eurExchangeRate && !isNaN(parseFloat(eurExchangeRate))
+                    ? parseFloat(eurExchangeRate)
+                    : undefined
+            });
         }
 
         // Generate slug
@@ -419,97 +420,76 @@ export async function PUT(request: Request, { params }: { params: Params }) {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)/g, '');
 
-        let slugCount = 0;
-        let uniqueSlug = slug;
-
-        const existingProductWithSlug = await Product.findOne({ slug, _id: { $ne: productId } });
-        if (existingProductWithSlug) {
-            slugCount++;
-            uniqueSlug = `${slug}-${slugCount}`;
+        // Check for duplicate slug
+        const existingSlugProduct = await Product.findOne({
+            slug,
+            _id: { $ne: productId }
+        });
+        if (existingSlugProduct) {
+            let counter = 1;
+            let newSlug = `${slug}-${counter}`;
+            while (await Product.findOne({ slug: newSlug, _id: { $ne: productId } })) {
+                counter++;
+                newSlug = `${slug}-${counter}`;
+            }
+            slug = newSlug;
         }
-
-        // Auto-generate schemaMarkup
-        const schemaMarkup = {
-            '@context': 'https://schema.org',
-            '@type': 'Product',
-            name: title,
-            image: mainImageUrl,
-            description: description,
-            brand: {
-                '@type': 'Brand',
-                name: brand,
-            },
-            offers: {
-                '@type': 'Offer',
-                priceCurrency: 'BDT',
-                price: bdtPrice,
-                availability: availability || 'https://schema.org/InStock',
-                url: `${process.env.NEXTAUTH_URL}/shop/${uniqueSlug}`,
-                itemOffered: {
-                    '@type': 'Product',
-                    areaServed: isGlobal ? 'Worldwide' : targetCountry,
-                },
-            },
-            aggregateRating: {
-                '@type': 'AggregateRating',
-                ratingValue: aggregateRating.ratingValue,
-                reviewCount: aggregateRating.reviewCount,
-            },
-        };
 
         // Update product
+        const updateData: any = {
+            title: title.trim(),
+            slug,
+            prices,
+            mainImage: mainImageUrl,
+            mainImageAlt: mainImageAlt.trim(),
+            additionalImages: additionalImageUrls,
+            description: description.trim(),
+            shortDescription: shortDescription?.trim() || '',
+            product_code: product_code.trim(),
+            descriptions,
+            bulletPoints: bulletPoints.split(',').map(p => p.trim()).filter(Boolean),
+            productType,
+            affiliateLink: productType === 'Affiliate' ? affiliateLink : undefined,
+            brand: brand.trim(),
+            category: category._id,
+            quantity,
+            availability,
+            metaTitle: metaTitle.trim(),
+            metaDescription: metaDescription.trim(),
+            keywords,
+            faqs,
+            specifications,
+            aggregateRating,
+            sizeRequirement,
+            sizes: sizeRequirement === 'Mandatory' ? sizes : [],
+            isGlobal,
+            targetCountry: isGlobal ? '' : targetCountry.trim(),
+            targetCity: isGlobal ? '' : targetCity.trim(),
+            updatedAt: new Date()
+        };
+
+        console.log('Updating product with data:', JSON.stringify(updateData, null, 2));
+
         const updatedProduct = await Product.findByIdAndUpdate(
             productId,
-            {
-                title,
-                slug: uniqueSlug,
-                prices,
-                mainImage: mainImageUrl,
-                mainImageAlt,
-                additionalImages: additionalImageUrls,
-                description,
-                shortDescription,
-                product_code,
-                descriptions,
-                bulletPoints,
-                productType,
-                affiliateLink,
-                owner: session.user.name,
-                brand,
-                category: category._id,
-                availability,
-                metaTitle,
-                metaDescription,
-                keywords,
-                faqs,
-                specifications,
-                aggregateRating,
-                schemaMarkup,
-                isGlobal,
-                quantity,
-                sizeRequirement,
-                sizes: sizes.length > 0 ? sizes : existingProduct.sizes || [],
-                targetCountry,
-                targetCity,
-            },
+            updateData,
             { new: true, runValidators: true }
-        );
+        ).populate('category');
 
         if (!updatedProduct) {
-            return Response.json({ error: 'Product not found' }, { status: 404 });
+            return Response.json({ error: 'Failed to update product' }, { status: 500 });
         }
 
-        console.log('Updated product:', JSON.stringify(updatedProduct, null, 2));
-        return Response.json({ message: 'Product updated', product: updatedProduct }, { status: 200 });
+        return Response.json({
+            message: 'Product updated successfully',
+            product: updatedProduct
+        }, { status: 200 });
+
     } catch (error: any) {
         console.error('Error updating product:', error);
-        if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map((err: any) => err.message);
-            return Response.json({ error: `Validation failed: ${errors.join(', ')}` }, { status: 400 });
-        }
-        if (error.message.includes('image')) {
-            return Response.json({ error: error.message }, { status: 400 });
-        }
-        return Response.json({ error: `Failed to update product: ${error.message}` }, { status: 500 });
+        return Response.json({
+            error: 'Internal server error',
+            details: error.message
+        }, { status: 500 });
     }
 }
