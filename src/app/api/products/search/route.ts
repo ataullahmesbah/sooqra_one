@@ -1,3 +1,5 @@
+
+
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose, { Types } from 'mongoose';
 import Product from '@/src/models/Products';
@@ -14,6 +16,7 @@ interface SearchQuery {
     minPrice?: string;
     maxPrice?: string;
     availability?: string;
+    brand?: string;
 }
 
 // Interface for product price
@@ -25,7 +28,7 @@ interface ProductPrice {
 
 // Interface for category
 interface ProductCategory {
-    _id: Types.ObjectId;
+    _id: string;
     name: string;
     slug: string;
 }
@@ -38,7 +41,7 @@ interface AggregateRating {
 
 // Interface for search result
 interface SearchResult {
-    _id: Types.ObjectId;
+    _id: string;
     title: string;
     slug: string;
     mainImage: string;
@@ -56,38 +59,16 @@ interface SearchResult {
     targetCity?: string;
     keywords: string[];
     createdAt: Date;
-}
-
-// Interface for MongoDB product document
-interface MongoDBProduct {
-    _id: Types.ObjectId;
-    title: string;
-    slug: string;
-    mainImage: string;
-    mainImageAlt: string;
-    prices: any[];
-    description: string;
-    shortDescription?: string;
-    category: any;
-    brand: string;
-    quantity: number;
-    availability: string;
-    aggregateRating?: any;
-    isGlobal: boolean;
-    targetCountry?: string;
-    targetCity?: string;
-    keywords?: string[];
-    createdAt: Date;
-    [key: string]: any;
+    bdtPrice: number;
 }
 
 // Function to calculate relevance score
-const calculateRelevanceScore = (product: MongoDBProduct, searchTerms: string[]): number => {
+const calculateRelevanceScore = (product: any, searchTerms: string[]): number => {
     let score = 0;
-    const title = product.title.toLowerCase();
-    const description = product.description.toLowerCase();
-    const brand = product.brand.toLowerCase();
-    const category = product.category?.name?.toLowerCase() || '';
+    const title = product.title?.toLowerCase() || '';
+    const description = product.description?.toLowerCase() || '';
+    const brand = product.brand?.toLowerCase() || '';
+    const categoryName = product.category?.name?.toLowerCase() || '';
     const keywords = product.keywords?.join(' ').toLowerCase() || '';
 
     searchTerms.forEach(term => {
@@ -97,8 +78,8 @@ const calculateRelevanceScore = (product: MongoDBProduct, searchTerms: string[])
         // Exact match in brand
         if (brand.includes(term)) score += 8;
 
-        // Exact match in category
-        if (category.includes(term)) score += 7;
+        // Exact match in category name
+        if (categoryName.includes(term)) score += 7;
 
         // Exact match in keywords
         if (keywords.includes(term)) score += 6;
@@ -107,7 +88,9 @@ const calculateRelevanceScore = (product: MongoDBProduct, searchTerms: string[])
         if (description.includes(term)) score += 5;
 
         // Partial match in title
-        if (title.includes(term.substring(0, Math.max(3, term.length - 1)))) score += 4;
+        if (term.length > 3 && title.includes(term.substring(0, Math.max(3, term.length - 1)))) {
+            score += 4;
+        }
 
         // Check for number matches (like 2025)
         if (/\d{4}/.test(term) && title.includes(term)) score += 3;
@@ -117,9 +100,12 @@ const calculateRelevanceScore = (product: MongoDBProduct, searchTerms: string[])
     if (product.availability === 'InStock') score += 2;
 
     // Boost score for newer products
-    const daysOld = (new Date().getTime() - new Date(product.createdAt).getTime()) / (1000 * 3600 * 24);
-    if (daysOld < 30) score += 3; // Products less than 30 days old
-    if (daysOld < 7) score += 2; // Products less than 7 days old
+    const daysOld = product.createdAt
+        ? (new Date().getTime() - new Date(product.createdAt).getTime()) / (1000 * 3600 * 24)
+        : 1000;
+
+    if (daysOld < 30) score += 3;
+    if (daysOld < 7) score += 2;
 
     // Boost score for high rating
     if (product.aggregateRating?.ratingValue >= 4) score += 2;
@@ -140,7 +126,7 @@ const normalizeSearchQuery = (query: string): string[] => {
     // Split into words and remove empty strings
     const words = noSpecialChars.split(/\s+/).filter(word => word.length > 0);
 
-    // Remove common stop words (can be expanded)
+    // Remove common stop words
     const stopWords = new Set(['a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by']);
     const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 1);
 
@@ -160,11 +146,14 @@ const normalizeSearchQuery = (query: string): string[] => {
             'panjabi': ['panjabi', 'punjabi', 'panjabi'],
             'collection': ['collection', 'collecton', 'colection'],
             'best': ['best', 'best', 'bests'],
-            '2025': ['2025', '2024', '2023'],
+            '2025': ['2025', '2024', '2023', '2022'],
             'shirt': ['shirt', 'shirts', 'shart', 'shert'],
-            't-shirt': ['t-shirt', 'tshirt', 'tee shirt'],
+            't-shirt': ['t-shirt', 'tshirt', 'tee shirt', 't shirt'],
             'honey': ['honey', 'honi', 'hone'],
             'nuts': ['nuts', 'nut', 'nutts'],
+            'attar': ['attar', 'atar', 'attarr'],
+            'sports': ['sports', 'sport', 'spotrs'],
+            'fashion': ['fashion', 'fashon', 'fashin'],
         };
 
         if (commonTypos[word]) {
@@ -172,70 +161,14 @@ const normalizeSearchQuery = (query: string): string[] => {
         }
     });
 
-    // Remove duplicates
+    // Remove duplicates and return
     return [...new Set(variations)];
 };
 
-// Type guard for MongoDB product
-const isMongoDBProduct = (obj: any): obj is MongoDBProduct => {
-    return obj &&
-        typeof obj === 'object' &&
-        '_id' in obj &&
-        'title' in obj &&
-        'slug' in obj;
-};
-
-// Helper function to safely convert to SearchResult
-const convertToSearchResult = (product: any): SearchResult => {
-    // Ensure _id is properly typed
-    const _id = product._id instanceof Types.ObjectId
-        ? product._id
-        : new Types.ObjectId(product._id.toString());
-
-    // Ensure category is properly typed
-    const category: ProductCategory = {
-        _id: product.category?._id instanceof Types.ObjectId
-            ? product.category._id
-            : new Types.ObjectId(product.category?._id?.toString() || new Types.ObjectId().toString()),
-        name: product.category?.name || 'Uncategorized',
-        slug: product.category?.slug || 'uncategorized'
-    };
-
-    // Ensure prices are properly typed
-    const prices: ProductPrice[] = Array.isArray(product.prices)
-        ? product.prices.map((price: any) => ({
-            currency: price.currency || 'BDT',
-            amount: typeof price.amount === 'number' ? price.amount : 0,
-            exchangeRate: typeof price.exchangeRate === 'number' ? price.exchangeRate : undefined
-        }))
-        : [];
-
-    // Ensure aggregateRating is properly typed
-    const aggregateRating: AggregateRating = {
-        ratingValue: product.aggregateRating?.ratingValue || 0,
-        reviewCount: product.aggregateRating?.reviewCount || 0
-    };
-
-    return {
-        _id,
-        title: product.title || '',
-        slug: product.slug || '',
-        mainImage: product.mainImage || '',
-        mainImageAlt: product.mainImageAlt || '',
-        prices,
-        description: product.description || '',
-        shortDescription: product.shortDescription || undefined,
-        category,
-        brand: product.brand || '',
-        quantity: typeof product.quantity === 'number' ? product.quantity : 0,
-        availability: product.availability || 'InStock',
-        aggregateRating,
-        isGlobal: Boolean(product.isGlobal),
-        targetCountry: product.targetCountry || undefined,
-        targetCity: product.targetCity || undefined,
-        keywords: Array.isArray(product.keywords) ? product.keywords : [],
-        createdAt: product.createdAt ? new Date(product.createdAt) : new Date()
-    };
+// Helper function to get BDT price
+const getBDTPrice = (prices: any[]): number => {
+    const bdtPrice = prices?.find((p: any) => p.currency === 'BDT');
+    return bdtPrice?.amount || 0;
 };
 
 export async function GET(request: NextRequest) {
@@ -252,6 +185,7 @@ export async function GET(request: NextRequest) {
         const minPrice = searchParams.get('minPrice');
         const maxPrice = searchParams.get('maxPrice');
         const availability = searchParams.get('availability');
+        const brand = searchParams.get('brand');
 
         console.log('Search query:', query);
 
@@ -259,8 +193,8 @@ export async function GET(request: NextRequest) {
         const searchTerms = normalizeSearchQuery(query);
         console.log('Normalized search terms:', searchTerms);
 
-        // If no search terms, return empty
-        if (!query.trim() && !category) {
+        // If no search terms and no filters, return empty
+        if (!query.trim() && !category && !brand && !minPrice && !maxPrice) {
             return NextResponse.json({
                 success: true,
                 data: [],
@@ -271,52 +205,48 @@ export async function GET(request: NextRequest) {
                     totalResults: 0,
                 },
                 suggestions: [],
+                searchTerms: [],
             });
         }
 
         // Build query conditions
         const conditions: any[] = [];
 
-        // Text search conditions
+        // Text search conditions - Search in multiple fields
         if (searchTerms.length > 0) {
             const textConditions: any[] = [];
 
             searchTerms.forEach(term => {
                 const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
+                // Search in product fields
                 textConditions.push(
                     { title: { $regex: regex } },
                     { description: { $regex: regex } },
                     { shortDescription: { $regex: regex } },
                     { brand: { $regex: regex } },
-                    { keywords: { $in: [regex] } },
                     { product_code: { $regex: regex } }
                 );
 
-                // Search in size names
-                textConditions.push({ 'sizes.name': { $regex: regex } });
+                // Search in keywords array
+                textConditions.push({ keywords: { $in: [regex] } });
 
-                // Search in specifications
-                textConditions.push(
-                    { 'specifications.name': { $regex: regex } },
-                    { 'specifications.value': { $regex: regex } }
-                );
-
-                // Search in FAQs
-                textConditions.push(
-                    { 'faqs.question': { $regex: regex } },
-                    { 'faqs.answer': { $regex: regex } }
-                );
+                // Search in category name via population
+                textConditions.push({ 'category.name': { $regex: regex } });
             });
 
-            conditions.push({ $or: textConditions });
+            if (textConditions.length > 0) {
+                conditions.push({ $or: textConditions });
+            }
         }
 
         // Category filter
         if (category) {
+            let categoryId;
+
             // Check if category is ObjectId
             if (mongoose.Types.ObjectId.isValid(category)) {
-                conditions.push({ category: new mongoose.Types.ObjectId(category) });
+                categoryId = new mongoose.Types.ObjectId(category);
             } else {
                 // Find category by slug or name
                 const categoryDoc = await Category.findOne({
@@ -327,29 +257,48 @@ export async function GET(request: NextRequest) {
                 });
 
                 if (categoryDoc) {
-                    conditions.push({ category: categoryDoc._id });
+                    categoryId = categoryDoc._id;
+                } else {
+                    return NextResponse.json({
+                        success: false,
+                        error: 'Category not found',
+                        data: [],
+                    }, { status: 404 });
                 }
             }
+
+            conditions.push({ category: categoryId });
+        }
+
+        // Brand filter
+        if (brand) {
+            conditions.push({ brand: { $regex: new RegExp(brand, 'i') } });
         }
 
         // Price filter
         if (minPrice || maxPrice) {
-            const priceCondition: any = {};
+            const priceCondition: any = {
+                'prices.currency': 'BDT'
+            };
 
             if (minPrice) {
-                priceCondition['prices.amount'] = { $gte: parseFloat(minPrice) };
-            }
-
-            if (maxPrice) {
-                if (priceCondition['prices.amount']) {
-                    priceCondition['prices.amount'].$lte = parseFloat(maxPrice);
-                } else {
-                    priceCondition['prices.amount'] = { $lte: parseFloat(maxPrice) };
+                const min = parseFloat(minPrice);
+                if (!isNaN(min)) {
+                    priceCondition['prices.amount'] = { $gte: min };
                 }
             }
 
-            // Filter only BDT prices for now
-            priceCondition['prices.currency'] = 'BDT';
+            if (maxPrice) {
+                const max = parseFloat(maxPrice);
+                if (!isNaN(max)) {
+                    if (priceCondition['prices.amount']) {
+                        priceCondition['prices.amount'].$lte = max;
+                    } else {
+                        priceCondition['prices.amount'] = { $lte: max };
+                    }
+                }
+            }
+
             conditions.push({ prices: { $elemMatch: priceCondition } });
         }
 
@@ -361,6 +310,8 @@ export async function GET(request: NextRequest) {
         // Build final query
         const mongoQuery = conditions.length > 0 ? { $and: conditions } : {};
 
+        console.log('MongoDB Query:', JSON.stringify(mongoQuery, null, 2));
+
         // Execute query with pagination
         const skip = (page - 1) * limit;
 
@@ -368,53 +319,67 @@ export async function GET(request: NextRequest) {
             .populate('category', 'name slug')
             .skip(skip)
             .limit(limit)
-            .lean<MongoDBProduct[]>();
+            .lean();
 
         // Calculate total count for pagination
         const totalResults = await Product.countDocuments(mongoQuery);
 
-        // Calculate relevance scores and sort
-        let productsWithScores = products.map(product => ({
-            ...product,
-            relevanceScore: calculateRelevanceScore(product, searchTerms)
+        // Format products and add BDT price
+        let formattedProducts: SearchResult[] = products.map((product: any) => ({
+            _id: product._id.toString(),
+            title: product.title || '',
+            slug: product.slug || '',
+            mainImage: product.mainImage || '',
+            mainImageAlt: product.mainImageAlt || '',
+            prices: product.prices || [],
+            description: product.description || '',
+            shortDescription: product.shortDescription || undefined,
+            category: product.category ? {
+                _id: product.category._id.toString(),
+                name: product.category.name || 'Uncategorized',
+                slug: product.category.slug || 'uncategorized'
+            } : {
+                _id: '',
+                name: 'Uncategorized',
+                slug: 'uncategorized'
+            },
+            brand: product.brand || '',
+            quantity: product.quantity || 0,
+            availability: product.availability || 'InStock',
+            aggregateRating: {
+                ratingValue: product.aggregateRating?.ratingValue || 0,
+                reviewCount: product.aggregateRating?.reviewCount || 0
+            },
+            isGlobal: product.isGlobal || false,
+            targetCountry: product.targetCountry || undefined,
+            targetCity: product.targetCity || undefined,
+            keywords: product.keywords || [],
+            createdAt: product.createdAt ? new Date(product.createdAt) : new Date(),
+            bdtPrice: getBDTPrice(product.prices)
         }));
 
-        // Filter out products with zero relevance score if searching by text
-        if (searchTerms.length > 0) {
-            productsWithScores = productsWithScores.filter(product => product.relevanceScore > 0);
-        }
-
-        // Sort based on selected option
-        let sortedProducts = [...productsWithScores];
-
+        // Calculate relevance scores and sort
         if (sort === 'relevance' && searchTerms.length > 0) {
-            sortedProducts.sort((a, b) => b.relevanceScore - a.relevanceScore);
+            formattedProducts = formattedProducts
+                .map(product => ({
+                    ...product,
+                    relevanceScore: calculateRelevanceScore(product, searchTerms)
+                }))
+                .filter(product => product.relevanceScore > 0)
+                .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
         } else if (sort === 'price_asc') {
-            sortedProducts.sort((a, b) => {
-                const priceA = a.prices.find((p: any) => p.currency === 'BDT')?.amount || 0;
-                const priceB = b.prices.find((p: any) => p.currency === 'BDT')?.amount || 0;
-                return priceA - priceB;
-            });
+            formattedProducts.sort((a, b) => a.bdtPrice - b.bdtPrice);
         } else if (sort === 'price_desc') {
-            sortedProducts.sort((a, b) => {
-                const priceA = a.prices.find((p: any) => p.currency === 'BDT')?.amount || 0;
-                const priceB = b.prices.find((p: any) => p.currency === 'BDT')?.amount || 0;
-                return priceB - priceA;
-            });
+            formattedProducts.sort((a, b) => b.bdtPrice - a.bdtPrice);
         } else if (sort === 'newest') {
-            sortedProducts.sort((a, b) =>
+            formattedProducts.sort((a, b) =>
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
         } else if (sort === 'rating') {
-            sortedProducts.sort((a, b) => {
-                const ratingA = a.aggregateRating?.ratingValue || 0;
-                const ratingB = b.aggregateRating?.ratingValue || 0;
-                return ratingB - ratingA;
-            });
+            formattedProducts.sort((a, b) =>
+                (b.aggregateRating.ratingValue || 0) - (a.aggregateRating.ratingValue || 0)
+            );
         }
-
-        // Format response using the helper function
-        const formattedProducts: SearchResult[] = sortedProducts.map(convertToSearchResult);
 
         // Generate search suggestions
         const suggestions = await generateSuggestions(query, formattedProducts);
@@ -446,6 +411,7 @@ export async function GET(request: NextRequest) {
                 totalResults: 0,
             },
             suggestions: [],
+            searchTerms: [],
         }, { status: 500 });
     }
 }
@@ -483,11 +449,14 @@ async function generateSuggestions(query: string, products: SearchResult[]): Pro
 
     // Generate related search terms
     const commonRelated: Record<string, string[]> = {
-        'panjabi': ['Punjabi Suit', 'Salwar Kameez', 'Traditional Dress', 'Ethnic Wear'],
+        'panjabi': ['Punjabi Dress', 'Salwar Kameez', 'Traditional Wear', 'Ethnic Dress'],
         'shirt': ['T-Shirt', 'Formal Shirt', 'Casual Shirt', 'Polo Shirt'],
-        '2025': ['2024 Collection', 'Latest Fashion', 'New Arrivals'],
-        'honeynuts': ['Dry Fruits', 'Nuts', 'Healthy Snacks', 'Organic Food'],
+        '2025': ['2024 Collection', 'Latest Fashion', 'New Arrivals', 'Trending Now'],
+        'honey': ['Honey Products', 'Natural Honey', 'Organic Honey', 'Pure Honey'],
+        'nuts': ['Dry Fruits', 'Mixed Nuts', 'Almonds', 'Cashews'],
         'sports': ['Sports Wear', 'Gym Clothes', 'Athletic Wear', 'Fitness Gear'],
+        'attar': ['Perfume', 'Fragrance', 'Scent', 'Aroma'],
+        'best': ['Top Rated', 'Popular', 'Recommended', 'Best Selling'],
     };
 
     Object.entries(commonRelated).forEach(([key, relatedTerms]) => {
@@ -496,5 +465,5 @@ async function generateSuggestions(query: string, products: SearchResult[]): Pro
         }
     });
 
-    return Array.from(suggestions).slice(0, 10); // Return top 10 suggestions
+    return Array.from(suggestions).slice(0, 8);
 }

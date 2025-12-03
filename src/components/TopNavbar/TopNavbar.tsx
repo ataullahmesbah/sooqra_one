@@ -5,9 +5,30 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaShoppingCart, FaSearch, FaUser, FaBars, FaTimes, FaStore } from 'react-icons/fa';
+import {
+    FaShoppingCart,
+    FaSearch,
+    FaUser,
+    FaBars,
+    FaTimes,
+    FaStore,
+    FaSignOutAlt,
+    FaCaretDown,
+    FaHome,
+    FaShoppingBag,
+    FaTags,
+    FaFire,
+    FaInfoCircle,
+    FaPhone,
+    FaTachometerAlt,
+    FaUserShield,
+    FaUserCheck,
+    FaBox,
+    FaHeart,
+    FaCog
+} from 'react-icons/fa';
+import { signOut, useSession } from 'next-auth/react';
 import CartSlider from '../Share/Shop/CartSlider/CartSlider';
-
 
 // Interface definitions
 interface SearchResult {
@@ -18,8 +39,12 @@ interface SearchResult {
     mainImageAlt: string;
     bdtPrice: number;
     category: {
+        _id: string;
         name: string;
+        slug: string;
     };
+    brand: string;
+    availability: string;
 }
 
 interface ConversionRates {
@@ -29,7 +54,14 @@ interface ConversionRates {
     [key: string]: number;
 }
 
+interface Category {
+    _id: string;
+    name: string;
+    slug: string;
+}
+
 export default function TopNavbar() {
+    const { data: session, status } = useSession();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -37,6 +69,8 @@ export default function TopNavbar() {
     const [isSearching, setIsSearching] = useState(false);
     const [cartCount, setCartCount] = useState(0);
     const [isCartOpen, setIsCartOpen] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [conversionRates] = useState<ConversionRates>({
         USD: 0.0091,
         EUR: 0.0084,
@@ -44,7 +78,25 @@ export default function TopNavbar() {
     });
 
     const searchRef = useRef<HTMLDivElement>(null);
+    const userMenuRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
+
+    // Fetch categories on component mount
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch('/api/products?type=categories');
+                if (response.ok) {
+                    const data = await response.json();
+                    setCategories(data);
+                }
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     // Update cart count from localStorage
     useEffect(() => {
@@ -64,11 +116,14 @@ export default function TopNavbar() {
         };
     }, []);
 
-    // Close search results when clicking outside
+    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setShowSearchResults(false);
+            }
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+                setShowUserMenu(false);
             }
         };
 
@@ -76,7 +131,7 @@ export default function TopNavbar() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Debounced search function
+    // Enhanced search function
     const searchProducts = useCallback(async (query: string) => {
         if (!query.trim()) {
             setSearchResults([]);
@@ -86,11 +141,14 @@ export default function TopNavbar() {
 
         setIsSearching(true);
         try {
-            const response = await fetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=8`);
+            const response = await fetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=6`);
+
             if (response.ok) {
                 const data = await response.json();
-                setSearchResults(data);
-                setShowSearchResults(true);
+                if (data.success) {
+                    setSearchResults(data.data);
+                    setShowSearchResults(true);
+                }
             }
         } catch (error) {
             console.error('Search error:', error);
@@ -109,7 +167,7 @@ export default function TopNavbar() {
         return () => clearTimeout(timer);
     }, [searchQuery, searchProducts]);
 
-    // handleSearchSubmit function update করুন:
+    // Handle search submit
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (searchQuery.trim()) {
@@ -119,10 +177,15 @@ export default function TopNavbar() {
         }
     };
 
-
-
     const handleResultClick = (slug: string) => {
         router.push(`/shop/${slug}`);
+        setSearchQuery('');
+        setShowSearchResults(false);
+        setIsMobileMenuOpen(false);
+    };
+
+    const handleCategoryClick = (categorySlug: string) => {
+        router.push(`/categories/${categorySlug}`);
         setSearchQuery('');
         setShowSearchResults(false);
         setIsMobileMenuOpen(false);
@@ -132,40 +195,103 @@ export default function TopNavbar() {
         setIsMobileMenuOpen(!isMobileMenuOpen);
     };
 
+    const toggleUserMenu = () => {
+        setShowUserMenu(!showUserMenu);
+    };
+
+    const handleSignOut = async () => {
+        await signOut({ redirect: false });
+        setShowUserMenu(false);
+        router.push('/');
+        router.refresh();
+    };
+
+    // Get user display name (first name only)
+    const getUserDisplayName = () => {
+        if (!session?.user) return '';
+
+        if (session.user.name) {
+            const names = session.user.name.split(' ');
+            return names[0];
+        }
+
+        return session.user.email?.split('@')[0] || 'User';
+    };
+
+    // Get user role badge color
+    const getRoleBadgeColor = (role: string) => {
+        switch (role) {
+            case 'admin': return 'bg-red-600 text-white';
+            case 'moderator': return 'bg-blue-600 text-white';
+            case 'user': return 'bg-gray-600 text-white';
+            default: return 'bg-gray-600 text-white';
+        }
+    };
+
     // Navigation links
     const navLinks = [
-        { name: 'Home', href: '/' },
-        { name: 'Shop', href: '/shop' },
-        { name: 'Categories', href: '/categories' },
-        { name: 'Deals', href: '/deals' },
-        { name: 'About', href: '/about' },
-        { name: 'Contact', href: '/contact' },
+        { name: 'Home', href: '/', icon: <FaHome /> },
+        { name: 'Shop', href: '/shop', icon: <FaShoppingBag /> },
+        { name: 'Categories', href: '/categories', icon: <FaTags /> },
+        { name: 'Deals', href: '/deals', icon: <FaFire /> },
+        { name: 'About', href: '/about', icon: <FaInfoCircle /> },
+        { name: 'Contact', href: '/contact', icon: <FaPhone /> },
+    ];
+
+    // Dashboard links based on user role
+    const getDashboardLinks = () => {
+        if (!session?.user?.role) return [];
+
+        const links = [];
+
+        if (session.user.role === 'admin') {
+            links.push(
+                { name: 'Admin Dashboard', href: '/admin-dashboard', icon: <FaTachometerAlt /> },
+                { name: 'Manage Products', href: '/admin-dashboard/shop/all-products', icon: <FaBox /> },
+                { name: 'Manage Users', href: '/admin-dashboard/users', icon: <FaUserShield /> }
+            );
+        } else if (session.user.role === 'moderator') {
+            links.push(
+                { name: 'Moderator Panel', href: '/moderator', icon: <FaTachometerAlt /> },
+                { name: 'Manage Content', href: '/moderator/content', icon: <FaBox /> }
+            );
+        }
+
+        return links;
+    };
+
+    // User profile links
+    const userProfileLinks = [
+        { name: 'My Profile', href: '/account', icon: <FaUser /> },
+        { name: 'My Orders', href: '/account/orders', icon: <FaShoppingBag /> },
+        { name: 'Wishlist', href: '/account/wishlist', icon: <FaHeart /> },
+        { name: 'Settings', href: '/account/settings', icon: <FaCog /> },
     ];
 
     return (
         <>
-            {/* Main Navbar */}
-            <nav className="bg-gradient-to-r from-gray-900 to-gray-800 shadow-lg sticky top-0 z-50">
+            {/* Main Navbar - bg-gray-100 background */}
+            <nav className="bg-gradient-to-r from-gray-100 to-gray-50 shadow-sm border-b border-gray-200 sticky top-0 z-50">
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo and Brand Name - Left */}
                         <div className="flex items-center space-x-3">
                             <Link href="/" className="flex items-center space-x-3 group">
-                                {/* E-commerce Icon */}
+                                {/* Store Icon */}
                                 <div className="relative">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-500 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300 shadow-lg">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shadow-md">
                                         <FaStore className="text-white text-xl" />
                                     </div>
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full animate-pulse"></div>
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-gray-600 to-gray-700 rounded-full animate-pulse"></div>
                                 </div>
 
-                                {/* Brand Name with Stylish Font */}
+                                {/* Brand Name */}
                                 <div className="flex flex-col">
-                                    <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent font-['Poppins'] tracking-tight">
+                                    <span className="text-2xl font-extrabold text-gray-900 font-['Poppins'] tracking-tight">
                                         SOOQRA ONE
                                     </span>
-                                    <span className="text-[10px] text-gray-400 font-medium tracking-wider uppercase mt-[-4px]">
-                                        Premium Marketplace
+                                    <span className="text-[10px] text-gray-600 font-medium tracking-wider uppercase mt-[-4px]">
+                                        Premium E-Commerce
                                     </span>
                                 </div>
                             </Link>
@@ -180,15 +306,15 @@ export default function TopNavbar() {
                                             type="text"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            placeholder="Search for products like attar 2025, honeynuts, sports shirt..."
-                                            className="w-full px-4 pl-12 py-3 bg-gray-800 border border-gray-700 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                                            placeholder="Search products, brands, categories..."
+                                            className="w-full px-4 pl-12 py-3 bg-white border-2 border-gray-300 rounded-full text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800 transition-all duration-300 shadow-sm"
                                         />
-                                        <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                        <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600">
                                             <FaSearch />
                                         </div>
                                         <button
                                             type="submit"
-                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-purple-600 to-blue-500 text-white px-4 py-1.5 rounded-full text-sm font-medium hover:from-purple-700 hover:to-blue-600 transition-all duration-300"
+                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-gray-800 to-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:from-gray-900 hover:to-black transition-all duration-300 shadow-md hover:shadow-lg"
                                         >
                                             Search
                                         </button>
@@ -202,36 +328,46 @@ export default function TopNavbar() {
                                             initial={{ opacity: 0, y: -10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
-                                            className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden z-50"
+                                            className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50 max-h-[400px] overflow-y-auto"
                                         >
                                             {isSearching ? (
                                                 <div className="p-4 text-center">
-                                                    <div className="inline-block w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                                                    <p className="text-gray-400 mt-2 text-sm">Searching...</p>
+                                                    <div className="inline-block w-6 h-6 border-2 border-gray-800 border-t-transparent rounded-full animate-spin"></div>
+                                                    <p className="text-gray-600 mt-2 text-sm font-medium">Searching...</p>
                                                 </div>
                                             ) : searchResults.length > 0 ? (
                                                 <>
-                                                    <div className="max-h-96 overflow-y-auto">
+                                                    <div className="divide-y divide-gray-100">
                                                         {searchResults.map((product) => (
                                                             <div
                                                                 key={product._id}
                                                                 onClick={() => handleResultClick(product.slug)}
-                                                                className="flex items-center p-3 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700 last:border-b-0"
+                                                                className="flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors"
                                                             >
-                                                                <div className="w-12 h-12 relative flex-shrink-0 mr-3">
+                                                                <div className="w-12 h-12 relative flex-shrink-0 mr-3 rounded-md overflow-hidden border border-gray-200">
                                                                     <Image
                                                                         src={product.mainImage}
                                                                         alt={product.mainImageAlt}
                                                                         width={48}
                                                                         height={48}
-                                                                        className="object-cover rounded-md"
+                                                                        className="object-cover"
                                                                     />
+                                                                    {product.availability !== 'InStock' && (
+                                                                        <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+                                                                            <span className="text-[10px] font-bold text-red-600 bg-white/90 px-1 rounded">OUT</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
-                                                                    <p className="text-white text-sm font-medium truncate">{product.title}</p>
+                                                                    <p className="text-gray-900 text-sm font-semibold truncate">{product.title}</p>
                                                                     <div className="flex items-center justify-between mt-1">
-                                                                        <span className="text-xs text-gray-400">{product.category.name}</span>
-                                                                        <span className="text-sm font-bold text-purple-300">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                                                {product.category.name}
+                                                                            </span>
+                                                                            <span className="text-xs text-gray-500">{product.brand}</span>
+                                                                        </div>
+                                                                        <span className="text-sm font-bold text-gray-900">
                                                                             ৳{product.bdtPrice.toLocaleString()}
                                                                         </span>
                                                                     </div>
@@ -239,23 +375,28 @@ export default function TopNavbar() {
                                                             </div>
                                                         ))}
                                                     </div>
-                                                    <div className="p-3 border-t border-gray-700 bg-gray-900">
-                           // Search results dropdown এ "View all results" button 
+                                                    <div className="p-3 border-t border-gray-200 bg-gray-50">
                                                         <button
                                                             onClick={() => {
                                                                 router.push(`/shop/search?q=${encodeURIComponent(searchQuery)}`);
                                                                 setShowSearchResults(false);
                                                             }}
-                                                            className="w-full text-center text-purple-400 hover:text-purple-300 text-sm font-medium py-2"
+                                                            className="w-full text-center text-gray-800 hover:text-gray-900 text-sm font-semibold py-2 flex items-center justify-center gap-2"
                                                         >
-                                                            View all results →
+                                                            View all results
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                            </svg>
                                                         </button>
                                                     </div>
                                                 </>
                                             ) : searchQuery.trim() ? (
                                                 <div className="p-4 text-center">
-                                                    <p className="text-gray-400">No products found</p>
-                                                    <p className="text-gray-500 text-sm mt-1">Try different keywords</p>
+                                                    <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                                                        <FaSearch className="text-gray-500" />
+                                                    </div>
+                                                    <p className="text-gray-800 font-medium mb-1">No results found</p>
+                                                    <p className="text-gray-600 text-sm">Try different keywords or check spelling</p>
                                                 </div>
                                             ) : null}
                                         </motion.div>
@@ -266,23 +407,128 @@ export default function TopNavbar() {
 
                         {/* Right Side Actions */}
                         <div className="flex items-center space-x-6">
-                            {/* Sign In / Account (Desktop) */}
-                            <div className="hidden lg:block">
-                                <Link
-                                    href="/signin"
-                                    className="flex items-center space-x-2 text-white hover:text-purple-300 transition-colors group"
-                                >
+                            {/* User Menu (Desktop) */}
+                            <div className="hidden lg:block relative" ref={userMenuRef}>
+                                {session?.user ? (
                                     <div className="relative">
-                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center group-hover:from-purple-900 group-hover:to-purple-800 transition-all duration-300">
-                                            <FaUser className="text-lg" />
+                                        <button
+                                            onClick={toggleUserMenu}
+                                            className="flex items-center space-x-2 text-gray-800 hover:text-gray-900 transition-colors group"
+                                        >
+                                            <div className="relative">
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-gray-300 flex items-center justify-center group-hover:from-gray-300 group-hover:to-gray-400 group-hover:border-gray-400 transition-all duration-300 shadow-sm">
+                                                    <FaUser className="text-lg text-gray-700" />
+                                                </div>
+                                                <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${getRoleBadgeColor(session.user.role)} rounded-full border-2 border-white text-[10px] font-bold flex items-center justify-center`}>
+                                                    {session.user.role.charAt(0).toUpperCase()}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-start">
+                                                <span className="text-sm font-semibold text-gray-900">{getUserDisplayName()}</span>
+                                                <span className="text-xs text-gray-600 capitalize">{session.user.role}</span>
+                                            </div>
+                                            <FaCaretDown className={`text-gray-600 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {/* User Dropdown Menu */}
+                                        <AnimatePresence>
+                                            {showUserMenu && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden"
+                                                >
+                                                    {/* User Info */}
+                                                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                                                        <div className="flex items-center space-x-3">
+                                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                                                                <FaUser className="text-xl text-gray-700" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-semibold text-gray-900 truncate">{session.user.name}</p>
+                                                                <p className="text-xs text-gray-600 truncate">{session.user.email}</p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className={`text-xs ${getRoleBadgeColor(session.user.role)} px-2 py-0.5 rounded-full`}>
+                                                                        {session.user.role}
+                                                                    </span>
+                                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${session.user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                                        }`}>
+                                                                        {session.user.isActive ? 'Active' : 'Inactive'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Dashboard Links (Admin/Moderator only) */}
+                                                    {getDashboardLinks().length > 0 && (
+                                                        <div className="py-2 border-b border-gray-100">
+                                                            <h4 className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                                Dashboard
+                                                            </h4>
+                                                            {getDashboardLinks().map((link) => (
+                                                                <Link
+                                                                    key={link.name}
+                                                                    href={link.href}
+                                                                    onClick={() => setShowUserMenu(false)}
+                                                                    className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                                                >
+                                                                    <span className="text-gray-600">{link.icon}</span>
+                                                                    <span>{link.name}</span>
+                                                                </Link>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Profile Links */}
+                                                    <div className="py-2">
+                                                        <h4 className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                            My Account
+                                                        </h4>
+                                                        {userProfileLinks.map((link) => (
+                                                            <Link
+                                                                key={link.name}
+                                                                href={link.href}
+                                                                onClick={() => setShowUserMenu(false)}
+                                                                className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                                            >
+                                                                <span className="text-gray-600">{link.icon}</span>
+                                                                <span>{link.name}</span>
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Sign Out */}
+                                                    <div className="p-3 border-t border-gray-100 bg-gray-50">
+                                                        <button
+                                                            onClick={handleSignOut}
+                                                            className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-lg text-sm font-semibold hover:from-gray-900 hover:to-black transition-all duration-300 shadow-sm"
+                                                        >
+                                                            <FaSignOutAlt />
+                                                            <span>Sign Out</span>
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                ) : (
+                                    <Link
+                                        href="/auth/signin"
+                                        className="flex items-center space-x-2 text-gray-800 hover:text-gray-900 transition-colors group"
+                                    >
+                                        <div className="relative">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-gray-300 flex items-center justify-center group-hover:from-gray-300 group-hover:to-gray-400 group-hover:border-gray-400 transition-all duration-300 shadow-sm">
+                                                <FaUser className="text-lg text-gray-700" />
+                                            </div>
                                         </div>
-                                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900"></div>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-medium">Sign In</span>
-                                        <span className="text-xs text-gray-400">Your Account</span>
-                                    </div>
-                                </Link>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-semibold">Sign In</span>
+                                            <span className="text-xs text-gray-600">Your Account</span>
+                                        </div>
+                                    </Link>
+                                )}
                             </div>
 
                             {/* Cart Icon (Desktop) */}
@@ -292,11 +538,11 @@ export default function TopNavbar() {
                                     className="relative group"
                                     aria-label="Shopping Cart"
                                 >
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-800 to-gray-700 flex items-center justify-center group-hover:from-purple-900 group-hover:to-purple-800 transition-all duration-300">
-                                        <FaShoppingCart className="text-xl" />
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-gray-300 flex items-center justify-center group-hover:from-gray-300 group-hover:to-gray-400 group-hover:border-gray-400 transition-all duration-300 shadow-sm">
+                                        <FaShoppingCart className="text-xl text-gray-700 group-hover:text-gray-900" />
                                     </div>
                                     {cartCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg animate-bounce">
+                                        <span className="absolute -top-1 -right-1 bg-gradient-to-r from-gray-800 to-gray-900 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg border-2 border-white">
                                             {cartCount > 99 ? '99+' : cartCount}
                                         </span>
                                     )}
@@ -307,31 +553,31 @@ export default function TopNavbar() {
                             <div className="lg:hidden flex items-center space-x-4">
                                 {/* Search Icon for Mobile */}
                                 <button
-                                    onClick={() => router.push('/search')}
-                                    className="text-white hover:text-purple-300"
+                                    onClick={() => router.push('/shop/search')}
+                                    className="text-gray-700 hover:text-gray-900"
                                     aria-label="Search"
                                 >
                                     <FaSearch className="text-xl" />
                                 </button>
 
                                 {/* Cart Icon for Mobile */}
-                                {cartCount > 0 && (
-                                    <button
-                                        onClick={() => setIsCartOpen(true)}
-                                        className="relative"
-                                        aria-label="Shopping Cart"
-                                    >
-                                        <FaShoppingCart className="text-2xl text-white" />
-                                        <span className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg">
+                                <button
+                                    onClick={() => setIsCartOpen(true)}
+                                    className="relative"
+                                    aria-label="Shopping Cart"
+                                >
+                                    <FaShoppingCart className="text-xl text-gray-700" />
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-2 -right-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg border border-white">
                                             {cartCount}
                                         </span>
-                                    </button>
-                                )}
+                                    )}
+                                </button>
 
                                 {/* Mobile Menu Toggle */}
                                 <button
                                     onClick={toggleMobileMenu}
-                                    className="text-white focus:outline-none"
+                                    className="text-gray-700 hover:text-gray-900 focus:outline-none"
                                     aria-label="Toggle Menu"
                                 >
                                     {isMobileMenuOpen ? (
@@ -347,7 +593,7 @@ export default function TopNavbar() {
 
                 {/* Mobile Search Bar (when menu is open) */}
                 {isMobileMenuOpen && (
-                    <div className="lg:hidden border-t border-gray-700 px-4 py-3 bg-gray-800">
+                    <div className="lg:hidden border-t border-gray-200 px-4 py-3 bg-white">
                         <div className="relative">
                             <form onSubmit={handleSearchSubmit}>
                                 <div className="relative">
@@ -356,14 +602,14 @@ export default function TopNavbar() {
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         placeholder="Search products..."
-                                        className="w-full px-4 pl-12 py-3 bg-gray-700 border border-gray-600 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        className="w-full px-4 pl-12 py-3 bg-gray-50 border-2 border-gray-300 rounded-full text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800"
                                     />
-                                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600">
                                         <FaSearch />
                                     </div>
                                     <button
                                         type="submit"
-                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-purple-600 to-blue-500 text-white px-4 py-1.5 rounded-full text-sm font-medium"
+                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-gray-800 to-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-semibold"
                                     >
                                         Go
                                     </button>
@@ -374,66 +620,139 @@ export default function TopNavbar() {
                 )}
 
                 {/* Mobile Menu */}
+                {/* Mobile Menu */}
                 <AnimatePresence>
                     {isMobileMenuOpen && (
                         <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="lg:hidden bg-gradient-to-b from-gray-800 to-gray-900 border-t border-gray-700 overflow-hidden"
+                            className="lg:hidden bg-white border-t border-gray-200 overflow-hidden"
                         >
                             <div className="container mx-auto px-4 py-4">
+                                {/* User Info for Mobile */}
+                                {session?.user ? (
+                                    <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-300">
+                                        <div className="flex items-center space-x-3 mb-4">
+                                            <div className="relative">
+                                                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                                                    <FaUser className="text-xl text-gray-700" />
+                                                </div>
+                                                <div className={`absolute -bottom-1 -right-1 w-5 h-5 ${getRoleBadgeColor(session.user.role)} rounded-full border-2 border-white text-[10px] font-bold flex items-center justify-center`}>
+                                                    {session.user.role.charAt(0).toUpperCase()}
+                                                </div>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-bold text-gray-900">{session.user.name}</p>
+                                                <p className="text-sm text-gray-600">{session.user.email}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className={`text-xs ${getRoleBadgeColor(session.user.role)} px-2 py-0.5 rounded-full`}>
+                                                        {session.user.role}
+                                                    </span>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${session.user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                        {session.user.isActive ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* ✅ এখানে আপনার Quick Dashboard Links কোড যোগ করুন */}
+                                        {/* Quick Dashboard Links */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Link
+                                                href="/account"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                                className="px-3 py-2 bg-white text-sm text-gray-700 rounded-lg border border-gray-200 hover:border-gray-300 hover:text-gray-900 transition-colors text-center font-medium"
+                                            >
+                                                My Profile
+                                            </Link>
+                                            <Link
+                                                href="/account/orders"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                                className="px-3 py-2 bg-white text-sm text-gray-700 rounded-lg border border-gray-200 hover:border-gray-300 hover:text-gray-900 transition-colors text-center font-medium"
+                                            >
+                                                My Orders
+                                            </Link>
+                                            {getDashboardLinks().slice(0, 2).map((link) => (
+                                                <Link
+                                                    key={link.name}
+                                                    href={link.href}
+                                                    onClick={() => setIsMobileMenuOpen(false)}
+                                                    className="px-3 py-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white text-sm rounded-lg hover:from-gray-900 hover:to-black transition-all duration-300 text-center font-medium"
+                                                >
+                                                    {link.name}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                        {/* ✅ কোড এখান পর্যন্ত */}
+
+                                        {/* Sign Out Button */}
+                                        <button
+                                            onClick={handleSignOut}
+                                            className="w-full mt-3 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <FaSignOutAlt />
+                                            Sign Out
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="mb-6">
+                                        <Link
+                                            href="/auth/signin"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-300 hover:border-gray-400 transition-colors"
+                                        >
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-gray-300 flex items-center justify-center">
+                                                <FaUser className="text-lg text-gray-700" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-bold text-gray-900">Sign In</p>
+                                                <p className="text-sm text-gray-600">Access your account</p>
+                                            </div>
+                                        </Link>
+                                    </div>
+                                )}
+
                                 {/* Navigation Links */}
-                                <div className="grid grid-cols-2 gap-3 mb-6">
+                                <div className="grid grid-cols-2 gap-2 mb-6">
                                     {navLinks.map((link) => (
                                         <Link
                                             key={link.name}
                                             href={link.href}
                                             onClick={() => setIsMobileMenuOpen(false)}
-                                            className="px-4 py-3 text-white hover:bg-gray-700 rounded-lg text-center transition-colors font-medium"
+                                            className="flex items-center space-x-2 px-4 py-3 bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                                         >
-                                            {link.name}
+                                            <span className="text-gray-600">{link.icon}</span>
+                                            <span className="font-medium">{link.name}</span>
                                         </Link>
                                     ))}
                                 </div>
 
-                                {/* Account Section */}
-                                <div className="mb-6">
-                                    <Link
-                                        href="/signin"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="flex items-center space-x-3 px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-                                    >
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center">
-                                            <FaUser className="text-lg text-white" />
+                                {/* Categories for Mobile */}
+                                {categories.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-gray-600 text-sm font-semibold mb-3 px-1">Categories</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {categories.slice(0, 6).map((category) => (
+                                                <button
+                                                    key={category._id}
+                                                    onClick={() => handleCategoryClick(category.slug)}
+                                                    className="px-3 py-2 bg-white text-gray-600 text-sm rounded-lg border border-gray-200 hover:border-gray-300 hover:text-gray-900 transition-colors"
+                                                >
+                                                    {category.name}
+                                                </button>
+                                            ))}
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="text-white font-medium">Sign In</p>
-                                            <p className="text-gray-400 text-sm">Access your account</p>
-                                        </div>
-                                    </Link>
-                                </div>
-
-                                {/* Quick Categories */}
-                                <div className="mb-6">
-                                    <h3 className="text-gray-400 text-sm font-medium mb-3 px-1">Popular Categories</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['Electronics', 'Fashion', 'Home & Kitchen', 'Beauty', 'Sports', 'Books'].map((cat) => (
-                                            <span
-                                                key={cat}
-                                                className="px-3 py-2 bg-gray-700 text-gray-300 text-sm rounded-full hover:bg-gray-600 cursor-pointer transition-colors"
-                                            >
-                                                {cat}
-                                            </span>
-                                        ))}
                                     </div>
-                                </div>
+                                )}
 
                                 {/* Contact Info */}
-                                <div className="pt-4 border-t border-gray-700">
-                                    <div className="text-center text-gray-400 text-sm">
-                                        <p>Need help? Call us: <span className="text-purple-400 font-medium">+880 1234 567890</span></p>
-                                        <p className="mt-1">24/7 Customer Support</p>
+                                <div className="pt-4 border-t border-gray-200">
+                                    <div className="text-center">
+                                        <p className="text-gray-800 font-medium mb-1">Need help?</p>
+                                        <p className="text-gray-900 font-bold text-lg">+880 1234 567890</p>
+                                        <p className="text-gray-500 text-xs mt-1">24/7 Customer Support</p>
                                     </div>
                                 </div>
                             </div>
@@ -448,119 +767,6 @@ export default function TopNavbar() {
                 setIsOpen={setIsCartOpen}
                 conversionRates={conversionRates}
             />
-
-            {/* Search API Route Example (create this file) */}
-            {/* 
-        // app/api/products/search/route.ts
-        export async function GET(request: Request) {
-          const { searchParams } = new URL(request.url);
-          const query = searchParams.get('q');
-          const limit = parseInt(searchParams.get('limit') || '8');
-
-          if (!query) {
-            return Response.json([], { status: 200 });
-          }
-
-          try {
-            const products = await Product.find({
-              $or: [
-                { title: { $regex: query, $options: 'i' } },
-                { description: { $regex: query, $options: 'i' } },
-                { keywords: { $regex: query, $options: 'i' } },
-                { brand: { $regex: query, $options: 'i' } },
-              ]
-            })
-            .limit(limit)
-            .populate('category', 'name')
-            .select('title slug mainImage mainImageAlt prices category')
-            .lean();
-
-            // Add bdtPrice field
-            const results = products.map(product => ({
-              ...product,
-              bdtPrice: product.prices.find((p: any) => p.currency === 'BDT')?.amount || 0
-            }));
-
-            return Response.json(results, { status: 200 });
-          } catch (error: any) {
-            return Response.json({ error: error.message }, { status: 500 });
-          }
-        }
-      */}
-
-            {/* Global Styles for Toast (add to global.css) */}
-            <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
-        
-        /* Toast Styles */
-        .custom-toast-slider {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          z-index: 9999;
-          transform: translateX(100%);
-          transition: transform 0.3s ease-in-out;
-        }
-        
-        .custom-toast-slider.show {
-          transform: translateX(0);
-        }
-        
-        .custom-toast-success {
-          background: linear-gradient(135deg, #10b981, #059669);
-        }
-        
-        .custom-toast-error {
-          background: linear-gradient(135deg, #ef4444, #dc2626);
-        }
-        
-        .custom-toast-info {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-        }
-        
-        .toast-content {
-          display: flex;
-          align-items: center;
-          padding: 12px 16px;
-          border-radius: 12px;
-          color: white;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-          min-width: 300px;
-          max-width: 400px;
-        }
-        
-        .toast-icon {
-          width: 20px;
-          height: 20px;
-          margin-right: 12px;
-          flex-shrink: 0;
-        }
-        
-        .toast-message {
-          flex: 1;
-          font-size: 14px;
-          font-weight: 500;
-        }
-        
-        .toast-close {
-          background: none;
-          border: none;
-          color: rgba(255, 255, 255, 0.8);
-          cursor: pointer;
-          padding: 4px;
-          margin-left: 12px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        }
-        
-        .toast-close:hover {
-          color: white;
-          background: rgba(255, 255, 255, 0.1);
-        }
-      `}</style>
         </>
     );
 }

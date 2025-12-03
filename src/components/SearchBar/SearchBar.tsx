@@ -186,7 +186,7 @@ function SearchContent() {
                                 <input
                                     type="text"
                                     name="search"
-                                    placeholder="Search for products like attar 2025, honeynuts, sports shirt..."
+                                    placeholder="Search Sooqra One"
                                     className="w-full px-6 py-4 text-lg bg-white border-2 border-gray-300 rounded-full focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
                                 />
                                 <button
@@ -258,7 +258,7 @@ function SearchContent() {
                                     type="text"
                                     name="search"
                                     defaultValue={query}
-                                    placeholder="Search for products..."
+                                    placeholder="Search Sooqra One"
                                     className="w-full px-6 py-3 text-white bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 />
                                 <button
