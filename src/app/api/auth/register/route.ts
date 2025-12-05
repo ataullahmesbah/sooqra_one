@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     try {
         await dbConnect();
 
-        const { name, email, password, role = 'user' } = await request.json();
+        const { name, email, password, phone = '', role = 'user' } = await request.json();
 
         // Validation
         if (!name || !email || !password) {
@@ -48,7 +48,8 @@ export async function POST(request: Request) {
             name: name.trim(),
             email: email.toLowerCase(),
             password,
-            role: role === 'admin' ? 'user' : role, // Prevent admin self-registration
+            phone: phone.trim() || null,  // <-- Ei line ta add koro!
+            role: role === 'admin' ? 'user' : role,
         });
 
         return NextResponse.json(

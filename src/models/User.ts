@@ -28,10 +28,12 @@ const userSchema = new mongoose.Schema({
         trim: true,
         match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
     },
+
     phone: {
         type: String,
-        required: false, // Optional field
+        required: false,
         trim: true,
+        default: null, // <-- Ei line ta add koro, na thakle problem hoy!
         match: [/^[0-9+\-\s()]+$/, 'Please enter a valid phone number']
     },
     password: {

@@ -139,11 +139,16 @@ export default function AccountPage() {
             const response = await fetch('/api/users/update-profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editForm)
+                // Shudhu ekta body thakbe, duplicate na!
+                body: JSON.stringify({
+                    name: editForm.name.trim(),
+                    phone: editForm.phone.trim() || null, // clean + null pathabe
+                }),
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update profile');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update profile');
             }
 
             const updatedData = await response.json();
@@ -151,18 +156,20 @@ export default function AccountPage() {
             setIsEditing(false);
             setMessage('Profile updated successfully!');
 
-            // Update session
+            // Session update (name change hole UI te reflect korbe)
             await update({
                 ...session,
                 user: {
                     ...session?.user,
-                    name: updatedData.user.name
-                }
+                    name: updatedData.user.name,
+                },
             });
 
-            setTimeout(() => setMessage(''), 3000);
+            setTimeout(() => setMessage(''), 4000);
         } catch (error: any) {
-            setError(error.message);
+            console.error('Profile update error:', error);
+            setError(error.message || 'Something went wrong');
+            setTimeout(() => setError(''), 5000);
         }
     };
 
@@ -177,30 +184,28 @@ export default function AccountPage() {
             return;
         }
 
+        setError('');
+        setMessage('');
+
         try {
             const response = await fetch('/api/users/change-password', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     oldPassword: passwordForm.oldPassword,
-                    newPassword: passwordForm.newPassword
-                })
+                    newPassword: passwordForm.newPassword,
+                }),
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const data = await response.json();
                 throw new Error(data.error || 'Failed to change password');
             }
 
             setMessage('Password changed successfully!');
-            setPasswordForm({
-                oldPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-            });
-            setError('');
-
-            setTimeout(() => setMessage(''), 3000);
+            setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+            setTimeout(() => setMessage(''), 5000);
         } catch (error: any) {
             setError(error.message);
         }

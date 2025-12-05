@@ -47,7 +47,7 @@ export default function SignUp() {
                 body: JSON.stringify({
                     name: formData.name,
                     email: formData.email,
-                    phone: formData.phone,
+                    phone: formData.phone || null,  // <-- null pathale better
                     password: formData.password,
                 }),
             });
