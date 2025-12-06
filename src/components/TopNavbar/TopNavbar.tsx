@@ -306,7 +306,7 @@ export default function TopNavbar() {
                                             type="text"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            placeholder="Search products, brands, categories..."
+                                            placeholder="Search Sooqra One"
                                             className="w-full px-4 pl-12 py-3 bg-white border-2 border-gray-300 rounded-full text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800 transition-all duration-300 shadow-sm"
                                         />
                                         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600">
@@ -601,7 +601,7 @@ export default function TopNavbar() {
                                         type="text"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="Search products..."
+                                        placeholder="Search Sooqra One"
                                         className="w-full px-4 pl-12 py-3 bg-gray-50 border-2 border-gray-300 rounded-full text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800"
                                     />
                                     <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600">
@@ -657,7 +657,7 @@ export default function TopNavbar() {
                                             </div>
                                         </div>
 
-                                        {/* ✅ এখানে আপনার Quick Dashboard Links কোড যোগ করুন */}
+                                  
                                         {/* Quick Dashboard Links */}
                                         <div className="grid grid-cols-2 gap-2">
                                             <Link
@@ -685,7 +685,7 @@ export default function TopNavbar() {
                                                 </Link>
                                             ))}
                                         </div>
-                                        {/* ✅ কোড এখান পর্যন্ত */}
+                                       
 
                                         {/* Sign Out Button */}
                                         <button

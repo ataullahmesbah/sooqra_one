@@ -93,6 +93,13 @@ const AdminDashboardLayout = ({ children }: AdminDashboardLayoutProps) => {
                 { label: 'Banner Shop', link: '/admin-dashboard/shop/shop-banner' },
             ],
         },
+        {
+            label: 'USER',
+            children: [
+                { label: 'User Control', link: '/admin-dashboard/users/users-control' },
+
+            ],
+        },
     ];
 
     // Loading state
