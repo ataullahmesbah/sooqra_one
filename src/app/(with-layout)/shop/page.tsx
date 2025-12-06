@@ -10,12 +10,14 @@ interface Product {
     title: string;
     slug: string;
     mainImage: string;
+    mainImageAlt?: string;
     prices: Array<{
         currency: string;
         amount: number;
     }>;
     quantity: number;
     createdAt: string;
+    tags?: string[];
 }
 
 interface StructuredData {
@@ -42,21 +44,26 @@ interface StructuredData {
 export async function generateMetadata() {
     const products = await getProducts();
     const productCount = products.length;
-    const description = `Browse our collection of ${productCount} high-quality products at Ataullah Mesbah's shop. Find the best deals with fast delivery and top-notch customer service.`;
+    const description = `Browse our collection of ${productCount} high-quality products at Sooqra One. Find the best deals with fast delivery and top-notch customer service.`;
 
     return {
-        title: 'Premium Shop - Ataullah Mesbah',
+        title: 'Shop - Sooqra One | Premium Products',
         description,
         openGraph: {
-            title: 'Premium Shop - Ataullah Mesbah',
+            title: 'Shop - Sooqra One | Premium Products',
             description,
             url: `${process.env.NEXTAUTH_URL}/shop`,
             type: 'website',
-            images: products[0]?.mainImage ? [{ url: products[0].mainImage, width: 400, height: 200, alt: products[0].title }] : [],
+            images: products[0]?.mainImage ? [{
+                url: products[0].mainImage,
+                width: 1200,
+                height: 630,
+                alt: products[0].title
+            }] : [],
         },
         twitter: {
             card: 'summary_large_image',
-            title: 'Premium Shop - Ataullah Mesbah',
+            title: 'Shop - Sooqra One | Premium Products',
             description,
             images: products[0]?.mainImage ? [products[0].mainImage] : [],
         },
@@ -67,10 +74,10 @@ function getStructuredData(products: Product[]): StructuredData {
     return {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: 'Premium Shop',
-        description: 'Browse our collection of high-quality products at Ataullah Mesbah.',
+        name: 'Sooqra One Shop',
+        description: 'Browse our collection of high-quality products at Sooqra One.',
         url: `${process.env.NEXTAUTH_URL}/shop`,
-        itemListElement: products.map((product, index) => ({
+        itemListElement: products.slice(0, 20).map((product, index) => ({
             '@type': 'Product',
             position: index + 1,
             name: product.title,
@@ -87,7 +94,7 @@ function getStructuredData(products: Product[]): StructuredData {
 }
 
 async function getProducts(): Promise<Product[]> {
-    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products`, {
+    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products?limit=100`, {
         next: { tags: ['products'], revalidate: 60 },
     });
     if (!res.ok) {
@@ -104,21 +111,20 @@ export default async function Shop() {
     } catch (error) {
         console.error('Error fetching products:', error);
         return (
-            <div className="min-h-screen bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto">
-                    <h1 className="text-4xl font-bold mb-8">Shop</h1>
-                    <p className="text-red-400 text-lg">Failed to load products. Please try again later.</p>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-4">Shop</h1>
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-2xl">
+                        <p className="font-medium mb-2">Failed to load products</p>
+                        <p className="text-sm">Please try again later or contact support if the problem persists.</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <main className="min-h-screen"
-            style={{
-                background: 'linear-gradient(to right, #111827, #111827 20%, #0f172a 70%, #111111 100%)',
-            }}
-        >
+        <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             {/* Shop Ads */}
             <ShopAds />
 
@@ -126,14 +132,11 @@ export default async function Shop() {
             <ShopHeroSection />
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 sm:px-6 py-12">
+            <div className="container mx-auto px-4 sm:px-6 py-8">
                 <Suspense fallback={<LoadingSkeleton />}>
                     <ShopClient products={products} structuredData={getStructuredData(products)} />
                 </Suspense>
             </div>
-
-            {/* Bottom Border */}
-            <div className="border-b border-gray-800"></div>
         </main>
     );
 }
@@ -141,14 +144,22 @@ export default async function Shop() {
 function LoadingSkeleton() {
     return (
         <div className="py-12">
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                    <div className="h-8 bg-gray-200 rounded-lg w-48 mb-2 animate-pulse"></div>
+                    <div className="h-4 bg-gray-200 rounded-lg w-32 animate-pulse"></div>
+                </div>
+                <div className="h-10 bg-gray-200 rounded-lg w-40 animate-pulse"></div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {[...Array(8)].map((_, i) => (
-                    <div key={i} className="bg-gray-800/50 rounded-xl overflow-hidden border border-gray-700">
-                        <div className="aspect-square bg-gray-700 animate-pulse"></div>
-                        <div className="p-4 space-y-3">
-                            <div className="h-5 bg-gray-700 rounded-full w-3/4 animate-pulse"></div>
-                            <div className="h-4 bg-gray-700 rounded-full w-1/2 animate-pulse"></div>
-                            <div className="h-6 bg-gray-700 rounded-full w-1/3 mt-2 animate-pulse"></div>
+                    <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                        <div className="aspect-square bg-gray-200 animate-pulse"></div>
+                        <div className="p-5 space-y-3">
+                            <div className="h-5 bg-gray-200 rounded-lg w-3/4 animate-pulse"></div>
+                            <div className="h-4 bg-gray-200 rounded-lg w-1/2 animate-pulse"></div>
+                            <div className="h-6 bg-gray-200 rounded-lg w-1/3 animate-pulse"></div>
                         </div>
                     </div>
                 ))}
