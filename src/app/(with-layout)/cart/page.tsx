@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 interface CartItem {
     _id: string;
@@ -44,12 +45,14 @@ interface ValidationResponse {
 }
 
 export default function CartPage() {
+    const { data: session, status } = useSession(); // Add this
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [conversionRates, setConversionRates] = useState<ConversionRates>({ USD: 123, EUR: 135, BDT: 1 });
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<DeleteModalItem | null>(null);
     const [availableSizesMap, setAvailableSizesMap] = useState<Record<string, string[]>>({});
+    const [showAuthModal, setShowAuthModal] = useState(false); // Add this for auth modal
     const router = useRouter();
 
     useEffect(() => {
@@ -445,6 +448,15 @@ export default function CartPage() {
                 return;
             }
 
+            // ✅ NEW AUTHENTICATION CHECK
+            if (!session) {
+                // If user is not logged in, show auth modal
+                setShowAuthModal(true);
+                setIsLoading(false);
+                return;
+            }
+
+            // If user is logged in, proceed to checkout
             router.push('/checkout');
         } catch (error) {
             console.error('Error validating cart:', error);
@@ -452,6 +464,23 @@ export default function CartPage() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+
+    // Add this function inside your CartPage component, before the return statement
+    const handleContinueWithoutRegistration = () => {
+        setShowAuthModal(false);
+        router.push('/checkout');
+    };
+
+    const handleLoginRedirect = () => {
+        setShowAuthModal(false);
+        router.push('/auth/signin?callbackUrl=/cart');
+    };
+
+    const handleSignupRedirect = () => {
+        setShowAuthModal(false);
+        router.push('/auth/signup?callbackUrl=/cart');
     };
 
     return (
@@ -672,6 +701,132 @@ export default function CartPage() {
                     </div>
                 </div>
             )}
+
+            {/* Authentication Modal */}
+            
+
+            {/* Simple Auth Modal */}
+{showAuthModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-lg w-full max-w-md md:max-w-2xl lg:max-w-3xl mx-auto shadow-xl">
+      
+      {/* Header */}
+      <div className="px-4 sm:px-6 py-4 border-b">
+        <div className="flex justify-between items-start sm:items-center">
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Proceed to Checkout</h2>
+            
+          </div>
+          <button
+            onClick={() => setShowAuthModal(false)}
+            className="text-gray-500 hover:text-gray-700 text-2xl ml-2 flex-shrink-0"
+            aria-label="Close modal"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4 sm:p-6">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+          
+          {/* Left Column - Sign In/Sign Up */}
+          <div className="lg:w-1/2">
+            <div className="border border-gray-300 rounded-lg p-4 sm:p-5 h-full">
+              <h3 className="font-bold text-gray-900 text-base sm:text-lg mb-3 sm:mb-4">Sign In / Sign Up</h3>
+              
+              <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-green-600 text-xs">✓</span>
+                  </div>
+                  <span className="text-gray-800 text-sm sm:text-base">Extra discount for members</span>
+                </div>
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-blue-600 text-xs">✓</span>
+                  </div>
+                  <span className="text-gray-800 text-sm sm:text-base">Access order history</span>
+                </div>
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-purple-600 text-xs">✓</span>
+                  </div>
+                  <span className="text-gray-800 text-sm sm:text-base">Faster checkout</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2 sm:space-y-3">
+                <button 
+                  onClick={handleSignupRedirect}
+                  className="w-full py-2.5 sm:py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-black transition-colors text-sm sm:text-base"
+                >
+                  Create Free Account
+                </button>
+                <button 
+                  onClick={handleLoginRedirect}
+                  className="w-full py-2.5 sm:py-3 border border-gray-400 text-gray-900 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
+                >
+                  Sign In to Account
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right Column - Guest Checkout */}
+          <div className="lg:w-1/2">
+            <div className="border border-gray-300 rounded-lg p-4 sm:p-5 h-full">
+              <h3 className="font-bold text-gray-900 text-base sm:text-lg mb-3 sm:mb-4">Order Without Registration</h3>
+              
+              <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
+                Complete your purchase as a guest. You can create an account later from order confirmation.
+              </p>
+              
+              <div className="mb-3 sm:mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <p className="text-yellow-800 text-xs">
+                  • Order tracking via email only<br/>
+                  • Re-enter details for future orders
+                </p>
+              </div>
+              
+              <button 
+                onClick={handleContinueWithoutRegistration}
+                className="w-full py-2.5 sm:py-3 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900 transition-colors text-sm sm:text-base"
+              >
+                Continue Checkout
+              </button>
+              
+              {/* Alternative Cancel Button for Mobile */}
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="w-full mt-3 py-2 text-gray-500 hover:text-gray-700 text-sm sm:hidden"
+              >
+                Cancel
+              </button>
+              
+              <p className="text-xs text-gray-500 text-center mt-3 sm:mt-3">
+                Secure checkout • SSL encrypted
+              </p>
+            </div>
+          </div>
+          
+        </div>
+        
+        {/* Cancel Button for Desktop/Tablet */}
+        <div className="mt-6 text-center hidden sm:block">
+          <button
+            onClick={() => setShowAuthModal(false)}
+            className="text-gray-500 hover:text-gray-700 text-sm"
+          >
+            Cancel and continue shopping
+          </button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+)}
 
             {/* Toast Styles */}
             <style jsx global>{`

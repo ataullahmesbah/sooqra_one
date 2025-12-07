@@ -1,6 +1,8 @@
 'use client';
+'use client';
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import axios from 'axios';
 import 'react-phone-input-2/lib/style.css';
@@ -84,7 +86,22 @@ interface ToastType {
     info: string;
 }
 
+interface User {
+    id?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+    isActive?: boolean;
+}
+
+interface Session {
+    user?: User;
+}
+
+
 export default function Checkout() {
+    const { data: session, status } = useSession(); // Add this
     const [isCouponOpen, setIsCouponOpen] = useState<boolean>(false);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({
         email: '',
@@ -115,7 +132,7 @@ export default function Checkout() {
     const [districtsThanas, setDistrictsThanas] = useState<DistrictsThanas>({});
     const router = useRouter();
     const [shippingCharges, setShippingCharges] = useState<ShippingCharges>({ 'Dhaka-Chattogram': 0, 'Others': 0 });
-    const [userId] = useState<string>('mock-user-id');
+    const [userId, setUserId] = useState<string>(''); // Change this
     const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
     const [validatingCart, setValidatingCart] = useState<boolean>(false);
 
@@ -124,6 +141,25 @@ export default function Checkout() {
     const [transactionId, setTransactionId] = useState<string>('');
     const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
     const [orderData, setOrderData] = useState<OrderData | null>(null);
+
+    // Add this useEffect to get user info if logged in
+    useEffect(() => {
+        if (status === 'authenticated' && session?.user) {
+            // If user is logged in, pre-fill their info
+            setCustomerInfo(prev => ({
+                ...prev,
+                name: session.user?.name || '',
+                email: session.user?.email || '',
+                phone: (session.user as any)?.phone || '',
+            }));
+
+            // Set userId for logged in user
+            setUserId((session.user as any)?.id || '');
+        } else {
+            // If guest, reset userId
+            setUserId('');
+        }
+    }, [session, status]);
 
     const toggleCoupon = (): void => {
         setIsCouponOpen(!isCouponOpen);
@@ -513,7 +549,6 @@ export default function Checkout() {
         return 'ORDER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
     };
 
-    // Checkout
     const handleCheckout = async (e: FormEvent): Promise<void> => {
         e.preventDefault();
         setError('');
@@ -583,7 +618,7 @@ export default function Checkout() {
             return;
         }
 
-        const orderData: OrderData = {
+        const orderData = {
             orderId: generateOrderId(),
             products: cart.map((item) => ({
                 productId: item._id,
@@ -610,7 +645,10 @@ export default function Checkout() {
                 (Number.isFinite(shippingCharge) ? shippingCharge : 0) : 0,
             couponCode: appliedCoupon ? appliedCoupon.code : null,
             acceptedTerms: true,
-            termsAcceptedAt: new Date().toISOString()
+            termsAcceptedAt: new Date().toISOString(),
+            userId: userId || null, // Add this
+            userEmail: customerInfo.email, // Add this
+            userPhone: getStorablePhoneNumber(customerInfo.phone) // Add this
         };
 
         setOrderData(orderData);
@@ -619,12 +657,21 @@ export default function Checkout() {
             orderId: orderData.orderId,
             productCount: orderData.products.length,
             paymentMethod: orderData.paymentMethod,
-            total: orderData.total
+            total: orderData.total,
+            userId: userId || 'guest' // Add this
         });
 
         try {
             if (paymentMethod === 'cod' || paymentMethod === 'bkash') {
-                const orderResponse = await axios.post('/api/products/orders', orderData);
+                // Add userId to order data
+                const orderDataWithUser = {
+                    ...orderData,
+                    userId: userId || null, // Include userId if logged in
+                    userEmail: customerInfo.email,
+                    userPhone: getStorablePhoneNumber(customerInfo.phone)
+                };
+
+                const orderResponse = await axios.post('/api/products/orders', orderDataWithUser);
 
                 console.log('Order API Response:', orderResponse.data);
 
@@ -638,7 +685,7 @@ export default function Checkout() {
                     if (appliedCoupon) {
                         try {
                             await axios.post('/api/products/coupons/record-usage', {
-                                userId,
+                                userId: userId || null, // Use actual userId
                                 couponCode: appliedCoupon.code,
                                 email: customerInfo.email,
                                 phone: customerInfo.phone,

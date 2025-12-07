@@ -1,4 +1,4 @@
-// src/app/(with-layout)/my-orders/page.tsx
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -79,20 +79,41 @@ export default function MyOrders() {
         }
     }, [searchTerm, orders]);
 
+    // MyOrders component - fetchOrders function update করুন
     const fetchOrders = async () => {
         try {
             setLoading(true);
             const response = await axios.get('/api/users/orders');
-            setOrders(response.data);
-            setFilteredOrders(response.data);
+
+            // API থেকে data format check করুন
+            console.log('Orders API response:', response.data);
+
+            if (Array.isArray(response.data)) {
+                setOrders(response.data);
+                setFilteredOrders(response.data);
+            } else {
+                // যদি error response আসে
+                if (response.data?.error) {
+                    if (response.data.error === 'Authentication required') {
+                        toast.error('Please login to view your orders');
+                        router.push('/auth/signin?callbackUrl=/my-orders');
+                    } else {
+                        toast.error(response.data.error);
+                    }
+                }
+                setOrders([]);
+                setFilteredOrders([]);
+            }
         } catch (error: any) {
             console.error('Error fetching orders:', error);
             if (error.response?.status === 401) {
                 toast.error('Please login to view your orders');
-                router.push('/auth/signin');
+                router.push('/auth/signin?callbackUrl=/my-orders');
             } else {
                 toast.error('Failed to load orders');
             }
+            setOrders([]);
+            setFilteredOrders([]);
         } finally {
             setLoading(false);
         }
@@ -241,19 +262,17 @@ export default function MyOrders() {
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full">
+                                {/* Orders Table Headers */}
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Order ID
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Customer
+                                            Date
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Total
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Order Date
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Status
@@ -266,22 +285,17 @@ export default function MyOrders() {
                                         </th>
                                     </tr>
                                 </thead>
+
                                 <tbody className="divide-y divide-gray-200">
+                                    {/* Orders Table Body - Update mapping */}
                                     {filteredOrders.map((order) => (
-                                        <tr key={order.orderId} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={order._id || order.orderId} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="font-mono text-sm font-medium text-gray-900">
                                                     {order.orderId}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-900">
-                                                    {order.customerInfo.name}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-semibold text-gray-900">
-                                                    ৳{order.total.toLocaleString()}
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {order.customerInfo?.name || 'N/A'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -290,6 +304,11 @@ export default function MyOrders() {
                                                 </div>
                                                 <div className="text-xs text-gray-500">
                                                     {formatTime(order.createdAt)}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-semibold text-gray-900">
+                                                    ৳{order.total?.toLocaleString() || '0'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -421,9 +440,9 @@ function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
                                     <div className="flex items-center justify-between">
                                         <span className="text-gray-600">Status:</span>
                                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                                                order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                    order.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                                        'bg-gray-100 text-gray-800'
+                                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                order.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                                    'bg-gray-100 text-gray-800'
                                             }`}>
                                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                                         </span>
@@ -431,8 +450,8 @@ function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
                                     <div className="flex items-center justify-between">
                                         <span className="text-gray-600">Payment Method:</span>
                                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.paymentMethod === 'cod' ? 'bg-orange-100 text-orange-800' :
-                                                order.paymentMethod === 'bkash' ? 'bg-green-100 text-green-800' :
-                                                    'bg-blue-100 text-blue-800'
+                                            order.paymentMethod === 'bkash' ? 'bg-green-100 text-green-800' :
+                                                'bg-blue-100 text-blue-800'
                                             }`}>
                                             {order.paymentMethod === 'cod' ? 'Cash on Delivery' :
                                                 order.paymentMethod === 'bkash' ? 'bKash Payment' : 'Online Payment'}

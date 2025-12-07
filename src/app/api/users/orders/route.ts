@@ -24,9 +24,12 @@ export async function GET(request: Request) {
         const orderId = searchParams.get('orderId');
         const email = session.user.email;
 
-        // Build query - only show orders for this specific user
+        // Build query - show orders for this user (both old and new format)
         const query: any = {
-            'customerInfo.email': email
+            $or: [
+                { 'customerInfo.email': email },
+                { userEmail: email } // নতুন field এর জন্য
+            ]
         };
 
         // If searching by order ID
@@ -34,10 +37,10 @@ export async function GET(request: Request) {
             query.orderId = { $regex: orderId, $options: 'i' };
         }
 
-        // Fetch orders sorted by date (newest first)
+        // Fetch orders with all necessary fields
         const orders = await Order.find(query)
             .sort({ createdAt: -1 })
-            .select('orderId customerInfo.name total createdAt status paymentMethod')
+            .select('-__v') // সব field নেবে
             .lean();
 
         return NextResponse.json(orders, { status: 200 });

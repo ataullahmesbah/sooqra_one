@@ -7,18 +7,20 @@ import Config from '@/src/models/Config';
 import UsedCoupon from '@/src/models/UsedCoupon';
 import Coupon from '@/src/models/Coupon';
 
-// Interface definitions
 interface CustomerInfo {
     name: string;
     email: string;
     phone: string;
     address: string;
+    city: string; // Add this
+    postcode: string; // Add this
     country: string;
     district?: string;
     thana?: string;
     bkashNumber?: string;
     transactionId?: string;
 }
+
 
 interface ProductItem {
     productId: string;
@@ -39,7 +41,17 @@ interface CreateOrderRequestBody {
     discount?: number;
     shippingCharge?: number;
     couponCode?: string;
+    acceptedTerms?: boolean; // Add this
+    termsAcceptedAt?: string; // Add this
+    userId?: string; // Add this
+    userEmail?: string; // Add this
+    userPhone?: string; // Add this
 }
+
+
+
+
+
 
 export async function GET(request: Request) {
     try {
@@ -83,6 +95,9 @@ export async function POST(request: Request) {
             discount,
             shippingCharge,
             couponCode,
+            userId, // Add this
+            userEmail, // Add this
+            userPhone, // Add this
         }: CreateOrderRequestBody = await request.json();
 
         // Validate required fields
@@ -181,6 +196,9 @@ export async function POST(request: Request) {
         // Create order with validated products
         const order = await Order.create({
             orderId,
+            userId: userId || null, // Add this
+            userEmail: userEmail || customerInfo.email, // Add this
+            userPhone: userPhone || customerInfo.phone, // Add this
             products: products.map((item: any) => ({
                 productId: item.productId,
                 title: item.title,
@@ -222,6 +240,7 @@ export async function POST(request: Request) {
                 email: customerInfo.email,
                 phone: customerInfo.phone,
                 usedAt: new Date(),
+                userId: userId || null, // Add this
             });
         }
 

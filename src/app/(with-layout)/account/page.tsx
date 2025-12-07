@@ -17,6 +17,7 @@ import {
     FaTimes
 } from 'react-icons/fa';
 import { signOut } from 'next-auth/react';
+import MyOrders from '@/src/components/Share/MyOrders/MyOrders';
 
 // Interfaces
 interface UserData {
@@ -280,8 +281,7 @@ export default function AccountPage() {
                                             <span className="font-medium">Profile</span>
                                         </button>
 
-                                        {/* My Orders (Current - যেটা আছে) */}
-                                        {/* My Orders (Current) */}
+
                                         <button
                                             onClick={() => setActiveSection('orders')}
                                             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${activeSection === 'orders'
@@ -298,17 +298,7 @@ export default function AccountPage() {
                                             )}
                                         </button>
 
-                                        {/* নতুন: Full My Orders Page */}
-                                        <button
-                                            onClick={() => router.push('/account/orders')}
-                                            className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-left text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-200 mt-1"
-                                        >
-                                            <div className="flex items-center space-x-3">
-                                                <FaShoppingBag className="text-gray-600" />
-                                                <span className="font-medium">All Orders History</span>
-                                            </div>
-                                            <span className="text-xs text-blue-600">→ View Details</span>
-                                        </button>
+
 
                                         <button
                                             onClick={() => setActiveSection('password')}
@@ -499,82 +489,8 @@ export default function AccountPage() {
 
                                 {/* Orders Section */}
                                 {activeSection === 'orders' && (
-                                    <div className="p-6">
-                                        <h2 className="text-xl font-bold text-gray-900 mb-6">My Orders</h2>
-
-                                        {orders.length === 0 ? (
-                                            <div className="text-center py-12">
-                                                <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                                                    <FaShoppingBag className="text-3xl text-gray-400" />
-                                                </div>
-                                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
-                                                <p className="text-gray-600 mb-6">Start shopping to see your orders here</p>
-                                                <button
-                                                    onClick={() => router.push('/shop')}
-                                                    className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
-                                                >
-                                                    Start Shopping
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                {orders.map((order) => (
-                                                    <div key={order._id} className="border border-gray-200 rounded-lg overflow-hidden">
-                                                        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                                                            <div className="flex flex-col md:flex-row md:items-center justify-between">
-                                                                <div>
-                                                                    <h4 className="font-semibold text-gray-900">
-                                                                        Order #{order.orderNumber}
-                                                                    </h4>
-                                                                    <p className="text-sm text-gray-600">
-                                                                        Placed on {new Date(order.createdAt).toLocaleDateString()}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="mt-2 md:mt-0">
-                                                                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                                                                        order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                                                            'bg-yellow-100 text-yellow-800'
-                                                                        }`}>
-                                                                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="p-6">
-                                                            <div className="flex justify-between items-start">
-                                                                <div className="flex-1">
-                                                                    <div className="space-y-2">
-                                                                        {order.items.map((item, index) => (
-                                                                            <div key={index} className="flex items-center">
-                                                                                <div className="w-12 h-12 bg-gray-100 rounded mr-3"></div>
-                                                                                <div className="flex-1">
-                                                                                    <p className="text-gray-900 font-medium">{item.product.title}</p>
-                                                                                    <p className="text-sm text-gray-600">
-                                                                                        Qty: {item.quantity} × ৳{item.price.toLocaleString()}
-                                                                                    </p>
-                                                                                </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="ml-6 text-right">
-                                                                    <p className="text-lg font-bold text-gray-900">
-                                                                        ৳{order.total.toLocaleString()}
-                                                                    </p>
-                                                                    <button
-                                                                        onClick={() => router.push(`/orders/${order._id}`)}
-                                                                        className="mt-2 text-sm text-gray-800 hover:text-gray-900 font-medium"
-                                                                    >
-                                                                        View Details →
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 min-h-screen">
+                                        <MyOrders />
                                     </div>
                                 )}
 
@@ -649,6 +565,6 @@ export default function AccountPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

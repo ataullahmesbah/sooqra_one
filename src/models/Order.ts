@@ -29,6 +29,9 @@ interface ICustomerInfo {
 // Main Order Interface
 export interface IOrder extends Document {
     orderId: string;
+    userId?: string; // Add this - optional for guests
+    userEmail?: string; // Add this
+    userPhone?: string; // Add this
     products: IOrderProduct[];
     customerInfo: ICustomerInfo;
     paymentMethod: 'cod' | 'pay_first' | 'bkash';
@@ -36,6 +39,7 @@ export interface IOrder extends Document {
     total: number;
     discount: number;
     shippingCharge: number;
+    couponCode?: string; // Add this
     createdAt: Date;
     updatedAt: Date;
 }
@@ -45,6 +49,19 @@ const OrderSchema: Schema = new Schema({
         type: String,
         required: true,
         unique: true,
+    },
+    userId: { // Add this field
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        default: null // Allow null for guest orders
+    },
+    userEmail: { // Add this field
+        type: String,
+        required: false
+    },
+    userPhone: { // Add this field
+        type: String,
+        required: false
     },
     products: [{
         productId: {
@@ -145,6 +162,10 @@ const OrderSchema: Schema = new Schema({
         default: 0,
         min: 0
     },
+    couponCode: { // Add this field
+        type: String,
+        required: false
+    },
     createdAt: {
         type: Date,
         default: Date.now,
@@ -164,6 +185,8 @@ OrderSchema.pre('save', function (next) {
 // Index for better query performance
 OrderSchema.index({ orderId: 1 });
 OrderSchema.index({ 'customerInfo.email': 1 });
+OrderSchema.index({ userId: 1 }); // Add this index
+OrderSchema.index({ userEmail: 1 }); // Add this index
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ status: 1 });
 
