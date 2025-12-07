@@ -375,7 +375,7 @@ export default function TopNavbar() {
                                                             </div>
                                                         ))}
                                                     </div>
-                                                    <div className="p-3 border-t border-gray-200 bg-gray-50">
+                                                    {/* <div className="p-3 border-t border-gray-200 bg-gray-50">
                                                         <button
                                                             onClick={() => {
                                                                 router.push(`/shop/search?q=${encodeURIComponent(searchQuery)}`);
@@ -388,7 +388,7 @@ export default function TopNavbar() {
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                                             </svg>
                                                         </button>
-                                                    </div>
+                                                    </div> */}
                                                 </>
                                             ) : searchQuery.trim() ? (
                                                 <div className="p-4 text-center">

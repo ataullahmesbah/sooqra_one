@@ -1,6 +1,4 @@
-
-
-import SuccessPage from "@/app/Dashboard/Shop/SuccessPage/SuccessPage";
+import SuccessPage from "@/src/components/Share/Shop/SuccessPage/SuccessPage";
 
 
 const page = () => {

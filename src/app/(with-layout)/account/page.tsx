@@ -280,6 +280,8 @@ export default function AccountPage() {
                                             <span className="font-medium">Profile</span>
                                         </button>
 
+                                        {/* My Orders (Current - যেটা আছে) */}
+                                        {/* My Orders (Current) */}
                                         <button
                                             onClick={() => setActiveSection('orders')}
                                             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${activeSection === 'orders'
@@ -294,6 +296,18 @@ export default function AccountPage() {
                                                     {orders.length}
                                                 </span>
                                             )}
+                                        </button>
+
+                                        {/* নতুন: Full My Orders Page */}
+                                        <button
+                                            onClick={() => router.push('/account/orders')}
+                                            className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-left text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-200 mt-1"
+                                        >
+                                            <div className="flex items-center space-x-3">
+                                                <FaShoppingBag className="text-gray-600" />
+                                                <span className="font-medium">All Orders History</span>
+                                            </div>
+                                            <span className="text-xs text-blue-600">→ View Details</span>
                                         </button>
 
                                         <button

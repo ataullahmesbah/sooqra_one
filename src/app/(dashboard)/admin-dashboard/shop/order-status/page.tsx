@@ -1,4 +1,5 @@
-import OrdersPage from "@/app/Dashboard/Shop/Orders/Orders";
+import OrdersPage from "@/src/components/Share/Shop/Orders/Orders";
+
 
 
 const page = () => {

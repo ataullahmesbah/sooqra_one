@@ -1,12 +1,13 @@
 // src/components/Share/Shop/ProductDetailsClient/ProductDetailsClient.tsx
 'use client';
-import { useState, useEffect } from 'react';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CartSlider from '../CartSlider/CartSlider';
 import axios from 'axios';
 import { CiDeliveryTruck } from "react-icons/ci";
+import { useState, useEffect, useRef } from 'react';
 
 // Define proper interfaces
 interface ProductPrice {
@@ -117,6 +118,12 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
     const router = useRouter();
     const [selectedSize, setSelectedSize] = useState<ProductSize | null>(null);
     const [showSizeError, setShowSizeError] = useState<boolean>(false);
+    const [isClient, setIsClient] = useState(false);
+
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     // Custom Toast Function
     const showCustomToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -486,9 +493,23 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-                {faqStructuredData && (
-                    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }} />
+                {isClient && (
+                    <>
+                        <script
+                            type="application/ld+json"
+                            dangerouslySetInnerHTML={{
+                                __html: JSON.stringify(structuredData)
+                            }}
+                        />
+                        {faqStructuredData && (
+                            <script
+                                type="application/ld+json"
+                                dangerouslySetInnerHTML={{
+                                    __html: JSON.stringify(faqStructuredData)
+                                }}
+                            />
+                        )}
+                    </>
                 )}
 
                 {/* Breadcrumb Navigation */}

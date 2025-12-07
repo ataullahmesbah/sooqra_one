@@ -513,12 +513,13 @@ export default function Checkout() {
         return 'ORDER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
     };
 
-    // Checkout handler
+    // Checkout
     const handleCheckout = async (e: FormEvent): Promise<void> => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
+        // Basic validation
         if (customerInfo.country === 'Bangladesh') {
             if (!customerInfo.phone || customerInfo.phone.length !== 11 || !/^01[3-9]/.test(customerInfo.phone)) {
                 setError('Please enter a valid 11-digit Bangladesh phone number (01XXXXXXXXX)');
@@ -549,12 +550,15 @@ export default function Checkout() {
             }
         }
 
+        // Cart validation
         const isCartValid = await validateCart();
         if (!isCartValid) {
             setLoading(false);
+            showCustomToast('Some items in your cart are invalid. Please check your cart.', 'error');
             return;
         }
 
+        // Form validation
         if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.address) {
             setError('Please fill in all required fields.');
             showCustomToast('Please fill in all required fields.', 'error');
@@ -562,7 +566,10 @@ export default function Checkout() {
             return;
         }
 
-        if ((paymentMethod === 'cod' || paymentMethod === 'bkash') && customerInfo.country === 'Bangladesh' && (!customerInfo.district || !customerInfo.thana)) {
+        // District and thana validation for Bangladesh
+        if ((paymentMethod === 'cod' || paymentMethod === 'bkash') &&
+            customerInfo.country === 'Bangladesh' &&
+            (!customerInfo.district || !customerInfo.thana)) {
             setError('Please select district and thana for delivery.');
             showCustomToast('Please select district and thana for delivery.', 'error');
             setLoading(false);
@@ -598,7 +605,9 @@ export default function Checkout() {
             status: paymentMethod === 'cod' || paymentMethod === 'bkash' ? 'pending' : 'pending_payment',
             total: Number.isFinite(payableAmount) ? payableAmount : 0,
             discount,
-            shippingCharge: (paymentMethod === 'cod' || paymentMethod === 'bkash') && customerInfo.country === 'Bangladesh' ? (Number.isFinite(shippingCharge) ? shippingCharge : 0) : 0,
+            shippingCharge: (paymentMethod === 'cod' || paymentMethod === 'bkash') &&
+                customerInfo.country === 'Bangladesh' ?
+                (Number.isFinite(shippingCharge) ? shippingCharge : 0) : 0,
             couponCode: appliedCoupon ? appliedCoupon.code : null,
             acceptedTerms: true,
             termsAcceptedAt: new Date().toISOString()
@@ -606,34 +615,86 @@ export default function Checkout() {
 
         setOrderData(orderData);
 
+        console.log('Submitting order data:', {
+            orderId: orderData.orderId,
+            productCount: orderData.products.length,
+            paymentMethod: orderData.paymentMethod,
+            total: orderData.total
+        });
+
         try {
             if (paymentMethod === 'cod' || paymentMethod === 'bkash') {
                 const orderResponse = await axios.post('/api/products/orders', orderData);
-                if (orderResponse.data.message === 'Order created') {
+
+                console.log('Order API Response:', orderResponse.data);
+
+                // FIXED: Correct API response check
+                if (orderResponse.data &&
+                    (orderResponse.data.message === 'Order created' ||
+                        orderResponse.data.message === 'Order created successfully' ||
+                        orderResponse.data.success)) {
+
+                    // Record coupon usage if applied
                     if (appliedCoupon) {
-                        await axios.post('/api/products/coupons/record-usage', {
-                            userId,
-                            couponCode: appliedCoupon.code,
-                            email: customerInfo.email,
-                            phone: customerInfo.phone,
-                        });
+                        try {
+                            await axios.post('/api/products/coupons/record-usage', {
+                                userId,
+                                couponCode: appliedCoupon.code,
+                                email: customerInfo.email,
+                                phone: customerInfo.phone,
+                            });
+                        } catch (couponError) {
+                            console.warn('Failed to record coupon usage:', couponError);
+                            // Continue even if coupon recording fails
+                        }
                     }
+
+                    // Clear cart
                     localStorage.removeItem('cart');
                     window.dispatchEvent(new Event('cartUpdated'));
+
+                    // Show success message
                     showCustomToast(`Order ${orderData.orderId} placed successfully!`, 'success');
-                    setLoading(true);
-                    router.push(`/checkout/cod-success?orderId=${orderData.orderId}`);
+
+                    // Redirect to success page with delay for better UX
+                    setTimeout(() => {
+                        if (paymentMethod === 'cod') {
+                            router.push(`/checkout/cod-success?orderId=${orderData.orderId}`);
+                        } else if (paymentMethod === 'bkash') {
+                            router.push(`/checkout/cod-success?orderId=${orderData.orderId}&payment=bkash`);
+                        }
+                    }, 1500);
+
                 } else {
-                    throw new Error('Order creation failed');
+                    throw new Error(orderResponse.data?.error || 'Order creation failed without specific error');
                 }
             }
         } catch (err: any) {
-            const errorMessage = err.response?.data?.error || err.message || 'Payment processing failed';
+            console.error('Order creation error:', err);
+
+            // Better error handling
+            let errorMessage = 'Payment processing failed';
+
+            if (err.response) {
+                // Server responded with error
+                errorMessage = err.response.data?.error ||
+                    err.response.data?.message ||
+                    `Server error: ${err.response.status}`;
+                console.error('Server error details:', err.response.data);
+            } else if (err.request) {
+                // Request was made but no response
+                errorMessage = 'No response from server. Please check your internet connection.';
+            } else {
+                // Other errors
+                errorMessage = err.message || 'Unknown error occurred';
+            }
+
             setError(errorMessage);
             showCustomToast(errorMessage, 'error');
             setLoading(false);
         }
     };
+
 
     const isSubmitDisabled = (): boolean => {
         if (loading || validatingCart || cart.length === 0 || !acceptedTerms || !isFormValid) {
@@ -782,7 +843,7 @@ export default function Checkout() {
                                         </div>
                                         {customerInfo.phone && customerInfo.phone.length === 11 && /^01[3-9]/.test(customerInfo.phone) && (
                                             <p className="text-green-600 text-xs mt-1">
-                                                ✅ +88{customerInfo.phone}
+                                                +88{customerInfo.phone}
                                             </p>
                                         )}
                                         {validationErrors.phone && (
@@ -900,7 +961,10 @@ export default function Checkout() {
 
                                     <div className="space-y-4">
                                         {cart.map((item) => (
-                                            <div key={item._id} className="flex items-start gap-4 pb-4 border-b border-gray-200">
+                                            <div
+                                                key={`${item._id}-${item.size || 'no-size'}`}
+                                                className="flex items-start gap-4 pb-4 border-b border-gray-200"
+                                            >
                                                 <div className="relative w-16 h-16 flex-shrink-0">
                                                     <Image
                                                         src={item.mainImage || '/placeholder.png'}

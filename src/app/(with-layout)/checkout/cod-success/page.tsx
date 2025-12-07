@@ -1,8 +1,9 @@
-import CodSuccess from '@/app/Dashboard/Shop/CODSuccess/CODSuccess';
+import CodSuccess from "@/src/components/Share/Shop/CodSuccess/CodSuccess";
+
 
 
 export const metadata = {
-    title: 'Order Confirmed | SOOQRA ONE | Ataullah Mesbah',
+    title: 'Order Confirmed | SOOQRA ONE',
     description: 'Order confirmation page - Your purchase has been successfully processed.',
 };
 

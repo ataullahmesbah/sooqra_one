@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/dbConnect';
 import Product from '@/src/models/Products';
 
-// Interface definitions
+
 interface ProductItem {
     productId: string;
     title: string;
@@ -21,55 +21,74 @@ export async function POST(request: Request) {
     await dbConnect();
 
     try {
-        const { orderId, products }: ValidateRequestBody = await request.json();
+        const body: ValidateRequestBody = await request.json();
+        const { orderId, products } = body;
 
         if (!orderId || !Array.isArray(products)) {
-            return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+            return NextResponse.json(
+                { error: 'Invalid request data' },
+                { status: 400 }
+            );
         }
 
         const validationResults: string[] = [];
         let isValid = true;
 
+        // Validate each product
         for (const item of products) {
-            const product = await Product.findById(item.productId);
+            try {
+                const product = await Product.findById(item.productId);
 
-            if (!product) {
-                validationResults.push(`❌ Product "${item.title}" not found in our system`);
-                isValid = false;
-                continue;
-            }
-
-            if (product.sizeRequirement === 'Mandatory' && !item.size) {
-                validationResults.push(`❌ Size is required for "${item.title}"`);
-                isValid = false;
-                continue;
-            }
-
-            if (item.size && product.sizeRequirement === 'Mandatory') {
-                const sizeData = product.sizes.find((s: any) => s.name === item.size);
-                if (!sizeData) {
-                    validationResults.push(`❌ Size "${item.size}" not found for "${item.title}"`);
+                if (!product) {
+                    validationResults.push(`❌ Product "${item.title}" not found`);
                     isValid = false;
                     continue;
                 }
-                if (sizeData.quantity < item.quantity) {
-                    validationResults.push(`❌ Insufficient stock for "${item.title}" size "${item.size}" (Available: ${sizeData.quantity}, Needed: ${item.quantity})`);
-                    isValid = false;
-                    continue;
-                }
-            } else {
-                if (product.quantity < item.quantity) {
-                    validationResults.push(`❌ Insufficient stock for "${item.title}" (Available: ${product.quantity}, Needed: ${item.quantity})`);
-                    isValid = false;
-                    continue;
-                }
-            }
 
-            if (product.quantity === 0) {
-                validationResults.push(`❌ "${item.title}" is out of stock`);
-                isValid = false;
-            } else if (product.productType === 'Affiliate') {
-                validationResults.push(`❌ "${item.title}" is an affiliate product and cannot be processed`);
+                // Check if product is active
+                if (product.availability !== 'InStock') {
+                    validationResults.push(`❌ Product "${item.title}" is out of stock`);
+                    isValid = false;
+                    continue;
+                }
+
+                // Check quantity
+                if (item.quantity < 1) {
+                    validationResults.push(`❌ Invalid quantity for "${item.title}"`);
+                    isValid = false;
+                    continue;
+                }
+
+                // Check size requirements
+                if (product.sizeRequirement === 'Mandatory' && !item.size) {
+                    validationResults.push(`❌ Size is required for "${item.title}"`);
+                    isValid = false;
+                    continue;
+                }
+
+                if (item.size && product.sizeRequirement === 'Mandatory') {
+                    const sizeData = product.sizes.find((s: any) => s.name === item.size);
+                    if (!sizeData) {
+                        validationResults.push(`❌ Size "${item.size}" not available for "${item.title}"`);
+                        isValid = false;
+                        continue;
+                    }
+                    if (sizeData.quantity < item.quantity) {
+                        validationResults.push(`❌ Only ${sizeData.quantity} units available for "${item.title}" (Size: ${item.size})`);
+                        isValid = false;
+                        continue;
+                    }
+                } else if (product.quantity < item.quantity) {
+                    validationResults.push(`❌ Only ${product.quantity} units available for "${item.title}"`);
+                    isValid = false;
+                    continue;
+                }
+
+                // All validations passed for this product
+                validationResults.push(`✅ "${item.title}" - ${item.quantity} units available`);
+
+            } catch (error) {
+                validationResults.push(`❌ Error validating "${item.title}"`);
                 isValid = false;
             }
         }
@@ -78,12 +97,15 @@ export async function POST(request: Request) {
             isValid,
             issues: validationResults,
             orderId
-        });
+        }, { status: 200 });
 
     } catch (error: any) {
         console.error('Product validation error:', error);
         return NextResponse.json(
-            { error: 'Failed to validate products. Please try again.' },
+            {
+                error: 'Failed to validate products',
+                details: error.message
+            },
             { status: 500 }
         );
     }
