@@ -12,15 +12,14 @@ interface CustomerInfo {
     email: string;
     phone: string;
     address: string;
-    city: string; // Add this
-    postcode: string; // Add this
+    city: string;
+    postcode: string;
     country: string;
     district?: string;
     thana?: string;
     bkashNumber?: string;
     transactionId?: string;
 }
-
 
 interface ProductItem {
     productId: string;
@@ -40,14 +39,11 @@ interface CreateOrderRequestBody {
     total: number;
     discount?: number;
     shippingCharge?: number;
-    couponCode?: string;
-    acceptedTerms?: boolean; // Add this
-    termsAcceptedAt?: string; // Add this
-    userId?: string; // Add this
-    userEmail?: string; // Add this
-    userPhone?: string; // Add this
+    couponCode?: string | null;
+    userId?: string | null;
+    userEmail?: string;
+    userPhone?: string;
 }
-
 
 
 
@@ -82,9 +78,15 @@ export async function GET(request: Request) {
     }
 }
 
+
+
+
+
+
 export async function POST(request: Request) {
     try {
         await dbConnect();
+
         const {
             orderId,
             products,
@@ -92,100 +94,99 @@ export async function POST(request: Request) {
             paymentMethod,
             status,
             total,
-            discount,
-            shippingCharge,
-            couponCode,
-            userId, // Add this
-            userEmail, // Add this
-            userPhone, // Add this
+            discount = 0,
+            shippingCharge = 0,
+            couponCode = null,
+            userId = null,
+            userEmail,
+            userPhone,
         }: CreateOrderRequestBody = await request.json();
 
-        // Validate required fields
-        if (!orderId || !products || !customerInfo || !paymentMethod || !status || total == null) {
+        // 1. Required fields validation
+        if (!orderId || !products?.length || !customerInfo || !paymentMethod || !status || total == null) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Validate customerInfo fields
         if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.address) {
-            return NextResponse.json({ error: 'Missing required customer information (name, email, phone, address)' }, { status: 400 });
+            return NextResponse.json({ error: 'Missing required customer information' }, { status: 400 });
         }
 
-        // Add Bkash validation
+        // 2. Bkash validation
         if (paymentMethod === 'bkash') {
             if (!customerInfo.bkashNumber || !customerInfo.transactionId) {
-                return NextResponse.json({ error: 'Bkash number and Transaction ID required for Bkash payment' }, { status: 400 });
+                return NextResponse.json({ error: 'Bkash number and Transaction ID required' }, { status: 400 });
             }
             if (customerInfo.bkashNumber.length !== 11) {
                 return NextResponse.json({ error: 'Invalid Bkash number. Must be 11 digits.' }, { status: 400 });
             }
         }
 
-        // Update the COD validation to include Bkash
-        if ((paymentMethod === 'cod' || paymentMethod === 'bkash') && customerInfo.country === 'Bangladesh' && (!customerInfo.district || !customerInfo.thana)) {
-            return NextResponse.json({ error: 'District and thana required for COD and Bkash orders in Bangladesh' }, { status: 400 });
+        // 3. COD & Bkash: District + Thana required
+        if ((paymentMethod === 'cod' || paymentMethod === 'bkash') && customerInfo.country === 'Bangladesh') {
+            if (!customerInfo.district || !customerInfo.thana) {
+                return NextResponse.json({ error: 'District and thana required for delivery' }, { status: 400 });
+            }
         }
 
-        // Validate product quantities and sizes
+        // 4. Product validation (only check, don't reduce stock)
         for (const item of products) {
             const product = await Products.findById(item.productId);
             if (!product) {
-                return NextResponse.json({ error: `Product not found for ID ${item.productId}` }, { status: 400 });
+                return NextResponse.json({ error: `Product not found: ${item.title}` }, { status: 400 });
+            }
+
+            if (product.availability !== 'InStock') {
+                return NextResponse.json({ error: `${item.title} is out of stock` }, { status: 400 });
             }
 
             if (product.sizeRequirement === 'Mandatory' && !item.size) {
-                return NextResponse.json({ error: `Size is required for product ${product.title}` }, { status: 400 });
+                return NextResponse.json({ error: `Size required for ${item.title}` }, { status: 400 });
             }
 
             if (item.size && product.sizeRequirement === 'Mandatory') {
                 const sizeData = product.sizes.find((s: any) => s.name === item.size);
-                if (!sizeData) {
-                    return NextResponse.json({ error: `Invalid size ${item.size} for product ${product.title}` }, { status: 400 });
+                if (!sizeData || sizeData.quantity < item.quantity) {
+                    return NextResponse.json({ error: `Not enough stock for ${item.title} (Size: ${item.size})` }, { status: 400 });
                 }
-                if (item.quantity > sizeData.quantity) {
-                    return NextResponse.json({ error: `Insufficient stock for ${product.title} size ${item.size}` }, { status: 400 });
-                }
-            } else if (item.quantity > product.quantity) {
-                return NextResponse.json({ error: `Insufficient stock for ${product.title}` }, { status: 400 });
+            } else if (product.quantity < item.quantity) {
+                return NextResponse.json({ error: `Only ${product.quantity} units available for ${item.title}` }, { status: 400 });
             }
         }
 
-        // Validate coupon if provided
+        // 5. Coupon validation (product & global)
         if (couponCode) {
             const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
             if (coupon) {
-                if (!products.some((p: any) => p.productId === coupon.productId?.toString())) {
-                    return NextResponse.json({ error: 'Coupon not applicable to products' }, { status: 400 });
+                // Product-specific coupon
+                if (!products.some(p => p.productId === coupon.productId?.toString())) {
+                    return NextResponse.json({ error: 'Coupon not applicable to cart items' }, { status: 400 });
                 }
                 if (coupon.expiresAt && coupon.expiresAt < new Date()) {
                     return NextResponse.json({ error: 'Coupon has expired' }, { status: 400 });
                 }
                 if (coupon.useType === 'one-time') {
-                    const usedCoupon = await UsedCoupon.findOne({
+                    const used = await UsedCoupon.findOne({
                         couponCode,
-                        $or: [{ email: customerInfo.email }, { phone: customerInfo.phone }],
+                        $or: [{ email: customerInfo.email }, { phone: customerInfo.phone }]
                     });
-                    if (usedCoupon) {
-                        return NextResponse.json({ error: 'Coupon already used with this email or phone number' }, { status: 400 });
-                    }
+                    if (used) return NextResponse.json({ error: 'Coupon already used' }, { status: 400 });
                 }
             } else {
+                // Global coupon
                 const globalCoupon = await Config.findOne({
                     key: 'globalCoupon',
                     'value.code': { $regex: `^${couponCode}$`, $options: 'i' }
                 });
-                if (!globalCoupon || !globalCoupon.value || !globalCoupon.value.code) {
-                    return NextResponse.json({ error: 'Coupon not found' }, { status: 400 });
+                if (!globalCoupon?.value?.code) {
+                    return NextResponse.json({ error: 'Invalid coupon code' }, { status: 400 });
                 }
                 const { discountAmount, minCartTotal, expiresAt } = globalCoupon.value;
-                if (!Number.isFinite(discountAmount) || !Number.isFinite(minCartTotal)) {
-                    return NextResponse.json({ error: 'Invalid coupon configuration' }, { status: 400 });
-                }
-                const productTotal = products.reduce((sum: number, p: any) => sum + (p.price * p.quantity), 0);
-                if (productTotal < minCartTotal) {
-                    return NextResponse.json({ error: `Cart total must be at least ৳${minCartTotal}` }, { status: 400 });
+                const subtotal = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+                if (subtotal < (minCartTotal || 0)) {
+                    return NextResponse.json({ error: `Minimum ৳${minCartTotal} required` }, { status: 400 });
                 }
                 if (expiresAt && new Date(expiresAt) < new Date()) {
-                    return NextResponse.json({ error: 'Global coupon has expired' }, { status: 400 });
+                    return NextResponse.json({ error: 'Coupon expired' }, { status: 400 });
                 }
                 if (discount !== discountAmount) {
                     return NextResponse.json({ error: 'Invalid discount amount' }, { status: 400 });
@@ -193,65 +194,78 @@ export async function POST(request: Request) {
             }
         }
 
-        // Create order with validated products
+        // 6. Create order — STOCK NOT REDUCED HERE
         const order = await Order.create({
             orderId,
-            userId: userId || null, // Add this
-            userEmail: userEmail || customerInfo.email, // Add this
-            userPhone: userPhone || customerInfo.phone, // Add this
-            products: products.map((item: any) => ({
-                productId: item.productId,
-                title: item.title,
-                quantity: item.quantity,
-                price: item.price,
-                mainImage: item.mainImage || null,
-                size: item.size || null
+            userId: userId || null,
+            userEmail: userEmail || customerInfo.email,
+            userPhone: userPhone || customerInfo.phone,
+            products: products.map(p => ({
+                productId: p.productId,
+                title: p.title,
+                quantity: p.quantity,
+                price: p.price,
+                mainImage: p.mainImage || null,
+                size: p.size || null
             })),
             customerInfo,
             paymentMethod,
-            status,
+            status: paymentMethod === 'bkash' ? 'pending_payment' : 'pending',
             total,
-            discount: discount || 0,
-            shippingCharge: shippingCharge || 0,
-            couponCode: couponCode || null,
+            discount,
+            shippingCharge,
+            couponCode,
         });
 
-        // Update product quantities after successful order
-        for (const item of products) {
-            const product = await Products.findById(item.productId);
-            if (product) {
-                if (item.size && product.sizeRequirement === 'Mandatory') {
-                    const sizeIndex = product.sizes.findIndex((s: any) => s.name === item.size);
-                    if (sizeIndex !== -1) {
-                        product.sizes[sizeIndex].quantity -= item.quantity;
-                        await product.save();
-                    }
-                } else {
-                    product.quantity -= item.quantity;
-                    await product.save();
-                }
-            }
-        }
-
-        // Record coupon usage if coupon was applied
+        // 7. Record coupon usage
         if (couponCode) {
             await UsedCoupon.create({
                 couponCode,
                 email: customerInfo.email,
                 phone: customerInfo.phone,
+                userId: userId || null,
                 usedAt: new Date(),
-                userId: userId || null, // Add this
             });
         }
 
         return NextResponse.json({
+            success: true,
             message: 'Order created successfully',
             orderId: order.orderId,
-            order: order
+            order,
         }, { status: 201 });
 
     } catch (error: any) {
         console.error('Order creation error:', error);
-        return NextResponse.json({ error: `Failed to create order: ${error.message}` }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to create order', details: error.message },
+            { status: 500 }
+        );
     }
 }
+
+// GET route remains unchanged
+// export async function GET(request: Request) {
+//     try {
+//         await dbConnect();
+//         const { searchParams } = new URL(request.url);
+//         const orderId = searchParams.get('orderId');
+//         const status = searchParams.get('status');
+//         const date = searchParams.get('date');
+
+//         const query: any = {};
+//         if (orderId) query.orderId = orderId;
+//         if (status) query.status = { $in: status.split(',') };
+//         if (date) {
+//             const start = new Date(date);
+//             const end = new Date(start);
+//             end.setDate(start.getDate() + 1);
+//             query.createdAt = { $gte: start, $lt: end };
+//         }
+
+//         const orders = await Order.find(query).lean();
+//         return NextResponse.json(orders, { status: 200 });
+//     } catch (error: any) {
+//         return NextResponse.json({ error: error.message }, { status: 500 });
+//     }
+// }
