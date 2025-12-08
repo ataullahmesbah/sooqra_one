@@ -1,12 +1,12 @@
-
 // src/app/api/products/route.ts
 import { getServerSession } from 'next-auth';
 import mongoose from 'mongoose';
 import cloudinary from '@/src/utils/cloudinary';
 import { authOptions } from '../auth/[...nextauth]/route';
 import Category from '@/src/models/Category';
-import Product from '@/src/models/Products'; 
+import Product from '@/src/models/Products';
 import dbConnect from '@/src/lib/dbConnect';
+import SubCategory from '@/src/models/SubCategory';
 
 // Interface definitions
 interface Price {
@@ -47,7 +47,9 @@ export async function GET(request: Request) {
     const sort = searchParams.get('sort');
     const order = searchParams.get('order');
     const limit = parseInt(searchParams.get('limit') || '0');
+    const categoryId = searchParams.get('categoryId');
 
+    // ক্যাটেগরিগুলো ফেচ করার জন্য
     if (type === 'categories') {
         try {
             const categories = await Category.find({}).lean();
@@ -57,8 +59,26 @@ export async function GET(request: Request) {
         }
     }
 
+    // সাবক্যাটেগরিগুলো ফেচ করার জন্য
+    if (type === 'subcategories' && categoryId) {
+        try {
+            if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+                return Response.json({ error: 'Invalid category ID' }, { status: 400 });
+            }
+            const subCategories = await SubCategory.find({ category: categoryId }).lean();
+            return Response.json(subCategories, { status: 200 });
+        } catch (error: any) {
+            return Response.json({ error: `Failed to fetch subcategories: ${error.message}` }, { status: 500 });
+        }
+    }
+
+    // প্রোডাক্টগুলো ফেচ করার জন্য
     try {
-        let query = Product.find({}).populate('category').lean();
+        let query = Product.find({})
+            .populate('category')
+            .populate('subCategory') // subCategory পপুলেট করো
+            .lean();
+
         if (sort && order) {
             query = query.sort({ [sort]: order === 'desc' ? -1 : 1 });
         }
@@ -244,6 +264,40 @@ export async function POST(request: Request) {
             return Response.json({ error: 'Invalid category selection' }, { status: 400 });
         }
 
+        // Handle subcategory (ঐচ্ছিক)
+        let subCategoryId: mongoose.Types.ObjectId | undefined;
+        const subCategoryInput = formData.get('subCategory')?.toString();
+        const newSubCategoryName = formData.get('newSubCategory')?.toString();
+
+        if (newSubCategoryName && newSubCategoryName.trim()) {
+            const slug = newSubCategoryName
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+
+            let subCategory = await SubCategory.findOne({ slug, category: categoryId });
+            if (!subCategory) {
+                subCategory = new SubCategory({
+                    name: newSubCategoryName.trim(),
+                    slug,
+                    category: categoryId,
+                });
+                await subCategory.save();
+            }
+            subCategoryId = subCategory._id;
+        } else if (subCategoryInput && subCategoryInput.trim() && mongoose.Types.ObjectId.isValid(subCategoryInput)) {
+            const subCategory = await SubCategory.findOne({
+                _id: subCategoryInput,
+                category: categoryId
+            });
+            if (!subCategory) {
+                return Response.json({ error: 'Invalid subcategory for selected category' }, { status: 400 });
+            }
+            subCategoryId = subCategory._id;
+        }
+        // Note: subCategory is optional, so no error if not provided
+
         // Upload main image
         const mainImageFile = formData.get('mainImage') as File;
         if (!mainImageFile || mainImageFile.size === 0) {
@@ -408,7 +462,7 @@ export async function POST(request: Request) {
             },
         };
 
-        // Create product object - FIXED: Product model ব্যবহার করুন
+        // Create product object
         const productData = {
             title: title,
             slug: uniqueSlug,
@@ -426,6 +480,7 @@ export async function POST(request: Request) {
             owner: session.user.name,
             brand: formData.get('brand')?.toString(),
             category: categoryId,
+            subCategory: subCategoryId, // subCategory যোগ করলাম
             quantity,
             availability: formData.get('availability')?.toString() || 'InStock',
             metaTitle: formData.get('metaTitle')?.toString(),
@@ -448,7 +503,7 @@ export async function POST(request: Request) {
 
         console.log('Product to save:', JSON.stringify(productData, null, 2));
 
-        const product = new Product(productData); // ✅ Product model ব্যবহার করুন
+        const product = new Product(productData);
         await product.save();
 
         return Response.json(product, { status: 201 });
@@ -467,4 +522,3 @@ export async function POST(request: Request) {
         return Response.json({ error: `Failed to create product: ${error.message}` }, { status: 500 });
     }
 }
-

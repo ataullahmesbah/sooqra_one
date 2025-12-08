@@ -10,6 +10,11 @@ interface Category {
     name: string;
 }
 
+interface SubCategory {
+    _id: string;
+    name: string;
+}
+
 interface FormData {
     title: string;
     bdtPrice: string;
@@ -24,7 +29,9 @@ interface FormData {
     productType: 'Own' | 'Affiliate';
     affiliateLink: string;
     category: string;
+    subCategory: string;
     newCategory: string;
+    newSubCategory: string;
     mainImage: File | null;
     mainImageAlt: string;
     additionalImages: (File | null)[];
@@ -74,7 +81,9 @@ export default function CreateProduct() {
         productType: 'Own',
         affiliateLink: '',
         category: '',
+        subCategory: '',
         newCategory: '',
+        newSubCategory: '',
         mainImage: null,
         mainImageAlt: '',
         additionalImages: [],
@@ -104,13 +113,13 @@ export default function CreateProduct() {
     const [categories, setCategories] = useState<Category[]>([]);
     const mainImageInputRef = useRef<HTMLInputElement>(null);
     const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
 
     // Set isClient to true on mount
     useEffect(() => {
         setIsClient(true);
     }, []);
 
-    // Consolidated authentication and data fetching useEffect
     useEffect(() => {
         if (status === 'loading' || !isClient) return;
 
@@ -144,6 +153,26 @@ export default function CreateProduct() {
 
         fetchCategories();
     }, [session, status, router, isClient]);
+
+
+    useEffect(() => {
+        if (formData.category && formData.category !== 'new') {
+            const fetchSubCategories = async () => {
+                try {
+                    const res = await fetch(`/api/products/subcategories?categoryId=${formData.category}`);
+                    if (!res.ok) throw new Error('Failed to fetch subcategories');
+                    const data = await res.json();
+                    setSubCategories(data);
+                } catch (err: any) {
+                    console.error('Subcategory fetch error:', err);
+
+                }
+            };
+            fetchSubCategories();
+        } else {
+            setSubCategories([]);
+        }
+    }, [formData.category]);
 
     // Cleanup effect for image URLs - moved to proper position
     useEffect(() => {
@@ -185,6 +214,7 @@ export default function CreateProduct() {
         if (formData.usdPrice && formData.usdExchangeRate && (isNaN(Number(formData.usdExchangeRate)) || Number(formData.usdExchangeRate) <= 0)) {
             newErrors.usdExchangeRate = 'USD exchange rate must be a positive number';
         }
+        if (!formData.subCategory) newErrors.subCategory = 'Subcategory is required';
         if (formData.eurPrice && formData.eurExchangeRate && (isNaN(Number(formData.eurExchangeRate)) || Number(formData.eurExchangeRate) <= 0)) {
             newErrors.eurExchangeRate = 'EUR exchange rate must be a positive number';
         }
@@ -213,6 +243,11 @@ export default function CreateProduct() {
         // Size Validations
         if (!formData.sizeRequirement) {
             newErrors.sizeRequirement = 'Size requirement is required';
+        }
+        if (!formData.subCategory) {
+            if (!formData.subCategory?.trim()) {
+                newErrors.subCategory = 'Subcategory is required';
+            }
         }
         if (formData.sizeRequirement === 'Mandatory') {
             if (formData.sizes.length === 0) {
@@ -279,6 +314,14 @@ export default function CreateProduct() {
         data.append('targetCountry', formData.targetCountry || '');
         data.append('targetCity', formData.targetCity || '');
 
+
+        if (formData.subCategory && formData.subCategory !== 'new') {
+            data.append('subCategory', formData.subCategory);
+        }
+        if (formData.newSubCategory && formData.subCategory === 'new') {
+            data.append('newSubCategory', formData.newSubCategory);
+        }
+
         // Log FormData to debug
         console.log('FormData entries:');
         for (let [key, value] of data.entries()) {
@@ -297,6 +340,7 @@ export default function CreateProduct() {
                 console.log(`Appending additionalAlts[${index}]:`, alt);
             }
         });
+
         data.append('quantity', formData.quantity);
         data.append('brand', formData.brand);
         data.append('availability', formData.availability);
@@ -604,6 +648,45 @@ export default function CreateProduct() {
                                     />
                                     {errors.newCategory && <p className="mt-1 text-sm text-red-500">{errors.newCategory}</p>}
                                 </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-300 mb-2 text-sm font-medium">Subcategory</label>
+                            <select
+                                value={formData.subCategory || ''}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    subCategory: e.target.value,
+                                    newSubCategory: e.target.value === 'new' ? formData.newSubCategory : ''
+                                })}
+                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border ${errors.subCategory ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            >
+                                <option value="">Select Subcategory</option>
+                                {subCategories.map((sub) => (
+                                    <option key={sub._id} value={sub._id}>{sub.name}</option>
+                                ))}
+                                <option value="new">➕ Add New Subcategory</option>
+                            </select>
+
+                            {formData.subCategory === 'new' && (
+                                <div className="mt-2">
+                                    <input
+                                        type="text"
+                                        value={formData.newSubCategory || ''}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            newSubCategory: e.target.value
+                                        })}
+                                        className={`w-full p-3 bg-gray-800 text-white rounded-lg border ${errors.newSubCategory ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                                        placeholder="Enter new subcategory name"
+                                    />
+                                    {errors.newSubCategory && <p className="mt-1 text-sm text-red-500">{errors.newSubCategory}</p>}
+                                </div>
+                            )}
+
+                            {errors.subCategory && formData.subCategory !== 'new' && (
+                                <p className="mt-1 text-sm text-red-500">Subcategory is required</p>
                             )}
                         </div>
 
