@@ -10,6 +10,11 @@ interface Category {
     name: string;
 }
 
+interface SubCategory {
+    _id: string;
+    name: string;
+}
+
 interface AdditionalImage {
     url: string;
     alt: string;
@@ -49,6 +54,7 @@ interface FormData {
     productType: 'Own' | 'Affiliate';
     affiliateLink: string;
     category: string;
+    subCategory: string; // ✅ subCategory যোগ করেছি
     newCategory: string;
     mainImage: File | null;
     mainImageAlt: string;
@@ -86,22 +92,11 @@ export default function UpdateProduct() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
-    
-    // ✅ useParams থেকে productId নিন
+
+    // ✅ useParams থেকে productId নিন (early return না করে)
     const productId = params?.id as string;
 
-    console.log('Product ID from useParams:', productId);
-
-    // Early return যদি productId না থাকে
-    if (!productId) {
-        console.error('No product ID found in params');
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-900">
-                <div className="text-white text-lg">Product ID not found. Please check the URL.</div>
-            </div>
-        );
-    }
-
+    // ✅ প্রথমে সব Hooks declare করো (কোন condition এর আগে না)
     const [formData, setFormData] = useState<FormData>({
         title: '',
         bdtPrice: '',
@@ -116,6 +111,7 @@ export default function UpdateProduct() {
         productType: 'Own',
         affiliateLink: '',
         category: '',
+        subCategory: '',
         newCategory: '',
         mainImage: null,
         mainImageAlt: '',
@@ -147,9 +143,42 @@ export default function UpdateProduct() {
         additionalImages: []
     });
     const [categories, setCategories] = useState<Category[]>([]);
+    const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const mainImageInputRef = useRef<HTMLInputElement>(null);
     const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+    // ✅ Early return condition Hooks এর পরে
+    if (!productId) {
+        console.error('No product ID found in params');
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-900">
+                <div className="text-white text-lg">Product ID not found. Please check the URL.</div>
+            </div>
+        );
+    }
+
+    // ✅ এখন useEffect গুলো declare করো
+    // Category change-এর জন্য useEffect
+    useEffect(() => {
+        if (formData.category && formData.category !== 'new') {
+            const fetchSubCategories = async () => {
+                try {
+                    const res = await fetch(`/api/products?type=subcategories&categoryId=${formData.category}`);
+                    if (!res.ok) throw new Error('Failed to fetch subcategories');
+                    const data = await res.json();
+                    setSubCategories(data);
+                } catch (err: any) {
+                    console.error('Subcategory fetch error:', err);
+                    setErrors(prev => ({ ...prev, subcategory: err.message }));
+                }
+            };
+            fetchSubCategories();
+        } else {
+            setSubCategories([]);
+            setFormData(prev => ({ ...prev, subCategory: '' }));
+        }
+    }, [formData.category]);
 
     // Fetch product and categories
     useEffect(() => {
@@ -192,13 +221,14 @@ export default function UpdateProduct() {
                     description: product.description || '',
                     shortDescription: product.shortDescription || '',
                     product_code: product.product_code || '',
-                    descriptions: product.descriptions && product.descriptions.length > 0 
-                        ? product.descriptions 
+                    descriptions: product.descriptions && product.descriptions.length > 0
+                        ? product.descriptions
                         : [''],
                     bulletPoints: product.bulletPoints?.join(', ') || '',
                     productType: product.productType || 'Own',
                     affiliateLink: product.affiliateLink || '',
                     category: product.category?._id || '',
+                    subCategory: product.subCategory?._id || '',
                     newCategory: '',
                     mainImage: null,
                     mainImageAlt: product.mainImageAlt || '',
@@ -233,6 +263,16 @@ export default function UpdateProduct() {
 
                 setCategories(categoriesData);
                 setErrors({});
+
+                // Product load হওয়ার পর যদি category থাকে, তাহলে subcategories fetch করো
+                if (product.category?._id) {
+                    const subCatRes = await fetch(`/api/products?type=subcategories&categoryId=${product.category._id}`);
+                    if (subCatRes.ok) {
+                        const subCatData = await subCatRes.json();
+                        setSubCategories(subCatData);
+                    }
+                }
+
             } catch (err: any) {
                 console.error('Error in fetchData:', err);
                 setErrors({ general: err.message || 'Failed to load product data' });
@@ -250,71 +290,73 @@ export default function UpdateProduct() {
             if (imagePreviews.mainImage && imagePreviews.mainImage.startsWith('blob:')) {
                 URL.revokeObjectURL(imagePreviews.mainImage);
             }
-            imagePreviews.additionalImages.forEach((url) => 
+            imagePreviews.additionalImages.forEach((url) =>
                 url && url.startsWith('blob:') && URL.revokeObjectURL(url)
             );
         };
     }, [imagePreviews]);
 
+
+
     // Validation function
     const validateForm = (): Errors => {
         const newErrors: Errors = {};
-        
+
         if (!formData.title.trim()) newErrors.title = 'Title is required';
-        
+
         const bdtPriceNum = parseFloat(formData.bdtPrice);
         if (isNaN(bdtPriceNum) || bdtPriceNum <= 0) {
             newErrors.bdtPrice = 'BDT price must be a positive number';
         }
-        
+
         if (formData.usdPrice) {
             const usdPriceNum = parseFloat(formData.usdPrice);
             if (isNaN(usdPriceNum) || usdPriceNum <= 0) {
                 newErrors.usdPrice = 'USD price must be a positive number';
             }
         }
-        
+
         if (formData.eurPrice) {
             const eurPriceNum = parseFloat(formData.eurPrice);
             if (isNaN(eurPriceNum) || eurPriceNum <= 0) {
                 newErrors.eurPrice = 'EUR price must be a positive number';
             }
         }
-        
+
         if (!formData.description.trim()) newErrors.description = 'Primary description is required';
         if (!formData.product_code.trim()) newErrors.product_code = 'Product Code is required';
-        
+
         if (formData.productType === 'Affiliate' && !formData.affiliateLink.trim()) {
             newErrors.affiliateLink = 'Affiliate link is required';
         } else if (formData.affiliateLink && !/^https?:\/\/.+/.test(formData.affiliateLink)) {
             newErrors.affiliateLink = 'Invalid URL format';
         }
-        
+
         if (!formData.category && !formData.newCategory.trim()) {
             newErrors.category = 'Category or new category name is required';
         }
-        
+
         if (formData.newCategory && !/^[a-zA-Z0-9\s&-]+$/.test(formData.newCategory)) {
             newErrors.newCategory = 'Category name can only contain letters, numbers, spaces, &, or -';
         }
-        
+
         if (!formData.mainImage && !formData.existingMainImage) {
             newErrors.mainImage = 'Main image is required';
         }
-        
+
         if (!formData.mainImageAlt.trim()) newErrors.mainImageAlt = 'Main image ALT text is required';
-        
+
         const quantityNum = parseInt(formData.quantity, 10);
         if (isNaN(quantityNum) || quantityNum < 0) {
             newErrors.quantity = 'Quantity must be a non-negative integer';
         }
-        
+
         if (!formData.brand.trim()) newErrors.brand = 'Brand is required';
-        
+
         if (!formData.metaTitle.trim() || formData.metaTitle.length > 60) {
             newErrors.metaTitle = 'Meta Title is required (max 60 chars)';
         }
-        
+
         if (!formData.metaDescription.trim() || formData.metaDescription.length > 160) {
             newErrors.metaDescription = 'Meta Description is required (max 160 chars)';
         }
@@ -332,19 +374,19 @@ export default function UpdateProduct() {
                         newErrors[`sizeQuantity${index}`] = 'Size quantity must be a non-negative number';
                     }
                 });
-                
+
                 const totalSizeQuantity = formData.sizes.reduce((sum, size) => sum + (size.quantity || 0), 0);
                 if (totalSizeQuantity !== quantityNum) {
                     newErrors.sizes = 'Sum of size quantities must equal total quantity';
                 }
             }
         }
-        
+
         if (!formData.isGlobal) {
             if (!formData.targetCountry.trim()) newErrors.targetCountry = 'Target country is required';
             if (!formData.targetCity.trim()) newErrors.targetCity = 'Target city is required';
         }
-        
+
         return newErrors;
     };
 
@@ -385,6 +427,11 @@ export default function UpdateProduct() {
             data.append('availability', formData.availability);
             data.append('sizeRequirement', formData.sizeRequirement);
             data.append('isGlobal', formData.isGlobal.toString());
+
+            // ✅ Subcategory 
+            if (formData.subCategory && formData.subCategory.trim()) {
+                data.append('subCategory', formData.subCategory);
+            }
 
             // Optional fields
             if (formData.usdPrice) data.append('usdPrice', formData.usdPrice);
@@ -467,9 +514,9 @@ export default function UpdateProduct() {
             router.refresh(); // Refresh the page data
         } catch (err: any) {
             console.error('Error updating product:', err);
-            setErrors(prev => ({ 
-                ...prev, 
-                general: err.message || 'Failed to update product' 
+            setErrors(prev => ({
+                ...prev,
+                general: err.message || 'Failed to update product'
             }));
         } finally {
             setIsSubmitting(false);
@@ -677,9 +724,9 @@ export default function UpdateProduct() {
                     </div>
                 </div>
 
-            
-                    
-                    
+
+
+
 
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div className="space-y-6">
@@ -783,6 +830,27 @@ export default function UpdateProduct() {
                                     />
                                     {errors.newCategory && <p className="mt-1 text-sm text-red-500">{errors.newCategory}</p>}
                                 </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-300 mb-2 text-sm font-medium">Subcategory (Optional)</label>
+                            <select
+                                value={formData.subCategory || ''}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    subCategory: e.target.value
+                                })}
+                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border ${errors.subCategory ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                            >
+                                <option value="">Select Subcategory (Optional)</option>
+                                {subCategories.map((sub) => (
+                                    <option key={sub._id} value={sub._id}>{sub.name}</option>
+                                ))}
+                            </select>
+
+                            {errors.subCategory && (
+                                <p className="mt-1 text-sm text-red-500">{errors.subCategory}</p>
                             )}
                         </div>
 

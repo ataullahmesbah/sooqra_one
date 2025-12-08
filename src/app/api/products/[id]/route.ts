@@ -10,6 +10,7 @@ import Category from '@/src/models/Category';
 import Product from '@/src/models/Products';
 import dbConnect from '@/src/lib/dbConnect';
 import { authOptions } from '../../auth/[...nextauth]/route';
+import SubCategory from '@/src/models/SubCategory'; // 
 
 
 // Interface definitions
@@ -44,34 +45,35 @@ interface Price {
     exchangeRate?: number;
 }
 
-// Sort function for additional images by lastModified date
-const ascendingSort = (a: File, b: File): number => {
-    return b.lastModified - a.lastModified;
-};
-
 interface Params {
     id: string;
 }
 
+// Sort function for additional images by lastModified date
+const ascendingSort = (a: File, b: File): number => {
+    return b.lastModified - a.lastModified;
+};
 
 
 
 export async function GET(request: Request, { params }: { params: Promise<Params> }) {
     await dbConnect();
     try {
-        // Await the params promise
         const { id } = await params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return Response.json({ error: 'Invalid product ID' }, { status: 400 });
         }
 
-        const product = await Product.findById(id).populate('category').lean();
+        const product = await Product.findById(id)
+            .populate('category')
+            .populate('subCategory') // ✅ subCategory populate করো
+            .lean();
+
         if (!product) {
             return Response.json({ error: 'Product not found' }, { status: 404 });
         }
 
-        // Type assertion for the product object
         const productData = product as any;
 
         if (productData.sizeRequirement === 'Mandatory' && productData.sizes?.length > 0) {
@@ -85,45 +87,6 @@ export async function GET(request: Request, { params }: { params: Promise<Params
     }
 }
 
-export async function DELETE(request: Request, { params }: { params: Params }) {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    try {
-        const productId = params.id;
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            return Response.json({ error: 'Invalid product ID' }, { status: 400 });
-        }
-        const product = await Product.findById(productId);
-        if (!product) {
-            return Response.json({ error: 'Product not found' }, { status: 404 });
-        }
-
-        // Delete images from Cloudinary
-        if (product.mainImage) {
-            const publicId = product.mainImage.split('/').pop()?.split('.')[0];
-            if (publicId) {
-                await cloudinary.uploader.destroy(`products/${publicId}`);
-            }
-        }
-
-        for (const img of product.additionalImages) {
-            const publicId = img.url.split('/').pop()?.split('.')[0];
-            if (publicId) {
-                await cloudinary.uploader.destroy(`products/additional/${publicId}`);
-            }
-        }
-
-        await Product.findByIdAndDelete(productId);
-        return Response.json({ message: 'Product deleted' }, { status: 200 });
-    } catch (error: any) {
-        return Response.json({ error: `Failed to delete product: ${error.message}` }, { status: 500 });
-    }
-}
-
 export async function PUT(request: Request, { params }: { params: Promise<Params> }) {
     await dbConnect();
     const session = await getServerSession(authOptions);
@@ -132,7 +95,6 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
     }
 
     try {
-        // Await the params
         const { id: productId } = await params;
 
         console.log('Updating product ID:', productId);
@@ -149,12 +111,13 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         const formData = await request.formData();
         console.log('FormData keys:', [...formData.keys()]);
 
-        // Debug log
-        for (let [key, value] of formData.entries()) {
+
+        for (const [key, value] of formData.entries()) {
             console.log(`${key}:`, typeof value, value);
         }
 
-        // Extract ALL fields including aggregateRating
+
+        // Extract ALL fields
         const title = formData.get('title') as string;
         const bdtPrice = formData.get('bdtPrice') as string;
         const usdPrice = formData.get('usdPrice') as string;
@@ -170,6 +133,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         const affiliateLink = productType === 'Affiliate' ? (formData.get('affiliateLink') as string) : '';
         const categoryId = formData.get('category') as string;
         const newCategory = formData.get('newCategory') as string;
+        const subCategoryId = formData.get('subCategory') as string; // ✅ subCategory
         const mainImage = formData.get('mainImage') as File;
         const mainImageAlt = formData.get('mainImageAlt') as string;
         const existingMainImage = formData.get('existingMainImage') as string;
@@ -317,6 +281,16 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             return Response.json({ error: 'Category is required' }, { status: 400 });
         }
 
+        // ✅ Handle subcategory
+        let subCategory = null;
+        if (subCategoryId && subCategoryId.trim() && mongoose.Types.ObjectId.isValid(subCategoryId)) {
+            subCategory = await SubCategory.findOne({
+                _id: subCategoryId,
+                category: category._id // Ensure subcategory belongs to selected category
+            });
+            // Note: subCategory optional, so no error if not found
+        }
+
         // Handle main image
         let mainImageUrl = existingMainImage;
         if (mainImage && mainImage.size > 0) {
@@ -357,7 +331,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         }
 
         // Handle additional images
-        let additionalImageUrls: AdditionalImage[] = [...existingAdditionalImages];
+        const additionalImageUrls: AdditionalImage[] = [...existingAdditionalImages];
 
         // Upload new additional images
         for (const [index, image] of additionalImages.entries()) {
@@ -452,6 +426,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             affiliateLink: productType === 'Affiliate' ? affiliateLink : undefined,
             brand: brand.trim(),
             category: category._id,
+            subCategory: subCategory?._id || null, // ✅ subCategory যোগ করলাম
             quantity,
             availability,
             metaTitle: metaTitle.trim(),
@@ -474,7 +449,8 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             productId,
             updateData,
             { new: true, runValidators: true }
-        ).populate('category');
+        ).populate('category')
+            .populate('subCategory'); // ✅ subCategory populate করো
 
         if (!updatedProduct) {
             return Response.json({ error: 'Failed to update product' }, { status: 500 });
@@ -493,3 +469,44 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         }, { status: 500 });
     }
 }
+
+
+export async function DELETE(request: Request, { params }: { params: Params }) {
+    await dbConnect();
+    const session = await getServerSession(authOptions);
+    if (!session) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+        const productId = params.id;
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return Response.json({ error: 'Invalid product ID' }, { status: 400 });
+        }
+        const product = await Product.findById(productId);
+        if (!product) {
+            return Response.json({ error: 'Product not found' }, { status: 404 });
+        }
+
+        // Delete images from Cloudinary
+        if (product.mainImage) {
+            const publicId = product.mainImage.split('/').pop()?.split('.')[0];
+            if (publicId) {
+                await cloudinary.uploader.destroy(`products/${publicId}`);
+            }
+        }
+
+        for (const img of product.additionalImages) {
+            const publicId = img.url.split('/').pop()?.split('.')[0];
+            if (publicId) {
+                await cloudinary.uploader.destroy(`products/additional/${publicId}`);
+            }
+        }
+
+        await Product.findByIdAndDelete(productId);
+        return Response.json({ message: 'Product deleted' }, { status: 200 });
+    } catch (error: any) {
+        return Response.json({ error: `Failed to delete product: ${error.message}` }, { status: 500 });
+    }
+}
+
