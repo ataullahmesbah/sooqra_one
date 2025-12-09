@@ -134,6 +134,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         const categoryId = formData.get('category') as string;
         const newCategory = formData.get('newCategory') as string;
         const subCategoryId = formData.get('subCategory') as string; // ✅ subCategory
+        const newSubCategory = formData.get('newSubCategory') as string;
         const mainImage = formData.get('mainImage') as File;
         const mainImageAlt = formData.get('mainImageAlt') as string;
         const existingMainImage = formData.get('existingMainImage') as string;
@@ -283,13 +284,37 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
 
         // ✅ Handle subcategory
         let subCategory = null;
-        if (subCategoryId && subCategoryId.trim() && mongoose.Types.ObjectId.isValid(subCategoryId)) {
+        if (subCategoryId && subCategoryId.trim() && subCategoryId !== 'new' && mongoose.Types.ObjectId.isValid(subCategoryId)) {
+            // Existing subcategory
             subCategory = await SubCategory.findOne({
                 _id: subCategoryId,
-                category: category._id // Ensure subcategory belongs to selected category
+                category: category._id
             });
-            // Note: subCategory optional, so no error if not found
+        } else if (newSubCategory && newSubCategory.trim() && subCategoryId === 'new') {
+            // New subcategory create করো
+            const slug = newSubCategory
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+
+            let existingSubCat = await SubCategory.findOne({
+                slug,
+                category: category._id
+            });
+
+            if (!existingSubCat) {
+                existingSubCat = new SubCategory({
+                    name: newSubCategory.trim(),
+                    slug,
+                    category: category._id,
+                });
+                await existingSubCat.save();
+            }
+            subCategory = existingSubCat;
         }
+
+        const subCategoryIdToSave = subCategory?._id || null;
 
         // Handle main image
         let mainImageUrl = existingMainImage;
@@ -426,7 +451,8 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             affiliateLink: productType === 'Affiliate' ? affiliateLink : undefined,
             brand: brand.trim(),
             category: category._id,
-            subCategory: subCategory?._id || null, // ✅ subCategory যোগ করলাম
+            // subCategory: subCategory?._id || null, 
+            subCategory: subCategoryIdToSave,
             quantity,
             availability,
             metaTitle: metaTitle.trim(),

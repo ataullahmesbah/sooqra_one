@@ -1,5 +1,4 @@
-import ShippingCharges from "@/app/Dashboard/Shop/ShippingCharges/ShippingCharges";
-
+import ShippingCharges from "@/src/components/Dashboard/ShippingCharges/ShippingCharges";
 
 
 const page = () => {

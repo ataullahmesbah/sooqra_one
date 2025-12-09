@@ -47,7 +47,12 @@ const productSchema = new mongoose.Schema({
     owner: { type: String, required: true },
     brand: { type: String, required: true },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
-    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'SubCategory', required: true },
+    subCategory: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SubCategory',
+        required: false,
+        default: null
+    },
     quantity: { type: Number, required: true, min: 0, default: 0 },
     availability: { type: String, enum: ['InStock', 'OutOfStock', 'PreOrder'], default: 'InStock' },
     metaTitle: { type: String, required: true, maxlength: 60 },

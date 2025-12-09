@@ -56,6 +56,7 @@ interface FormData {
     category: string;
     subCategory: string; // ✅ subCategory যোগ করেছি
     newCategory: string;
+    newSubCategory: string;
     mainImage: File | null;
     mainImageAlt: string;
     existingMainImage: string;
@@ -113,6 +114,7 @@ export default function UpdateProduct() {
         category: '',
         subCategory: '',
         newCategory: '',
+        newSubCategory: '',
         mainImage: null,
         mainImageAlt: '',
         existingMainImage: '',
@@ -230,6 +232,7 @@ export default function UpdateProduct() {
                     category: product.category?._id || '',
                     subCategory: product.subCategory?._id || '',
                     newCategory: '',
+                    newSubCategory: '',
                     mainImage: null,
                     mainImageAlt: product.mainImageAlt || '',
                     existingMainImage: product.mainImage || '',
@@ -339,6 +342,9 @@ export default function UpdateProduct() {
         if (formData.newCategory && !/^[a-zA-Z0-9\s&-]+$/.test(formData.newCategory)) {
             newErrors.newCategory = 'Category name can only contain letters, numbers, spaces, &, or -';
         }
+        if (formData.subCategory === 'new' && !formData.newSubCategory?.trim()) {
+            newErrors.newSubCategory = 'New subcategory name is required';
+        }
 
         if (!formData.mainImage && !formData.existingMainImage) {
             newErrors.mainImage = 'Main image is required';
@@ -429,9 +435,16 @@ export default function UpdateProduct() {
             data.append('isGlobal', formData.isGlobal.toString());
 
             // ✅ Subcategory 
-            if (formData.subCategory && formData.subCategory.trim()) {
+            if (formData.subCategory && formData.subCategory.trim() && formData.subCategory !== 'new') {
                 data.append('subCategory', formData.subCategory);
+            } else if (formData.subCategory === 'new' && formData.newSubCategory) {
+                data.append('subCategory', 'new');
+                data.append('newSubCategory', formData.newSubCategory);
+            } else {
+
+                data.append('subCategory', '');
             }
+
 
             // Optional fields
             if (formData.usdPrice) data.append('usdPrice', formData.usdPrice);
@@ -834,23 +847,42 @@ export default function UpdateProduct() {
                         </div>
 
                         <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Subcategory (Optional)</label>
+                            <label className="block text-gray-300 mb-2 text-sm font-medium">Subcategory</label>
                             <select
                                 value={formData.subCategory || ''}
                                 onChange={(e) => setFormData({
                                     ...formData,
-                                    subCategory: e.target.value
+                                    subCategory: e.target.value,
+                                    newSubCategory: e.target.value === 'new' ? formData.newSubCategory : '' // ✅ reset করো
                                 })}
                                 className={`w-full p-3 bg-gray-800 text-white rounded-lg border ${errors.subCategory ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
                             >
-                                <option value="">Select Subcategory (Optional)</option>
+                                <option value="">Select Subcategory</option>
                                 {subCategories.map((sub) => (
                                     <option key={sub._id} value={sub._id}>{sub.name}</option>
                                 ))}
+                                <option value="new">➕ Add New Subcategory</option> {/* ✅ এই লাইন যোগ করো */}
                             </select>
 
-                            {errors.subCategory && (
-                                <p className="mt-1 text-sm text-red-500">{errors.subCategory}</p>
+                            {/* ✅ New subcategory input field */}
+                            {formData.subCategory === 'new' && (
+                                <div className="mt-2">
+                                    <input
+                                        type="text"
+                                        value={formData.newSubCategory || ''}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            newSubCategory: e.target.value
+                                        })}
+                                        className={`w-full p-3 bg-gray-800 text-white rounded-lg border ${errors.newSubCategory ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                                        placeholder="Enter new subcategory name"
+                                    />
+                                    {errors.newSubCategory && <p className="mt-1 text-sm text-red-500">{errors.newSubCategory}</p>}
+                                </div>
+                            )}
+
+                            {errors.subCategory && formData.subCategory !== 'new' && (
+                                <p className="mt-1 text-sm text-red-500">Subcategory is required</p>
                             )}
                         </div>
 

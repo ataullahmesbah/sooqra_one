@@ -1,6 +1,5 @@
 // src/app/api/products/shipping-charges/route.ts
-
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/dbConnect';
 import ShippingCharge from '@/src/models/ShippingCharge';
 
@@ -10,18 +9,25 @@ interface ShippingChargeItem {
     charge: number;
 }
 
-export async function GET() {
+interface ShippingChargeDocument {
+    type: string;
+    charge: number;
+    updatedAt: Date;
+}
+
+export async function GET(): Promise<NextResponse> {
     try {
         await dbConnect();
-        const charges = await ShippingCharge.find({}).lean();
+        const charges: ShippingChargeDocument[] = await ShippingCharge.find({}).lean() as ShippingChargeDocument[];
         console.log('Fetched Shipping Charges:', charges);
 
         if (charges.length === 0) {
+            // ✅ নতুন default charges
             await ShippingCharge.insertMany([
-                { type: 'Dhaka-Chattogram', charge: 100 },
-                { type: 'Others', charge: 150 }
+                { type: 'Dhaka', charge: 80 }, // ✅ ঢাকার জন্য
+                { type: 'Other-Districts', charge: 120 } // ✅ অন্যান্য জেলার জন্য
             ]);
-            const defaultCharges = await ShippingCharge.find({}).lean();
+            const defaultCharges: ShippingChargeDocument[] = await ShippingCharge.find({}).lean() as ShippingChargeDocument[];
             console.log('Initialized Default Shipping Charges:', defaultCharges);
             return NextResponse.json(defaultCharges, { status: 200 });
         }
@@ -29,37 +35,59 @@ export async function GET() {
         return NextResponse.json(charges, { status: 200 });
     } catch (error: any) {
         console.error('Error fetching shipping charges:', error);
-        return NextResponse.json({ error: 'Failed to fetch shipping charges' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to fetch shipping charges' },
+            { status: 500 }
+        );
     }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
         await dbConnect();
         const charges: ShippingChargeItem[] = await request.json();
 
+        // Validation
         if (!Array.isArray(charges) || charges.length !== 2) {
-            return NextResponse.json({ error: 'Expected an array of two charges' }, { status: 400 });
-        }
-
-        for (const { type, charge } of charges) {
-            if (!['Dhaka-Chattogram', 'Others'].includes(type)) {
-                return NextResponse.json({ error: `Invalid type: ${type}` }, { status: 400 });
-            }
-            if (typeof charge !== 'number' || charge < 0) {
-                return NextResponse.json({ error: `Invalid charge for ${type}` }, { status: 400 });
-            }
-
-            await ShippingCharge.findOneAndUpdate(
-                { type },
-                { charge, updatedAt: new Date() },
-                { upsert: true, new: true }
+            return NextResponse.json(
+                { error: 'Expected an array of two charges' },
+                { status: 400 }
             );
         }
 
-        return NextResponse.json({ message: 'Shipping charges updated' }, { status: 200 });
+        for (const { type, charge } of charges) {
+            // ✅ নতুন type validation
+            if (!['Dhaka', 'Other-Districts'].includes(type)) {
+                return NextResponse.json(
+                    { error: `Invalid type: ${type}. Must be "Dhaka" or "Other-Districts"` },
+                    { status: 400 }
+                );
+            }
+
+            if (typeof charge !== 'number' || isNaN(charge) || charge < 0) {
+                return NextResponse.json(
+                    { error: `Invalid charge for ${type}. Must be a positive number` },
+                    { status: 400 }
+                );
+            }
+
+            // Update or create the shipping charge
+            await ShippingCharge.findOneAndUpdate(
+                { type },
+                { charge, updatedAt: new Date() },
+                { upsert: true, new: true, runValidators: true }
+            );
+        }
+
+        return NextResponse.json(
+            { message: 'Shipping charges updated successfully' },
+            { status: 200 }
+        );
     } catch (error: any) {
         console.error('Error updating shipping charges:', error);
-        return NextResponse.json({ error: 'Failed to update shipping charges: ' + error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: `Failed to update shipping charges: ${error.message}` },
+            { status: 500 }
+        );
     }
 }
