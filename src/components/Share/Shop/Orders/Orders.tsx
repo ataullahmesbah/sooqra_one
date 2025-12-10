@@ -21,6 +21,7 @@ interface CustomerInfo {
     thana?: string;
     bkashNumber?: string;
     transactionId?: string;
+    notes?: string;
 }
 
 interface OrderProduct {
@@ -1054,90 +1055,109 @@ export default function OrdersPage() {
                 </div>
             </div>
 
-            {/* Order Details Modal */}
+            {/* Order Details Modal - RESPONSIVE VERSION */}
             {showCustomerInfo && selectedOrder && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
                     <div
                         ref={modalRef}
-                        className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                        className="bg-white rounded-xl sm:rounded-2xl w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mx-2 sm:mx-0"
+                        style={{
+                            width: 'calc(100vw - 16px)',
+                            maxWidth: 'min(calc(100vw - 32px), 800px)'
+                        }}
                     >
-                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
-                                <p className="text-gray-600 text-sm">Order ID: {selectedOrder.orderId}</p>
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center z-10">
+                            <div className="min-w-0 flex-1">
+                                <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Order Details</h2>
+                                <p className="text-gray-600 text-xs sm:text-sm truncate">Order ID: {selectedOrder.orderId}</p>
                             </div>
                             <button
                                 onClick={() => setShowCustomerInfo(false)}
-                                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                                className="text-gray-400 hover:text-gray-600 p-1 sm:p-2 rounded-full hover:bg-gray-100 ml-2 flex-shrink-0"
+                                aria-label="Close modal"
                             >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
 
-                        <div className="p-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="p-4 sm:p-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                                 {/* Left Column: Customer Info */}
                                 <div>
-                                    <div className="mb-8">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                                    <div className="mb-6 sm:mb-8">
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
                                             Customer Information
                                         </h3>
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="text-sm text-gray-500">Full Name</label>
-                                                <p className="font-medium text-gray-900">{selectedOrder.customerInfo.name}</p>
+                                                <label className="text-xs sm:text-sm text-gray-500">Full Name</label>
+                                                <p className="font-medium text-gray-900 text-sm sm:text-base">{selectedOrder.customerInfo.name}</p>
                                             </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                                 <div>
-                                                    <label className="text-sm text-gray-500">Email</label>
-                                                    <p className="font-medium text-gray-900">{selectedOrder.customerInfo.email}</p>
+                                                    <label className="text-xs sm:text-sm text-gray-500">Email</label>
+                                                    <p className="font-medium text-gray-900 text-sm sm:text-base break-words">{selectedOrder.customerInfo.email}</p>
                                                 </div>
                                                 <div>
-                                                    <label className="text-sm text-gray-500">Phone</label>
-                                                    <p className="font-medium text-gray-900">{selectedOrder.customerInfo.phone}</p>
+                                                    <label className="text-xs sm:text-sm text-gray-500">Phone</label>
+                                                    <p className="font-medium text-gray-900 text-sm sm:text-base">{selectedOrder.customerInfo.phone}</p>
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="text-sm text-gray-500">Shipping Address</label>
-                                                <p className="font-medium text-gray-900">
+                                                <label className="text-xs sm:text-sm text-gray-500">Shipping Address</label>
+                                                <p className="font-medium text-gray-900 text-sm sm:text-base">
                                                     {selectedOrder.customerInfo.address}
                                                     {selectedOrder.customerInfo.city && `, ${selectedOrder.customerInfo.city}`}
                                                     {selectedOrder.customerInfo.postcode && ` - ${selectedOrder.customerInfo.postcode}`}
                                                 </p>
-                                                <div className="text-sm text-gray-600 mt-1">
+                                                <div className="text-xs sm:text-sm text-gray-600 mt-1">
                                                     {selectedOrder.customerInfo.district && `${selectedOrder.customerInfo.district}, `}
                                                     {selectedOrder.customerInfo.thana && `${selectedOrder.customerInfo.thana}, `}
                                                     {selectedOrder.customerInfo.country}
                                                 </div>
                                             </div>
+
+                                            {/* ✅ Additional Notes Section */}
+                                            {selectedOrder.customerInfo.notes && (
+                                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                                    <label className="text-xs sm:text-sm text-gray-500 font-medium mb-2 block">
+                                                        Additional Notes:
+                                                    </label>
+                                                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                                                        <p className="text-gray-700 whitespace-pre-line text-sm sm:text-base">
+                                                            {selectedOrder.customerInfo.notes}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
                                     {/* Order Status Section */}
                                     <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
                                             Order Status
                                         </h3>
-                                        <div className="space-y-4">
+                                        <div className="space-y-3 sm:space-y-4">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-gray-600">Current Status:</span>
-                                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedOrder.status)}`}>
+                                                <span className="text-gray-600 text-sm sm:text-base">Current Status:</span>
+                                                <span className={`px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(selectedOrder.status)}`}>
                                                     {selectedOrder.status.replace('_', ' ')}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-gray-600">Payment Method:</span>
-                                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPaymentMethodColor(selectedOrder.paymentMethod)}`}>
-                                                    {selectedOrder.paymentMethod === 'cod' ? 'Cash on Delivery' :
-                                                        selectedOrder.paymentMethod === 'bkash' ? 'bKash Payment' : 'Online Payment'}
+                                                <span className="text-gray-600 text-sm sm:text-base">Payment Method:</span>
+                                                <span className={`px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium ${getPaymentMethodColor(selectedOrder.paymentMethod)}`}>
+                                                    {selectedOrder.paymentMethod === 'cod' ? 'COD' :
+                                                        selectedOrder.paymentMethod === 'bkash' ? 'bKash' : 'Online'}
                                                 </span>
                                             </div>
                                             {selectedOrder.couponCode && (
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-gray-600">Coupon Used:</span>
-                                                    <span className="font-medium text-purple-600">{selectedOrder.couponCode}</span>
+                                                    <span className="text-gray-600 text-sm sm:text-base">Coupon Used:</span>
+                                                    <span className="font-medium text-purple-600 text-sm sm:text-base">{selectedOrder.couponCode}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -1146,26 +1166,26 @@ export default function OrdersPage() {
 
                                 {/* Right Column: Order Summary */}
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
                                         Order Summary
                                     </h3>
 
-                                    <div className="space-y-4 mb-6">
+                                    <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                                         {groupProductsBySize(selectedOrder.products).map((product, index) => (
-                                            <div key={index} className="bg-gray-50 rounded-lg p-4">
+                                            <div key={index} className="bg-gray-50 rounded-lg p-3 sm:p-4">
                                                 <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <h4 className="font-medium text-gray-900">{product.title}</h4>
-                                                        <div className="text-sm text-gray-500 mt-1">
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-medium text-gray-900 text-sm sm:text-base truncate">{product.title}</h4>
+                                                        <div className="text-xs sm:text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
                                                             <span>Quantity: {product.quantity}</span>
-                                                            {product.size && <span className="ml-3">Size: {formatSize(product.size)}</span>}
+                                                            {product.size && <span>Size: {formatSize(product.size)}</span>}
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <div className="font-medium text-gray-900">
+                                                    <div className="text-right ml-2 flex-shrink-0">
+                                                        <div className="font-medium text-gray-900 text-sm sm:text-base">
                                                             ৳{(product.price * product.quantity).toLocaleString()}
                                                         </div>
-                                                        <div className="text-sm text-gray-500">
+                                                        <div className="text-xs sm:text-sm text-gray-500">
                                                             ৳{product.price.toLocaleString()} each
                                                         </div>
                                                     </div>
@@ -1175,43 +1195,43 @@ export default function OrdersPage() {
                                     </div>
 
                                     {/* Order Totals */}
-                                    <div className="bg-gray-50 rounded-lg p-4">
+                                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                                         <div className="space-y-2">
                                             <div className="flex justify-between">
-                                                <span className="text-gray-600">Subtotal</span>
-                                                <span className="font-medium">
+                                                <span className="text-gray-600 text-sm sm:text-base">Subtotal</span>
+                                                <span className="font-medium text-sm sm:text-base">
                                                     ৳{selectedOrder.products.reduce((sum, p) => sum + (p.price * p.quantity), 0).toLocaleString()}
                                                 </span>
                                             </div>
                                             {selectedOrder.discount > 0 && (
                                                 <div className="flex justify-between text-green-600">
-                                                    <span>Discount</span>
-                                                    <span>-৳{selectedOrder.discount.toLocaleString()}</span>
+                                                    <span className="text-sm sm:text-base">Discount</span>
+                                                    <span className="font-medium text-sm sm:text-base">-৳{selectedOrder.discount.toLocaleString()}</span>
                                                 </div>
                                             )}
                                             {selectedOrder.shippingCharge > 0 && (
                                                 <div className="flex justify-between">
-                                                    <span className="text-gray-600">Shipping</span>
-                                                    <span className="font-medium">৳{selectedOrder.shippingCharge.toLocaleString()}</span>
+                                                    <span className="text-gray-600 text-sm sm:text-base">Shipping</span>
+                                                    <span className="font-medium text-sm sm:text-base">৳{selectedOrder.shippingCharge.toLocaleString()}</span>
                                                 </div>
                                             )}
                                             <div className="flex justify-between pt-2 border-t border-gray-200">
-                                                <span className="font-bold text-gray-900">Total</span>
-                                                <span className="font-bold text-gray-900">৳{selectedOrder.total.toLocaleString()}</span>
+                                                <span className="font-bold text-gray-900 text-sm sm:text-base">Total</span>
+                                                <span className="font-bold text-gray-900 text-sm sm:text-base">৳{selectedOrder.total.toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="mt-6 pt-4 border-t border-gray-200">
-                                        <div className="flex gap-3">
+                                    <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
+                                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                             {selectedOrder.status === 'accepted' && (
                                                 <button
                                                     onClick={() => {
                                                         handlePrintLabel(selectedOrder);
                                                         setShowCustomerInfo(false);
                                                     }}
-                                                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                                                    className="flex-1 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors text-sm sm:text-base"
                                                 >
                                                     Print Shipping Label
                                                 </button>
@@ -1221,13 +1241,13 @@ export default function OrdersPage() {
                                                     <button
                                                         onClick={() => handleAction(selectedOrder.orderId, 'accept')}
                                                         disabled={validatingOrder === selectedOrder.orderId}
-                                                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50"
+                                                        className="flex-1 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 text-sm sm:text-base"
                                                     >
-                                                        {validatingOrder === selectedOrder.orderId ? 'Checking Stock...' : 'Accept Order'}
+                                                        {validatingOrder === selectedOrder.orderId ? 'Checking...' : 'Accept Order'}
                                                     </button>
                                                     <button
                                                         onClick={() => handleAction(selectedOrder.orderId, 'reject')}
-                                                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+                                                        className="flex-1 px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors text-sm sm:text-base"
                                                     >
                                                         Reject Order
                                                     </button>

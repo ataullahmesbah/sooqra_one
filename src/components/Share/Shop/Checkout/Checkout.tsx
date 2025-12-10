@@ -31,6 +31,7 @@ interface CustomerInfo {
     country: string;
     district: string;
     thana: string;
+    notes: string;
 }
 
 interface ValidationErrors {
@@ -43,8 +44,8 @@ interface DistrictsThanas {
 }
 
 interface ShippingCharges {
-    'Dhaka-Chattogram': number;
-    'Others': number;
+    'Dhaka': number;
+    'Other-Districts': number;
 }
 
 interface AppliedCoupon {
@@ -122,6 +123,7 @@ export default function Checkout() {
         country: 'Bangladesh',
         district: '',
         thana: '',
+        notes: '',
     });
     const [couponCode, setCouponCode] = useState<string>('');
     const [discount, setDiscount] = useState<number>(0);
@@ -131,7 +133,10 @@ export default function Checkout() {
     const [loading, setLoading] = useState<boolean>(false);
     const [districtsThanas, setDistrictsThanas] = useState<DistrictsThanas>({});
     const router = useRouter();
-    const [shippingCharges, setShippingCharges] = useState<ShippingCharges>({ 'Dhaka-Chattogram': 0, 'Others': 0 });
+    const [shippingCharges, setShippingCharges] = useState<ShippingCharges>({
+        'Dhaka': 0,
+        'Other-Districts': 0
+    });
     const [userId, setUserId] = useState<string>(''); // Change this
     const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
     const [validatingCart, setValidatingCart] = useState<boolean>(false);
@@ -247,18 +252,23 @@ export default function Checkout() {
                 setDistrictsThanas(districtsResponse.data);
 
                 const shippingResponse = await axios.get('/api/products/shipping-charges');
-                const chargeMap: ShippingCharges = { 'Dhaka-Chattogram': 0, 'Others': 0 };
+                const chargeMap: ShippingCharges = {
+                    'Dhaka': 0,
+                    'Other-Districts': 0
+                };
+
                 shippingResponse.data.forEach((c: { type: string; charge: number }) => {
-                    if (c.type === 'Dhaka-Chattogram' || c.type === 'Others') {
+                    if (c.type === 'Dhaka' || c.type === 'Other-Districts') {
                         chargeMap[c.type as keyof ShippingCharges] = c.charge || 0;
                     }
                 });
+
                 setShippingCharges(chargeMap);
 
+
                 if (customerInfo.district) {
-                    const charge = customerInfo.district === 'Dhaka' || customerInfo.district === 'Chattogram' || customerInfo.district === 'Chittagong'
-                        ? chargeMap['Dhaka-Chattogram']
-                        : chargeMap['Others'];
+                    const isDhaka = customerInfo.district.toLowerCase().includes('dhaka');
+                    const charge = isDhaka ? chargeMap['Dhaka'] : chargeMap['Other-Districts'];
                     setShippingCharge(Number.isFinite(charge) ? charge : 0);
                 }
             } catch (error) {
@@ -365,9 +375,10 @@ export default function Checkout() {
 
         if (name === 'district') {
             setCustomerInfo((prev) => ({ ...prev, thana: '', district: value }));
-            const charge = value === 'Dhaka' || value === 'Chattogram' || value === 'Chittagong'
-                ? shippingCharges['Dhaka-Chattogram']
-                : shippingCharges['Others'];
+
+            // ✅ নতুন shipping charge logic
+            const isDhaka = value.toLowerCase().includes('dhaka');
+            const charge = isDhaka ? shippingCharges['Dhaka'] : shippingCharges['Other-Districts'];
             setShippingCharge(Number.isFinite(charge) ? charge : 0);
         } else {
             setCustomerInfo((prev) => ({ ...prev, [name]: value }));
@@ -618,6 +629,7 @@ export default function Checkout() {
             return;
         }
 
+        // Create order data object
         const orderData = {
             orderId: generateOrderId(),
             products: cart.map((item) => ({
@@ -629,26 +641,34 @@ export default function Checkout() {
                 size: item.size || null
             })),
             customerInfo: {
-                ...customerInfo,
+                name: customerInfo.name,
+                email: customerInfo.email,
                 phone: getStorablePhoneNumber(customerInfo.phone),
+                address: customerInfo.address,
+                notes: customerInfo.notes || '',
+                city: customerInfo.city || '',
+                postcode: customerInfo.postcode || '',
+                country: customerInfo.country || 'Bangladesh',
+                district: customerInfo.district || '',
+                thana: customerInfo.thana || '',
                 ...(paymentMethod === 'bkash' && {
-                    bkashNumber,
-                    transactionId
+                    bkashNumber: bkashNumber || '',
+                    transactionId: transactionId || ''
                 })
             },
             paymentMethod,
             status: paymentMethod === 'cod' || paymentMethod === 'bkash' ? 'pending' : 'pending_payment',
             total: Number.isFinite(payableAmount) ? payableAmount : 0,
-            discount,
-            shippingCharge: (paymentMethod === 'cod' || paymentMethod === 'bkash') &&
-                customerInfo.country === 'Bangladesh' ?
+            discount: discount || 0,
+            shippingCharge: ((paymentMethod === 'cod' || paymentMethod === 'bkash') &&
+                customerInfo.country === 'Bangladesh') ?
                 (Number.isFinite(shippingCharge) ? shippingCharge : 0) : 0,
             couponCode: appliedCoupon ? appliedCoupon.code : null,
             acceptedTerms: true,
             termsAcceptedAt: new Date().toISOString(),
-            userId: userId || null, // Add this
-            userEmail: customerInfo.email, // Add this
-            userPhone: getStorablePhoneNumber(customerInfo.phone) // Add this
+            userId: userId || null,
+            userEmail: customerInfo.email,
+            userPhone: getStorablePhoneNumber(customerInfo.phone)
         };
 
         setOrderData(orderData);
@@ -658,15 +678,19 @@ export default function Checkout() {
             productCount: orderData.products.length,
             paymentMethod: orderData.paymentMethod,
             total: orderData.total,
-            userId: userId || 'guest' // Add this
+            userId: userId || 'guest'
         });
+
+        // Debug: Check notes field
+        console.log('Notes in order data:', orderData.customerInfo.notes);
+        console.log('Full customer info:', orderData.customerInfo);
 
         try {
             if (paymentMethod === 'cod' || paymentMethod === 'bkash') {
                 // Add userId to order data
                 const orderDataWithUser = {
                     ...orderData,
-                    userId: userId || null, // Include userId if logged in
+                    userId: userId || null,
                     userEmail: customerInfo.email,
                     userPhone: getStorablePhoneNumber(customerInfo.phone)
                 };
@@ -675,7 +699,6 @@ export default function Checkout() {
 
                 console.log('Order API Response:', orderResponse.data);
 
-                // FIXED: Correct API response check
                 if (orderResponse.data &&
                     (orderResponse.data.message === 'Order created' ||
                         orderResponse.data.message === 'Order created successfully' ||
@@ -685,14 +708,13 @@ export default function Checkout() {
                     if (appliedCoupon) {
                         try {
                             await axios.post('/api/products/coupons/record-usage', {
-                                userId: userId || null, // Use actual userId
+                                userId: userId || null,
                                 couponCode: appliedCoupon.code,
                                 email: customerInfo.email,
                                 phone: customerInfo.phone,
                             });
                         } catch (couponError) {
                             console.warn('Failed to record coupon usage:', couponError);
-                            // Continue even if coupon recording fails
                         }
                     }
 
@@ -703,7 +725,7 @@ export default function Checkout() {
                     // Show success message
                     showCustomToast(`Order ${orderData.orderId} placed successfully!`, 'success');
 
-                    // Redirect to success page with delay for better UX
+                    // Redirect to success page
                     setTimeout(() => {
                         if (paymentMethod === 'cod') {
                             router.push(`/checkout/cod-success?orderId=${orderData.orderId}`);
@@ -713,26 +735,22 @@ export default function Checkout() {
                     }, 1500);
 
                 } else {
-                    throw new Error(orderResponse.data?.error || 'Order creation failed without specific error');
+                    throw new Error(orderResponse.data?.error || 'Order creation failed');
                 }
             }
         } catch (err: any) {
             console.error('Order creation error:', err);
 
-            // Better error handling
             let errorMessage = 'Payment processing failed';
 
             if (err.response) {
-                // Server responded with error
                 errorMessage = err.response.data?.error ||
                     err.response.data?.message ||
                     `Server error: ${err.response.status}`;
                 console.error('Server error details:', err.response.data);
             } else if (err.request) {
-                // Request was made but no response
                 errorMessage = 'No response from server. Please check your internet connection.';
             } else {
-                // Other errors
                 errorMessage = err.message || 'Unknown error occurred';
             }
 
@@ -986,6 +1004,29 @@ export default function Checkout() {
                                             )}
                                         </>
                                     )}
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Additional Notes (Optional)
+                                        </label>
+                                        <textarea
+                                            name="notes"
+                                            value={customerInfo.notes}
+                                            onChange={handleInputChange}
+                                            className="w-full bg-white border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent transition-all duration-200 hover:border-gray-400"
+                                            rows={3}
+                                            placeholder="Any special instructions, delivery preferences, or additional information..."
+                                            maxLength={500}
+                                        />
+                                        <div className="flex justify-between items-center mt-1">
+                                            <p className="text-xs text-gray-500">
+                                                Add any special instructions for delivery, packaging, or other preferences.
+                                            </p>
+                                            <span className={`text-xs ${customerInfo.notes.length > 450 ? 'text-red-500' : 'text-gray-400'}`}>
+                                                {customerInfo.notes.length}/500
+                                            </span>
+                                        </div>
+                                    </div>
                                 </form>
                             </div>
 
@@ -1158,7 +1199,15 @@ export default function Checkout() {
                                             {customerInfo.country === 'Bangladesh' && (paymentMethod === 'cod' || paymentMethod === 'bkash' || paymentMethod === 'pay_first') && (
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-gray-600">Shipping</span>
-                                                    <span className="font-medium text-gray-800">৳{(Number.isFinite(shippingCharge) ? shippingCharge : 0).toLocaleString()}</span>
+                                                    <span className="font-medium text-gray-800">
+                                                        ৳{(Number.isFinite(shippingCharge) ? shippingCharge : 0).toLocaleString()}
+                                                        {/*  Debug info যোগ করো */}
+                                                        <span className="text-xs text-gray-400 ml-2">
+                                                            ({customerInfo.district ?
+                                                                (customerInfo.district.toLowerCase().includes('dhaka') ? 'Dhaka' : 'Other Districts')
+                                                                : 'Not selected'})
+                                                        </span>
+                                                    </span>
                                                 </div>
                                             )}
 

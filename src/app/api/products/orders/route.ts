@@ -17,8 +17,10 @@ interface CustomerInfo {
     country: string;
     district?: string;
     thana?: string;
+    notes?: string;
     bkashNumber?: string;
     transactionId?: string;
+
 }
 
 interface ProductItem {
@@ -194,6 +196,7 @@ export async function POST(request: Request) {
             }
         }
 
+
         // 6. Create order — STOCK NOT REDUCED HERE
         const order = await Order.create({
             orderId,
@@ -208,7 +211,20 @@ export async function POST(request: Request) {
                 mainImage: p.mainImage || null,
                 size: p.size || null
             })),
-            customerInfo,
+            customerInfo: {
+                name: customerInfo.name,
+                email: customerInfo.email,
+                phone: customerInfo.phone,
+                address: customerInfo.address,
+                notes: customerInfo.notes || '', // ✅ notes সঠিকভাবে যোগ করা হয়েছে
+                city: customerInfo.city || '',
+                postcode: customerInfo.postcode || '',
+                country: customerInfo.country || 'Bangladesh', // ✅ country যোগ করা হয়েছে
+                district: customerInfo.district || '',
+                thana: customerInfo.thana || '',
+                bkashNumber: customerInfo.bkashNumber || '',
+                transactionId: customerInfo.transactionId || ''
+            },
             paymentMethod,
             status: paymentMethod === 'bkash' ? 'pending_payment' : 'pending',
             total,
@@ -244,28 +260,3 @@ export async function POST(request: Request) {
     }
 }
 
-// GET route remains unchanged
-// export async function GET(request: Request) {
-//     try {
-//         await dbConnect();
-//         const { searchParams } = new URL(request.url);
-//         const orderId = searchParams.get('orderId');
-//         const status = searchParams.get('status');
-//         const date = searchParams.get('date');
-
-//         const query: any = {};
-//         if (orderId) query.orderId = orderId;
-//         if (status) query.status = { $in: status.split(',') };
-//         if (date) {
-//             const start = new Date(date);
-//             const end = new Date(start);
-//             end.setDate(start.getDate() + 1);
-//             query.createdAt = { $gte: start, $lt: end };
-//         }
-
-//         const orders = await Order.find(query).lean();
-//         return NextResponse.json(orders, { status: 200 });
-//     } catch (error: any) {
-//         return NextResponse.json({ error: error.message }, { status: 500 });
-//     }
-// }

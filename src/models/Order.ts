@@ -17,6 +17,7 @@ interface ICustomerInfo {
     email: string;
     phone: string;
     address: string;
+    notes: string;
     city: string;
     postcode: string;
     country: string;
@@ -107,6 +108,11 @@ const OrderSchema: Schema = new Schema({
         address: {
             type: String,
             required: true
+        },
+        notes: { 
+            type: String,
+            required: false,
+            default: '' 
         },
         city: {
             type: String,
