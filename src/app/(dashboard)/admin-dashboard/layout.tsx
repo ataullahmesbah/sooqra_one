@@ -102,6 +102,13 @@ const AdminDashboardLayout = ({ children }: AdminDashboardLayoutProps) => {
 
             ],
         },
+        {
+            label: 'BANNER',
+            children: [
+                { label: 'Banner', link: '/admin-dashboard/home/banners' },
+
+            ],
+        },
     ];
 
     // Loading state
