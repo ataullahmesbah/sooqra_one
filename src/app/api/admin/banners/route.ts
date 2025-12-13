@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// CREATE new banner
+
 export async function POST(request: NextRequest) {
     try {
         await dbConnect();
@@ -50,14 +50,10 @@ export async function POST(request: NextRequest) {
         const buttons = formData.get('buttons') as string;
         const imageFile = formData.get('image') as File;
 
-        // Validate required fields
-        if (!title || title.trim() === '') {
-            return NextResponse.json(
-                { success: false, error: 'Title is required' },
-                { status: 400 }
-            );
-        }
+        // NEW: Add button position
+        const buttonPosition = formData.get('buttonPosition') as string || 'center-bottom';
 
+        // Validate required fields - Title is now optional
         if (!imageFile) {
             return NextResponse.json(
                 { success: false, error: 'Image is required' },
@@ -102,32 +98,18 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Default button if none provided (optional)
-        if (parsedButtons.length === 0) {
-            parsedButtons = [
-                {
-                    text: 'Shop Now',
-                    link: '/shop',
-                    type: 'gray'
-                }
-            ];
-        }
-
-        // Create banner
+        // Create banner with optional title/subtitle
         const bannerData = {
-            title: title.trim(),
-            subtitle: subtitle ? subtitle.trim() : '',
+            title: title ? title.trim() : '', // Optional
+            subtitle: subtitle ? subtitle.trim() : '', // Optional
             image: imageResult.secure_url,
             imagePublicId: imageResult.public_id,
             buttons: parsedButtons,
+            buttonPosition: buttonPosition, // NEW: Store button position
             isActive: isActive === 'true',
             order: parseInt(order) || 0,
             duration: parseInt(duration) || 5
         };
-
-        console.log('Creating banner with data:', {
-            bannerData: { ...bannerData, image: '[UPLOADED]' }
-        });
 
         const banner = await Banner.create(bannerData);
 
@@ -142,8 +124,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error: error.message || 'Failed to create banner',
-                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                error: error.message || 'Failed to create banner'
             },
             { status: 500 }
         );

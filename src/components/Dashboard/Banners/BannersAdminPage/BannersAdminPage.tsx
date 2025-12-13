@@ -187,122 +187,171 @@ export default function BannersAdminPage() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 lg:p-8">
       <Toaster position="top-right" />
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Banner Management</h1>
-        <p className="text-gray-600 mt-2">Create and manage your website banners</p>
+      {/* Updated Header with better width */}
+      <div className="mb-8 pb-6 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
+            Banner Management Dashboard
+          </h1>
+          <p className="text-gray-600 text-lg md:text-xl">
+            Create and manage your website banners with full control
+          </p>
+        </div>
       </div>
 
-      {/* Error Alert */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600">{error}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        {/* Left: Form Section */}
-        <div id="banner-form">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">
-                {editingBanner ? '✏️ Edit Banner' : '➕ Create New Banner'}
-              </h2>
-              {editingBanner && (
-                <button
-                  onClick={() => {
-                    setEditingBanner(null);
-                    toast.success('Edit cancelled');
-                  }}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel Edit
-                </button>
-              )}
-            </div>
-
-            <BannerForm
-              onSubmit={editingBanner ?
-                (data) => handleUpdate(editingBanner._id, data) :
-                handleCreate
-              }
-              initialData={editingBanner}
-              onCancel={() => setEditingBanner(null)}
-              isSubmitting={isSubmitting}
-            />
+      {/* Main Content with max width */}
+      <div className="max-w-7xl mx-auto">
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600">{error}</p>
           </div>
+        )}
 
-          {/* Stats */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Banner Stats</h3>
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <p className="text-sm text-blue-600 font-medium">Total Banners</p>
-                <p className="text-2xl md:text-3xl font-bold text-blue-800">{banners.length}</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                <p className="text-sm text-green-600 font-medium">Active</p>
-                <p className="text-2xl md:text-3xl font-bold text-green-800">
-                  {banners.filter(b => b.isActive).length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Banner List Section */}
-        <div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            {/* Header with Search */}
-            <div className="p-4 md:p-6 border-b border-gray-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+          {/* Left: Form Section */}
+          <div id="banner-form">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 md:p-8 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-800">All Banners</h2>
-                  <p className="text-gray-600 text-sm mt-1">
-                    Showing {filteredBanners.length} of {banners.length} banners
+                  <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-1">
+                    {editingBanner ? '✏️ Edit Banner' : '➕ Create New Banner'}
+                  </h2>
+                  <p className="text-gray-500 text-sm">
+                    {editingBanner
+                      ? 'Update your banner settings'
+                      : 'Add a new banner to your website'
+                    }
                   </p>
                 </div>
-                <div className="relative w-full sm:w-auto">
-                  <input
-                    type="text"
-                    placeholder="Search banners..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full sm:w-64 pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  />
-                  <svg
-                    className="absolute left-3 top-3 h-4 w-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {editingBanner && (
+                  <button
+                    onClick={() => {
+                      setEditingBanner(null);
+                      toast.success('Edit cancelled');
+                    }}
+                    className="px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+
+              <BannerForm
+                onSubmit={editingBanner ?
+                  (data) => handleUpdate(editingBanner._id, data) :
+                  handleCreate
+                }
+                initialData={editingBanner}
+                onCancel={() => setEditingBanner(null)}
+                isSubmitting={isSubmitting}
+              />
+            </div>
+
+            {/* Stats - Improved Design */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl shadow-lg border border-gray-200 p-6 md:p-8">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-6">Dashboard Overview</h3>
+              <div className="grid grid-cols-2 gap-4 md:gap-6">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 font-medium">Total Banners</p>
+                      <p className="text-2xl md:text-3xl font-bold text-gray-800 mt-1">{banners.length}</p>
+                    </div>
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 font-bold">{banners.length}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 font-medium">Active Banners</p>
+                      <p className="text-2xl md:text-3xl font-bold text-green-800 mt-1">
+                        {banners.filter(b => b.isActive).length}
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-green-600 font-bold">
+                        {banners.filter(b => b.isActive).length}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Banner List */}
-            <BannerList
-              banners={filteredBanners}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onToggleStatus={handleToggleStatus}
-            />
           </div>
 
-          {/* Help Text */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h4 className="font-medium text-gray-700 mb-2">💡 Tips</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Title is required, subtitle is optional</li>
-              <li>• Buttons are optional (default gray button added)</li>
-              <li>• Use drag handle (⋮⋮) to reorder banners</li>
-              <li>• Click on banner to preview on desktop</li>
-            </ul>
+          {/* Right: Banner List Section */}
+          <div>
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+              {/* Header with Search - Improved */}
+              <div className="p-6 md:p-8 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-semibold text-gray-800 mb-1">All Banners</h2>
+                    <p className="text-gray-500 text-sm">
+                      Manage and organize your banners
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search banners..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full sm:w-72 pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+                    />
+                    <svg
+                      className="absolute left-3 top-3 h-4 w-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Banner List */}
+              <div className="max-h-[600px] overflow-y-auto">
+                <BannerList
+                  banners={filteredBanners}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onToggleStatus={handleToggleStatus}
+                />
+              </div>
+            </div>
+
+            {/* Help Text - Improved Design */}
+            <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 shadow-sm">
+              <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                <span className="text-lg">💡</span> Quick Tips
+              </h4>
+              <ul className="text-sm text-blue-700 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span><strong>Title & Subtitle are optional</strong> - Leave empty if not needed</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span><strong>Button position</strong> - Choose from 9 positions for buttons</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span><strong>Gray buttons</strong> - Gradient design with hover effects</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span><strong>Clean design</strong> - Light overlay for better text visibility</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

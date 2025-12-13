@@ -1,6 +1,6 @@
 // File: components/Dashboard/Banners/BannerForm.tsx
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Move } from 'lucide-react';
 
 interface BannerButton {
   text: string;
@@ -10,10 +10,11 @@ interface BannerButton {
 
 interface Banner {
   _id?: string;
-  title: string;
+  title?: string;
   subtitle?: string;
   image: string;
   buttons: BannerButton[];
+  buttonPosition?: string;
   isActive: boolean;
   order: number;
   duration: number;
@@ -27,17 +28,55 @@ interface BannerFormProps {
 }
 
 const buttonTypes = [
-  { value: 'gray', label: 'Gray', class: 'bg-gray-800 hover:bg-gray-900 text-white' },
-  { value: 'primary', label: 'Primary', class: 'bg-blue-600 hover:bg-blue-700 text-white' },
-  { value: 'secondary', label: 'Secondary', class: 'bg-gray-600 hover:bg-gray-700 text-white' },
-  { value: 'outline', label: 'Outline', class: 'border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white' }
+  {
+    value: 'gray',
+    label: 'Gray Gradient',
+    class: 'bg-gradient-to-r from-gray-700 to-gray-900 text-white shadow-lg hover:shadow-xl'
+  },
+  {
+    value: 'primary',
+    label: 'Blue Primary',
+    class: 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg hover:shadow-xl'
+  },
+  {
+    value: 'secondary',
+    label: 'Dark Gray',
+    class: 'bg-gradient-to-r from-gray-600 to-gray-800 text-white shadow-lg hover:shadow-xl'
+  },
+  {
+    value: 'outline',
+    label: 'Glass Outline',
+    class: 'bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white hover:bg-white/20'
+  },
+  {
+    value: 'success',
+    label: 'Green Success',
+    class: 'bg-gradient-to-r from-emerald-600 to-emerald-800 text-white shadow-lg hover:shadow-xl'
+  },
+  {
+    value: 'warning',
+    label: 'Orange Warning',
+    class: 'bg-gradient-to-r from-orange-600 to-orange-800 text-white shadow-lg hover:shadow-xl'
+  }
 ];
 
-export default function BannerForm({ 
-  onSubmit, 
-  initialData, 
-  onCancel, 
-  isSubmitting = false 
+const buttonPositions = [
+  { value: 'left-top', label: 'Top Left', grid: 'justify-start items-start' },
+  { value: 'left-center', label: 'Left Center', grid: 'justify-start items-center' },
+  { value: 'left-bottom', label: 'Bottom Left', grid: 'justify-start items-end' },
+  { value: 'center-top', label: 'Top Center', grid: 'justify-center items-start' },
+  { value: 'center-center', label: 'Center', grid: 'justify-center items-center' },
+  { value: 'center-bottom', label: 'Bottom Center', grid: 'justify-center items-end' },
+  { value: 'right-top', label: 'Top Right', grid: 'justify-end items-start' },
+  { value: 'right-center', label: 'Right Center', grid: 'justify-end items-center' },
+  { value: 'right-bottom', label: 'Bottom Right', grid: 'justify-end items-end' }
+];
+
+export default function BannerForm({
+  onSubmit,
+  initialData,
+  onCancel,
+  isSubmitting = false
 }: BannerFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
@@ -47,12 +86,32 @@ export default function BannerForm({
   const [isActive, setIsActive] = useState(true);
   const [order, setOrder] = useState(0);
   const [duration, setDuration] = useState(5);
-  const [buttons, setButtons] = useState<BannerButton[]>([]);
+  const [buttons, setButtons] = useState<BannerButton[]>([
+    { text: 'Shop Now', link: '/shop', type: 'gray' },
+    { text: 'Learn More', link: '/about', type: 'outline' }
+  ]);
+  const [buttonPosition, setButtonPosition] = useState('center-bottom');
   const [newButton, setNewButton] = useState<BannerButton>({
     text: '',
     link: '',
     type: 'gray'
   });
+
+  // Helper function for position classes in preview
+  const getPositionClasses = (position: string) => {
+    switch (position) {
+      case 'left-top': return 'justify-start items-start pt-4 pl-4';
+      case 'left-center': return 'justify-start items-center pl-4';
+      case 'left-bottom': return 'justify-start items-end pb-4 pl-4';
+      case 'center-top': return 'justify-center items-start pt-4';
+      case 'center-center': return 'justify-center items-center';
+      case 'center-bottom': return 'justify-center items-end pb-4';
+      case 'right-top': return 'justify-end items-start pt-4 pr-4';
+      case 'right-center': return 'justify-end items-center pr-4';
+      case 'right-bottom': return 'justify-end items-end pb-4 pr-4';
+      default: return 'justify-center items-end pb-4';
+    }
+  };
 
   const resetForm = useCallback(() => {
     setTitle('');
@@ -62,7 +121,11 @@ export default function BannerForm({
     setIsActive(true);
     setOrder(0);
     setDuration(5);
-    setButtons([]);
+    setButtons([
+      { text: 'Shop Now', link: '/shop', type: 'gray' },
+      { text: 'Learn More', link: '/about', type: 'outline' }
+    ]);
+    setButtonPosition('center-bottom');
     setNewButton({ text: '', link: '', type: 'gray' });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -71,13 +134,14 @@ export default function BannerForm({
 
   useEffect(() => {
     if (initialData) {
-      setTitle(initialData.title);
+      setTitle(initialData.title || '');
       setSubtitle(initialData.subtitle || '');
       setImagePreview(initialData.image);
       setIsActive(initialData.isActive);
       setOrder(initialData.order);
       setDuration(initialData.duration || 5);
       setButtons(initialData.buttons || []);
+      setButtonPosition(initialData.buttonPosition || 'center-bottom');
     } else {
       resetForm();
     }
@@ -118,46 +182,40 @@ export default function BannerForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!title.trim()) {
-      alert('Please enter a title');
-      return;
-    }
-    
-    if (!initialData && !imageFile) {
+
+    if (!imageFile && !imagePreview) {
       alert('Please select an image');
       return;
     }
 
     const formData = new FormData();
-    formData.append('title', title.trim());
-    
+
+    // Title is optional - only add if exists
+    if (title.trim()) {
+      formData.append('title', title.trim());
+    }
+
+    // Subtitle is optional - only add if exists
     if (subtitle.trim()) {
       formData.append('subtitle', subtitle.trim());
     }
-    
+
     formData.append('isActive', isActive.toString());
     formData.append('order', order.toString());
     formData.append('duration', duration.toString());
-    
+    formData.append('buttonPosition', buttonPosition);
+
     // Add buttons only if they exist
     if (buttons.length > 0) {
       formData.append('buttons', JSON.stringify(buttons));
-    } else {
-      // Optional: Add default button if none provided
-      formData.append('buttons', JSON.stringify([{ 
-        text: 'Shop Now', 
-        link: '/shop', 
-        type: 'gray' 
-      }]));
     }
-    
+
     if (imageFile) {
       formData.append('image', imageFile);
     }
-    
+
     onSubmit(formData);
-    
+
     if (!initialData) {
       resetForm();
     }
@@ -167,25 +225,39 @@ export default function BannerForm({
     fileInputRef.current?.click();
   };
 
+  // Quick button examples
+  const quickButtons = [
+    { text: 'Shop Now', type: 'gray' },
+    { text: 'Learn More', type: 'outline' },
+    { text: 'Get Started', type: 'primary' },
+    { text: 'View All', type: 'secondary' },
+    { text: 'Buy Now', type: 'success' },
+    { text: 'Limited Offer', type: 'warning' },
+    { text: 'Explore', type: 'gray' },
+    { text: 'Contact Us', type: 'outline' }
+  ];
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Title Field */}
+      {/* Title Field - Optional */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Title *
+          Title (Optional)
         </label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          required
-          placeholder="Enter banner title"
+          placeholder="Enter banner title (optional)"
           disabled={isSubmitting}
         />
+        <p className="text-xs text-gray-500 mt-1">
+          Leave empty if you don't want a title
+        </p>
       </div>
 
-      {/* Subtitle Field */}
+      {/* Subtitle Field - Optional */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Subtitle (Optional)
@@ -198,14 +270,17 @@ export default function BannerForm({
           placeholder="Enter banner subtitle (optional)"
           disabled={isSubmitting}
         />
+        <p className="text-xs text-gray-500 mt-1">
+          Leave empty if you don't want a subtitle
+        </p>
       </div>
 
-      {/* Image Upload */}
+      {/* Image Upload - Required */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Banner Image {!initialData && '*'}
+          Banner Image *
         </label>
-        
+
         {imagePreview && (
           <div className="mb-4 relative">
             <div className="relative h-48 w-full rounded-lg overflow-hidden border border-gray-300">
@@ -229,7 +304,7 @@ export default function BannerForm({
             </div>
           </div>
         )}
-        
+
         <input
           type="file"
           ref={fileInputRef}
@@ -237,8 +312,9 @@ export default function BannerForm({
           onChange={handleImageChange}
           className="hidden"
           disabled={isSubmitting}
+          required={!imagePreview}
         />
-        
+
         <button
           type="button"
           onClick={triggerFileInput}
@@ -246,37 +322,106 @@ export default function BannerForm({
           disabled={isSubmitting}
         >
           <Upload size={18} />
-          {imagePreview ? 'Change Image' : 'Upload Image'}
+          {imagePreview ? 'Change Image' : 'Upload Image *'}
         </button>
-        
+
         <p className="text-xs text-gray-500 mt-2">
-          Recommended: 1920×600px • Max: 5MB
+          Required: 1920×600px • Max: 5MB
         </p>
       </div>
 
-      {/* Duration Slider */}
+      {/* Button Position Selector */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Button Position
+        </label>
+
+        {/* Position Preview */}
+        <div className="mb-4">
+          <div className="relative h-48 w-full bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border border-gray-300 mb-3">
+            {/* Preview Content */}
+            <div className={`absolute inset-0 flex ${getPositionClasses(buttonPosition)}`}>
+              <div className="flex flex-wrap gap-2">
+                <div className="w-24 h-10 bg-gradient-to-r from-gray-700 to-gray-900 rounded-lg flex items-center justify-center shadow">
+                  <span className="text-white text-xs font-medium">Button</span>
+                </div>
+                <div className="w-20 h-10 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg flex items-center justify-center shadow">
+                  <span className="text-white text-xs font-medium">Shop</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Grid Lines */}
+            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300/50"></div>
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-300/50"></div>
+
+            {/* Position Labels */}
+            <div className="absolute top-2 left-2 text-xs text-gray-500">Top Left</div>
+            <div className="absolute top-2 left-1/2 transform -translate-x-1/2 text-xs text-gray-500">Top Center</div>
+            <div className="absolute top-2 right-2 text-xs text-gray-500">Top Right</div>
+            <div className="absolute top-1/2 left-2 transform -translate-y-1/2 text-xs text-gray-500">Middle Left</div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-gray-500">Center</div>
+            <div className="absolute top-1/2 right-2 transform -translate-y-1/2 text-xs text-gray-500">Middle Right</div>
+            <div className="absolute bottom-2 left-2 text-xs text-gray-500">Bottom Left</div>
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs text-gray-500">Bottom Center</div>
+            <div className="absolute bottom-2 right-2 text-xs text-gray-500">Bottom Right</div>
+          </div>
+        </div>
+
+        {/* Position Buttons Grid */}
+        <div className="grid grid-cols-3 gap-2">
+          {buttonPositions.map((pos) => (
+            <button
+              key={pos.value}
+              type="button"
+              onClick={() => setButtonPosition(pos.value)}
+              className={`p-3 border rounded-lg flex flex-col items-center gap-1 transition-all ${buttonPosition === pos.value
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
+                  : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                }`}
+              disabled={isSubmitting}
+            >
+              <Move size={16} />
+              <span className="text-xs">{pos.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <p className="text-xs text-gray-500 mt-2">
+          Selected: {buttonPositions.find(p => p.value === buttonPosition)?.label}
+        </p>
+      </div>
+
+      {/* Quick Button Examples */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Slide Duration (seconds) *
+          Quick Button Examples
         </label>
-        <div className="flex items-center space-x-4">
-          <input
-            type="range"
-            min="3"
-            max="10"
-            step="1"
-            value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value))}
-            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-            disabled={isSubmitting}
-          />
-          <span className="text-lg font-semibold text-gray-700 w-12">
-            {duration}s
-          </span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+          {quickButtons.map((btn, idx) => (
+            <button
+              type="button"
+              key={idx}
+              onClick={() => {
+                setButtons([...buttons, {
+                  text: btn.text,
+                  link: '/shop',
+                  type: btn.type
+                }]);
+              }}
+              className={`px-3 py-2 text-xs rounded-lg font-medium transition-colors ${btn.type === 'gray' ? 'bg-gray-800 text-white hover:bg-gray-900' :
+                  btn.type === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700' :
+                    btn.type === 'outline' ? 'border border-gray-600 text-gray-700 hover:bg-gray-100' :
+                      btn.type === 'secondary' ? 'bg-gray-600 text-white hover:bg-gray-700' :
+                        btn.type === 'success' ? 'bg-emerald-600 text-white hover:bg-emerald-700' :
+                          'bg-orange-600 text-white hover:bg-orange-700'
+                }`}
+              disabled={isSubmitting}
+            >
+              {btn.text}
+            </button>
+          ))}
         </div>
-        <p className="text-xs text-gray-500 mt-1">
-          Auto-slide duration between banners
-        </p>
       </div>
 
       {/* Buttons Section - Optional */}
@@ -289,12 +434,13 @@ export default function BannerForm({
             {buttons.length} button{buttons.length !== 1 ? 's' : ''}
           </span>
         </div>
-        
+
         <div className="space-y-3">
           {buttons.map((button, index) => (
             <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
               <div className="flex items-center space-x-3 flex-1">
-                <span className={`px-3 py-1.5 text-sm rounded-md font-medium ${buttonTypes.find(t => t.value === button.type)?.class}`}>
+                <span className={`px-3 py-1.5 text-sm rounded-md font-medium ${buttonTypes.find(t => t.value === button.type)?.class
+                  }`}>
                   {button.text}
                 </span>
                 <span className="text-gray-500">→</span>
@@ -310,10 +456,10 @@ export default function BannerForm({
               </button>
             </div>
           ))}
-          
+
           {/* Add New Button Form */}
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h4 className="font-medium text-gray-700 mb-3">Add New Button</h4>
+            <h4 className="font-medium text-gray-700 mb-3">Add Custom Button</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
               <input
                 type="text"
@@ -347,13 +493,38 @@ export default function BannerForm({
             <button
               type="button"
               onClick={addButton}
-              className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 transition-colors text-sm font-medium"
+              className="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-900 text-white rounded-md hover:opacity-90 transition-opacity text-sm font-medium"
               disabled={isSubmitting}
             >
               + Add Button
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Duration Slider */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Slide Duration (seconds)
+        </label>
+        <div className="flex items-center space-x-4">
+          <input
+            type="range"
+            min="3"
+            max="10"
+            step="1"
+            value={duration}
+            onChange={(e) => setDuration(parseInt(e.target.value))}
+            className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            disabled={isSubmitting}
+          />
+          <span className="text-lg font-semibold text-gray-700 w-12">
+            {duration}s
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Auto-slide duration between banners
+        </p>
       </div>
 
       {/* Status and Order */}
@@ -373,7 +544,7 @@ export default function BannerForm({
             </div>
           </label>
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Display Order
@@ -395,7 +566,7 @@ export default function BannerForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 px-6 py-3 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-white font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <>
@@ -406,7 +577,7 @@ export default function BannerForm({
             initialData ? 'Update Banner' : 'Create Banner'
           )}
         </button>
-        
+
         {onCancel && (
           <button
             type="button"

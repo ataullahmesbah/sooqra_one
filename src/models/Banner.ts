@@ -2,7 +2,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IBanner extends Document {
-  title: string;
+  title?: string; // Changed to optional
   subtitle?: string;
   image: string;
   imagePublicId: string;
@@ -11,6 +11,7 @@ export interface IBanner extends Document {
     link: string;
     type: string;
   }>;
+  buttonPosition: string; // NEW: Store button position
   isActive: boolean;
   order: number;
   duration: number;
@@ -19,18 +20,25 @@ export interface IBanner extends Document {
 const ButtonSchema = new Schema({
   text: { type: String, required: true },
   link: { type: String, required: true },
-  type: { 
-    type: String, 
+  type: {
+    type: String,
     default: 'gray'
   }
 });
 
 const BannerSchema = new Schema({
-  title: { type: String, required: true },
+  title: { type: String },
   subtitle: { type: String },
   image: { type: String, required: true },
   imagePublicId: { type: String, required: true },
   buttons: [ButtonSchema],
+  buttonPosition: {
+    type: String,
+    enum: ['left-top', 'left-center', 'left-bottom', 
+           'center-top', 'center-center', 'center-bottom',
+           'right-top', 'right-center', 'right-bottom'],
+    default: 'center-bottom'
+  },
   isActive: { type: Boolean, default: true },
   order: { type: Number, default: 0 },
   duration: { type: Number, default: 5 }
