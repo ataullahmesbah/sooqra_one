@@ -1,10 +1,18 @@
+import CategoryGrid from "@/src/components/Category/CategoryGrid/CategoryGrid";
+import Banner from "@/src/components/Share/Home/Banner/Banner";
 
 
 const page = () => {
     return (
-        <div>
-            Hello! SOOQRA ONE !!
-        </div>
+        <>
+            {/* Hero Banner */}
+
+            <Banner />
+
+            {/* Category Grid */}
+            <CategoryGrid />
+
+        </>
     );
 };
 
