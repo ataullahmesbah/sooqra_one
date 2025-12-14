@@ -1,4 +1,4 @@
-// src/app/api/categories/[slug]/route.ts
+// src/app/api/categories/[slug]/route.ts - OPTIMIZED
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/dbConnect';
 import Category from '@/src/models/Category';
@@ -16,60 +16,80 @@ export async function GET(
     await dbConnect();
     const { slug } = await context.params;
 
-    console.log('🔍 API: Searching for category with slug:', slug);
-
     // Decode URL if needed
     const decodedSlug = decodeURIComponent(slug);
-    
-    // Find category
-    const category = await Category.findOne({
+
+    // Find category - multiple matching strategies
+    let category = await Category.findOne({
       slug: { $regex: new RegExp(`^${decodedSlug}$`, 'i') }
     }).lean();
 
     if (!category) {
-      console.log('❌ API: Category not found for slug:', decodedSlug);
+      // Try to find by name (convert slug to name)
+      const categoryName = decodedSlug
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      category = await Category.findOne({
+        name: { $regex: new RegExp(`^${categoryName}$`, 'i') }
+      }).lean();
+    }
+
+    if (!category) {
       return NextResponse.json(
-        { error: `Category not found: ${decodedSlug}`, success: false },
+        { error: 'Category not found', success: false },
         { status: 404 }
       );
     }
 
-    console.log('✅ API: Found category:', (category as any).name);
-    
-    // Fetch products
-    const products = await Product.find({ 
-      category: (category as any)._id 
+    // Fetch products for this category
+    const products = await Product.find({
+      category: (category as any)._id
     })
       .sort({ createdAt: -1 })
+      .select('title slug mainImage mainImageAlt shortDescription description prices availability')
       .lean();
 
-    console.log('🛒 API: Found products:', products.length);
-
-    // Type assertion for the response
-    const serializedCategory = {
-      ...category,
-      _id: (category as any)._id.toString(),
-      createdAt: (category as any).createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: (category as any).updatedAt?.toISOString() || new Date().toISOString(),
+    // Prepare response data
+    const responseData = {
+      success: true,
+      category: {
+        _id: (category as any)._id.toString(),
+        name: (category as any).name,
+        slug: (category as any).slug,
+        description: (category as any).description || null,
+        createdAt: (category as any).createdAt?.toISOString() || null,
+        updatedAt: (category as any).updatedAt?.toISOString() || null,
+      },
+      products: (products as any[]).map(product => ({
+        _id: product._id.toString(),
+        title: product.title,
+        slug: product.slug || null,
+        mainImage: product.mainImage || null,
+        mainImageAlt: product.mainImageAlt || null,
+        shortDescription: product.shortDescription || null,
+        description: product.description || null,
+        prices: product.prices || [],
+        availability: product.availability || 'InStock',
+      })),
+      count: products.length,
     };
 
-    const serializedProducts = (products as any[]).map(product => ({
-      ...product,
-      _id: product._id.toString(),
-      category: product.category ? product.category.toString() : null,
-      subCategory: product.subCategory ? product.subCategory.toString() : null,
-    }));
-
-    return NextResponse.json({
-      success: true,
-      category: serializedCategory,
-      products: serializedProducts,
-      count: products.length,
-    }, { status: 200 });
+    return NextResponse.json(responseData, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
+      }
+    });
   } catch (error: any) {
-    console.error('🚨 API Error:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Server error', details: error.message, success: false },
+      {
+        error: 'Server error',
+        details: error.message,
+        success: false
+      },
       { status: 500 }
     );
   }
