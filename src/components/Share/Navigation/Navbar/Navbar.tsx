@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fi';
 import { NavigationItem } from '@/src/types/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FaStore } from 'react-icons/fa';
 
 interface NavbarProps {
     contactNumber?: string;
@@ -28,7 +29,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: NavbarPro
     const [isScrolled, setIsScrolled] = useState(false);
     const pathname = usePathname();
 
-    // Handle scroll effect
+    // Handle scroll effect - TopNavbar এর কারণে adjustment
     useEffect(() => {
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 20);
@@ -83,7 +84,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: NavbarPro
 
     if (loading) {
         return (
-            <nav className={`bg-gray-100 border-b border-gray-200/50 backdrop-blur-sm transition-all duration-300 sticky top-0 z-50 ${isScrolled ? 'shadow-md' : ''}`}>
+            <nav className={`bg-gray-100 border-b border-gray-200/50 backdrop-blur-sm transition-all duration-300 relative z-40 mt-16 ${isScrolled ? 'shadow-md' : ''}`}>
                 <div className="max-w-7xl mx-auto px-4 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center space-x-6">
@@ -148,7 +149,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: NavbarPro
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                     transition={{ duration: 0.2 }}
-                                    className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200/80 py-2 z-50 backdrop-blur-sm"
+                                    className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200/80 py-2 z-[100] backdrop-blur-sm"
                                 >
                                     <div className="absolute -top-2 left-6 w-4 h-4 bg-white border-l border-t border-gray-200/80 transform rotate-45"></div>
                                     {item.children!.map((child) => (
@@ -268,31 +269,13 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: NavbarPro
 
     return (
         <>
-            {/* Desktop Navbar */}
-            <nav className={`bg-gray-100/95 backdrop-blur-sm border-b border-gray-200/50 transition-all duration-300 sticky top-0 z-50 ${isScrolled ? 'shadow-lg' : ''
+            {/* Desktop Navbar - TopNavbar এর নিচে পজিশন হবে */}
+            <nav className={`bg-gray-100/95 backdrop-blur-sm border-b border-gray-200/50 transition-all duration-300 sticky top-0 z-40 ${isScrolled ? 'shadow-lg' : ''
                 } hidden md:block`}>
                 <div className="max-w-7xl mx-auto px-4 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         {/* Left: Navigation Items */}
                         <div className="flex items-center space-x-1">
-                            {/* Home Link */}
-                            {/* <Link
-                                href="/"
-                                className={`flex items-center text-[13px] font-medium px-3 py-2.5 rounded-lg transition-all duration-200 ${pathname === '/'
-                                    ? 'text-gray-900 bg-white shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/80'
-                                    }`}
-                            >
-                                <FiHome className="w-3.5 h-3.5 mr-1.5" />
-                                Home
-                                {pathname === '/' && (
-                                    <motion.span
-                                        layoutId="homeIndicator"
-                                        className="absolute -bottom-1 left-3 right-3 h-0.5 bg-gradient-to-r from-gray-800 to-gray-600 rounded-full"
-                                    />
-                                )}
-                            </Link> */}
-
                             {/* Navigation Items */}
                             {navigation.map(renderDesktopItem)}
 
@@ -315,7 +298,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: NavbarPro
                             </Link>
                         </div>
 
-                        {/* Right: Contact Number & Account */}
+                        {/* Right: Contact Number */}
                         <div className="flex items-center gap-4">
                             {/* Contact Number */}
                             <a
@@ -335,25 +318,34 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: NavbarPro
                                     </div>
                                 </div>
                             </a>
-
-                           
                         </div>
                     </div>
                 </div>
             </nav>
 
-            {/* Mobile Navbar */}
-            <nav className={`bg-gray-100/95 backdrop-blur-sm border-b border-gray-200/50 transition-all duration-300 sticky top-0 z-50 ${isScrolled ? 'shadow-lg' : ''
+            {/* Mobile Navbar - TopNavbar এর নিচে পজিশন হবে */}
+            <nav className={`bg-gray-100/95 backdrop-blur-sm border-b border-gray-200/50 transition-all duration-300 sticky top-0 z-40 ${isScrolled ? 'shadow-lg' : ''
                 } md:hidden`}>
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="flex items-center justify-between h-14">
                         {/* Logo / Brand */}
-                        <div className="flex items-center">
-                            <Link href="/" className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-sm">
-                                    <span className="text-white font-bold text-sm">SO</span>
+                       {/* Logo and Brand Name - Left */}
+                        <div className="flex items-center space-x-2 md:space-x-3 flex-shrink-0">
+                            <Link href="/" className="flex items-center space-x-2 md:space-x-3 group">
+                                {/* Store Icon - Responsive */}
+                                <div className="relative">
+                                    <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shadow-md">
+                                        <FaStore className="text-white text-base sm:text-lg md:text-xl" />
+                                    </div>
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 bg-gradient-to-r from-gray-600 to-gray-700 rounded-full animate-pulse"></div>
                                 </div>
-                                <span className="text-gray-900 font-bold text-sm">Sooqra One</span>
+
+                                {/* Brand Name - Responsive */}
+                                <div className="flex flex-col">
+                                    <span className="text-lg sm:text-xl md:text-2xl font-extrabold text-gray-900 font-['Poppins'] tracking-tight leading-tight">
+                                        SOOQRA ONE
+                                    </span>
+                                </div>
                             </Link>
                         </div>
 
@@ -383,7 +375,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: NavbarPro
                     </div>
                 </div>
 
-                {/* Mobile Menu Dropdown */}
+                {/* Mobile Menu Dropdown - HIGH z-index সহ */}
                 <AnimatePresence>
                     {mobileMenuOpen && (
                         <motion.div
@@ -391,22 +383,9 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: NavbarPro
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="absolute top-full left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200/50 shadow-xl overflow-hidden"
+                            className="absolute top-full left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200/50 shadow-xl overflow-hidden z-[99999]"
                         >
-                            <div className="p-4 max-h-[calc(100vh-56px)] overflow-y-auto">
-                                {/* Home Link */}
-                                {/* <Link
-                                    href="/"
-                                    className={`flex items-center py-3 px-2 rounded-lg transition-all duration-200 ${pathname === '/'
-                                        ? 'bg-gray-100 text-gray-900'
-                                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                                        }`}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                >
-                                    <FiHome className="w-4 h-4 mr-3" />
-                                    Home
-                                </Link> */}
-
+                            <div className="p-4 max-h-[calc(100vh-120px)] overflow-y-auto">
                                 {/* Navigation Items */}
                                 {navigation.map((item) => renderMobileItem(item))}
 
