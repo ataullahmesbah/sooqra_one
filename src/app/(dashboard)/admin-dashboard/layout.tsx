@@ -85,6 +85,13 @@ const AdminDashboardLayout = ({ children }: AdminDashboardLayoutProps) => {
                 { label: 'Dashboard Home', link: '/admin-dashboard' },
             ],
         },
+         {
+            label: 'NAVBAR',
+            children: [
+                { label: 'Navbar', link: '/admin-dashboard/navbar' },
+
+            ],
+        },
         {
             label: 'SHOP',
             children: [
