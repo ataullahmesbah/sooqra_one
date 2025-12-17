@@ -81,7 +81,7 @@ export default function TopNavbar() {
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-            
+
             if (currentScrollY > lastScrollY && currentScrollY > 100) {
                 // Scrolling down
                 setIsNavbarVisible(false);
@@ -91,7 +91,7 @@ export default function TopNavbar() {
                 // Scrolling up
                 setIsNavbarVisible(true);
             }
-            
+
             setLastScrollY(currentScrollY);
         };
 
@@ -138,17 +138,17 @@ export default function TopNavbar() {
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
-            
+
             // Close search results if clicked outside
             if (searchRef.current && !searchRef.current.contains(target)) {
                 setShowSearchResults(false);
             }
-            
+
             // Close user menu if clicked outside
             if (userMenuRef.current && !userMenuRef.current.contains(target)) {
                 setShowUserMenu(false);
             }
-            
+
             // Close mobile search if clicked outside
             if (showMobileSearch && mobileSearchRef.current && !mobileSearchRef.current.contains(target)) {
                 // Check if clicked on mobile search icon
@@ -323,11 +323,13 @@ export default function TopNavbar() {
     return (
         <>
             {/* Main Navbar with scroll hide/show */}
-            <motion.nav 
+            <motion.nav
                 initial={{ y: 0 }}
                 animate={{ y: isNavbarVisible ? 0 : -100 }}
                 transition={{ duration: 0.3 }}
-                className="bg-gradient-to-r from-gray-100 to-gray-50 shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50"
+                className="bg-gradient-to-r from-gray-100 to-gray-50
+             shadow-sm border-b border-gray-200
+             sticky top-0 z-50 h-16"
             >
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-between h-16">
@@ -653,7 +655,7 @@ export default function TopNavbar() {
                                         <FaSearch />
                                     </div>
                                 </div>
-                                
+
                                 {/* Mobile Search Results - Fixed HIGH z-index */}
                                 <AnimatePresence>
                                     {showSearchResults && (
@@ -778,7 +780,7 @@ export default function TopNavbar() {
                                                 Sign Out
                                             </button>
                                         </div>
-                                        
+
                                         {/* Dashboard links for admin/moderator */}
                                         {getDashboardLinks().slice(0, 2).map((link) => (
                                             <Link
@@ -814,8 +816,7 @@ export default function TopNavbar() {
                 </AnimatePresence>
             </motion.nav>
 
-            {/* Spacer for fixed navbar */}
-            <div className="h-16"></div>
+
 
             {/* Cart Slider with high z-index */}
             <div className="relative z-[9999]">
@@ -827,4 +828,4 @@ export default function TopNavbar() {
             </div>
         </>
     );
-}
+} 
