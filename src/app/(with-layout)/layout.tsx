@@ -3,18 +3,16 @@ import Footer from "@/src/components/Share/Footer/Footer";
 import Navbar from "@/src/components/Share/Navigation/Navbar/Navbar";
 import TopNavbar from "@/src/components/TopNavbar/TopNavbar";
 
-
-
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
       <TopNavbar />
       <Navbar />
-      <main className="min-h-screen">
+      <main className="pt-16 lg:pt-32">
         {children}
       </main>
 
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,10 +16,10 @@ import {
     FaTachometerAlt,
     FaUserShield,
     FaBox,
+    FaShoppingBag,
 } from 'react-icons/fa';
 import { signOut, useSession } from 'next-auth/react';
 import CartSlider from '../Share/Shop/CartSlider/CartSlider';
-
 // Interface definitions
 interface SearchResult {
     _id: string;
@@ -37,20 +36,17 @@ interface SearchResult {
     brand: string;
     availability: string;
 }
-
 interface ConversionRates {
     USD: number;
     EUR: number;
     BDT: number;
     [key: string]: number;
 }
-
 interface Category {
     _id: string;
     name: string;
     slug: string;
 }
-
 export default function TopNavbar() {
     const { data: session, status } = useSession();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -70,18 +66,15 @@ export default function TopNavbar() {
     });
     const [isNavbarVisible, setIsNavbarVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
-
     const searchRef = useRef<HTMLDivElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const mobileSearchRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
-
     // Scroll hide/show functionality
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-
             if (currentScrollY > lastScrollY && currentScrollY > 100) {
                 // Scrolling down
                 setIsNavbarVisible(false);
@@ -91,14 +84,11 @@ export default function TopNavbar() {
                 // Scrolling up
                 setIsNavbarVisible(true);
             }
-
             setLastScrollY(currentScrollY);
         };
-
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, [lastScrollY]);
-
     // Fetch categories on component mount
     useEffect(() => {
         const fetchCategories = async () => {
@@ -112,10 +102,8 @@ export default function TopNavbar() {
                 console.error('Error fetching categories:', error);
             }
         };
-
         fetchCategories();
     }, []);
-
     // Update cart count from localStorage
     useEffect(() => {
         const updateCartCount = () => {
@@ -123,32 +111,26 @@ export default function TopNavbar() {
             const totalItems = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
             setCartCount(totalItems);
         };
-
         updateCartCount();
         window.addEventListener('storage', updateCartCount);
         window.addEventListener('cartUpdated', updateCartCount);
-
         return () => {
             window.removeEventListener('storage', updateCartCount);
             window.removeEventListener('cartUpdated', updateCartCount);
         };
     }, []);
-
     // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
-
             // Close search results if clicked outside
             if (searchRef.current && !searchRef.current.contains(target)) {
                 setShowSearchResults(false);
             }
-
             // Close user menu if clicked outside
             if (userMenuRef.current && !userMenuRef.current.contains(target)) {
                 setShowUserMenu(false);
             }
-
             // Close mobile search if clicked outside
             if (showMobileSearch && mobileSearchRef.current && !mobileSearchRef.current.contains(target)) {
                 // Check if clicked on mobile search icon
@@ -158,11 +140,9 @@ export default function TopNavbar() {
                 }
             }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showMobileSearch]);
-
     // Focus search input when mobile search opens
     useEffect(() => {
         if (showMobileSearch && searchInputRef.current) {
@@ -171,7 +151,6 @@ export default function TopNavbar() {
             }, 100);
         }
     }, [showMobileSearch]);
-
     // Enhanced search function
     const searchProducts = useCallback(async (query: string) => {
         if (!query.trim()) {
@@ -179,11 +158,9 @@ export default function TopNavbar() {
             setShowSearchResults(false);
             return;
         }
-
         setIsSearching(true);
         try {
             const response = await fetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=6`);
-
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -198,16 +175,13 @@ export default function TopNavbar() {
             setIsSearching(false);
         }
     }, []);
-
     // Debounce effect for search
     useEffect(() => {
         const timer = setTimeout(() => {
             searchProducts(searchQuery);
         }, 300);
-
         return () => clearTimeout(timer);
     }, [searchQuery, searchProducts]);
-
     // Handle search submit
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -218,7 +192,6 @@ export default function TopNavbar() {
             setShowMobileSearch(false);
         }
     };
-
     // Handle Enter key press in search
     const handleSearchKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
@@ -231,7 +204,6 @@ export default function TopNavbar() {
             }
         }
     };
-
     const handleResultClick = (slug: string) => {
         router.push(`/shop/${slug}`);
         setSearchQuery('');
@@ -239,7 +211,6 @@ export default function TopNavbar() {
         setShowMobileSearch(false);
         setIsMobileMenuOpen(false);
     };
-
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
         if (!isMobileMenuOpen) {
@@ -247,11 +218,9 @@ export default function TopNavbar() {
             setShowSearchResults(false);
         }
     };
-
     const toggleUserMenu = () => {
         setShowUserMenu(!showUserMenu);
     };
-
     const toggleMobileSearch = () => {
         setShowMobileSearch(!showMobileSearch);
         if (showMobileSearch) {
@@ -262,7 +231,6 @@ export default function TopNavbar() {
             setIsMobileMenuOpen(false);
         }
     };
-
     const handleSignOut = async () => {
         await signOut({ redirect: false });
         setShowUserMenu(false);
@@ -270,19 +238,15 @@ export default function TopNavbar() {
         router.push('/');
         router.refresh();
     };
-
     // Get user display name (first name only)
     const getUserDisplayName = () => {
         if (!session?.user) return '';
-
         if (session.user.name) {
             const names = session.user.name.split(' ');
             return names[0];
         }
-
         return session.user.email?.split('@')[0] || 'User';
     };
-
     // Get user role badge color
     const getRoleBadgeColor = (role: string) => {
         switch (role) {
@@ -292,13 +256,10 @@ export default function TopNavbar() {
             default: return 'bg-gray-600 text-white';
         }
     };
-
     // Dashboard links based on user role
     const getDashboardLinks = () => {
         if (!session?.user?.role) return [];
-
         const links = [];
-
         if (session.user.role === 'admin') {
             links.push(
                 { name: 'Admin Dashboard', href: '/admin-dashboard', icon: <FaTachometerAlt /> },
@@ -311,25 +272,23 @@ export default function TopNavbar() {
                 { name: 'Manage Content', href: '/moderator/content', icon: <FaBox /> }
             );
         }
-
         return links;
     };
-
     // User profile links
     const userProfileLinks = [
         { name: 'My Profile', href: '/account', icon: <FaUser /> },
     ];
-
     return (
-        <>
+
+        <div className="hidden lg:block">
             {/* Main Navbar with scroll hide/show */}
             <motion.nav
                 initial={{ y: 0 }}
-                animate={{ y: isNavbarVisible ? 0 : -100 }}
-                transition={{ duration: 0.3 }}
+                animate={{ y: isNavbarVisible ? 0 : -64 }}
+                transition={{ duration: 0.2 }}
                 className="bg-gradient-to-r from-gray-100 to-gray-50
              shadow-sm border-b border-gray-200
-             sticky top-0 z-50 h-16"
+             fixed top-0 left-0 w-full z-50 h-16"
             >
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-between h-16">
@@ -343,7 +302,6 @@ export default function TopNavbar() {
                                     </div>
                                     <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 bg-gradient-to-r from-gray-600 to-gray-700 rounded-full animate-pulse"></div>
                                 </div>
-
                                 {/* Brand Name - Responsive */}
                                 <div className="flex flex-col">
                                     <span className="text-lg sm:text-xl md:text-2xl font-extrabold text-gray-900 font-['Poppins'] tracking-tight leading-tight">
@@ -352,7 +310,6 @@ export default function TopNavbar() {
                                 </div>
                             </Link>
                         </div>
-
                         {/* Search Bar - Middle (Desktop only) */}
                         <div className="hidden lg:block flex-1 max-w-2xl mx-6 xl:mx-8 relative" ref={searchRef}>
                             <div className="relative">
@@ -374,7 +331,6 @@ export default function TopNavbar() {
                                     <FaSearch className="text-sm md:text-base" />
                                 </div>
                             </div>
-
                             {/* Desktop Search Results Dropdown - Fixed HIGH z-index */}
                             <AnimatePresence>
                                 {showSearchResults && (
@@ -441,7 +397,6 @@ export default function TopNavbar() {
                                 )}
                             </AnimatePresence>
                         </div>
-
                         {/* Right Side Actions */}
                         <div className="flex items-center space-x-4 md:space-x-6">
                             {/* User Menu (Desktop) - Fixed with HIGH z-index */}
@@ -466,7 +421,6 @@ export default function TopNavbar() {
                                             </div>
                                             <FaCaretDown className={`text-gray-600 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                                         </button>
-
                                         {/* User Dropdown Menu - Fixed HIGH z-index */}
                                         <AnimatePresence>
                                             {showUserMenu && (
@@ -497,7 +451,6 @@ export default function TopNavbar() {
                                                             </div>
                                                         </div>
                                                     </div>
-
                                                     {/* Dashboard Links (Admin/Moderator only) */}
                                                     {getDashboardLinks().length > 0 && (
                                                         <div className="py-2 border-b border-gray-100">
@@ -517,7 +470,6 @@ export default function TopNavbar() {
                                                             ))}
                                                         </div>
                                                     )}
-
                                                     {/* Profile Links */}
                                                     <div className="py-2">
                                                         <h4 className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -535,7 +487,6 @@ export default function TopNavbar() {
                                                             </Link>
                                                         ))}
                                                     </div>
-
                                                     {/* Sign Out */}
                                                     <div className="p-3 border-t border-gray-100 bg-gray-50">
                                                         <button
@@ -567,25 +518,35 @@ export default function TopNavbar() {
                                     </Link>
                                 )}
                             </div>
-
                             {/* Cart Icon (Desktop) */}
                             <div className="hidden lg:block relative">
                                 <button
                                     onClick={() => setIsCartOpen(true)}
-                                    className="relative group"
-                                    aria-label="Shopping Cart"
+                                    className="relative p-2 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
+                                    aria-label="Open Cart"
                                 >
-                                    <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-gray-300 flex items-center justify-center group-hover:from-gray-300 group-hover:to-gray-400 group-hover:border-gray-400 transition-all duration-300 shadow-sm">
-                                        <FaShoppingCart className="text-lg md:text-xl text-gray-700 group-hover:text-gray-900" />
-                                    </div>
+                                    {/* Cart Icon */}
+                                    <FaShoppingBag className="w-4 h-4 text-white group-hover:text-yellow-300 transition-colors duration-300" />
+
+                                    {/* Animated Badge */}
                                     {cartCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-gradient-to-r from-gray-800 to-gray-900 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg border-2 border-white">
+                                        <span className="
+                                            absolute -top-2 -right-2 
+                                            min-w-5 h-5 px-1.5 
+                                            flex items-center justify-center 
+                                            bg-gradient-to-r from-yellow-400 to-amber-500 
+                                            text-gray-900 text-xs font-extrabold 
+                                            rounded-full 
+                                            shadow-lg 
+                                            ring-2 ring-white
+                                            animate-bounce 
+                                            hover:animate-none   
+                                        ">
                                             {cartCount > 99 ? '99+' : cartCount}
                                         </span>
                                     )}
                                 </button>
                             </div>
-
                             {/* Mobile Menu and Cart */}
                             <div className="lg:hidden flex items-center space-x-4">
                                 {/* Search Icon for Mobile */}
@@ -596,21 +557,33 @@ export default function TopNavbar() {
                                 >
                                     <FaSearch className="text-xl" />
                                 </button>
-
                                 {/* Cart Icon for Mobile */}
                                 <button
                                     onClick={() => setIsCartOpen(true)}
-                                    className="relative"
-                                    aria-label="Shopping Cart"
+                                    className="relative p-2 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
+                                    aria-label="Open Cart"
                                 >
-                                    <FaShoppingCart className="text-xl text-gray-700" />
+                                    {/* Cart Icon */}
+                                    <FaShoppingBag className="w-4 h-4 text-white group-hover:text-yellow-300 transition-colors duration-300" />
+
+                                    {/* Animated Badge */}
                                     {cartCount > 0 && (
-                                        <span className="absolute -top-2 -right-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg border border-white">
-                                            {cartCount}
+                                        <span className="
+            absolute -top-2 -right-2 
+            min-w-5 h-5 px-1.5 
+            flex items-center justify-center 
+            bg-gradient-to-r from-yellow-400 to-amber-500 
+            text-gray-900 text-xs font-extrabold 
+            rounded-full 
+            shadow-lg 
+            ring-2 ring-white
+            animate-bounce 
+            hover:animate-none   
+        ">
+                                            {cartCount > 99 ? '99+' : cartCount}
                                         </span>
                                     )}
                                 </button>
-
                                 {/* Mobile Menu Toggle */}
                                 <button
                                     onClick={toggleMobileMenu}
@@ -627,7 +600,6 @@ export default function TopNavbar() {
                         </div>
                     </div>
                 </div>
-
                 {/* Mobile Search Bar (when search icon is clicked) - FIXED POSITION */}
                 <AnimatePresence>
                     {showMobileSearch && (
@@ -655,7 +627,6 @@ export default function TopNavbar() {
                                         <FaSearch />
                                     </div>
                                 </div>
-
                                 {/* Mobile Search Results - Fixed HIGH z-index */}
                                 <AnimatePresence>
                                     {showSearchResults && (
@@ -726,7 +697,6 @@ export default function TopNavbar() {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
                 {/* Mobile Menu - FIXED POSITION with HIGH z-index */}
                 <AnimatePresence>
                     {isMobileMenuOpen && (
@@ -760,7 +730,6 @@ export default function TopNavbar() {
                                                 </div>
                                             </div>
                                         </div>
-
                                         {/* Quick Dashboard Links */}
                                         <div className="grid grid-cols-2 gap-2">
                                             <Link
@@ -780,7 +749,6 @@ export default function TopNavbar() {
                                                 Sign Out
                                             </button>
                                         </div>
-
                                         {/* Dashboard links for admin/moderator */}
                                         {getDashboardLinks().slice(0, 2).map((link) => (
                                             <Link
@@ -815,9 +783,6 @@ export default function TopNavbar() {
                     )}
                 </AnimatePresence>
             </motion.nav>
-
-
-
             {/* Cart Slider with high z-index */}
             <div className="relative z-[9999]">
                 <CartSlider
@@ -826,6 +791,6 @@ export default function TopNavbar() {
                     conversionRates={conversionRates}
                 />
             </div>
-        </>
+        </div>
     );
-} 
+}
