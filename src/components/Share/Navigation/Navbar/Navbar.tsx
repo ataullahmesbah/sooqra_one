@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
+import sooqra from '@/public/sooqra.svg';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FaShoppingBag,
@@ -376,13 +377,18 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                         <div className="flex items-center justify-between h-16">
                             <div className="flex items-center space-x-1">
                                 {!isNavbarVisible && (
-                                    <Link href="/" className="flex items-center space-x-3 mr-6">
-                                        <div className="relative">
-                                            <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center">
-                                                <FaStore className="text-white text-xl" />
-                                            </div>
+                                    <Link href="/" className="flex items-center mr-6 hover:opacity-90 transition-opacity">
+                                        <div className="w-40 h-10 md:w-48 md:h-12 lg:w-56 lg:h-14 relative flex items-center">
+                                            {/* পুরো Logo + Text একসাথে */}
+                                            <Image
+                                                src="/sooqra.svg"  // তোমার 250×100 SVG
+                                                alt="Sooqra One"
+                                                width={200}    // Original: 250px → 80% scale
+                                                height={80}    // Original: 100px → 80% scale
+                                                className="object-contain w-full h-full"
+                                                priority
+                                            />
                                         </div>
-                                        <span className="text-2xl font-extrabold text-gray-900">SOOQRA ONE</span>
                                     </Link>
                                 )}
                                 {navigation.map(renderDesktopItem)}
@@ -469,7 +475,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                                                                                     <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
                                                                                         {product.category.name}
                                                                                     </span>
-                                                                                  
+
                                                                                 </div>
                                                                                 <span className="text-sm font-bold text-gray-900">
                                                                                     ৳{product.bdtPrice.toLocaleString()}
