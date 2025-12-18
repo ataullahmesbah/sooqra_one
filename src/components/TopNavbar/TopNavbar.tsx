@@ -310,6 +310,7 @@ export default function TopNavbar() {
                                 </div>
                             </Link>
                         </div>
+                        
                         {/* Search Bar - Middle (Desktop only) */}
                         <div className="hidden lg:block flex-1 max-w-2xl mx-6 xl:mx-8 relative" ref={searchRef}>
                             <div className="relative">
@@ -397,6 +398,7 @@ export default function TopNavbar() {
                                 )}
                             </AnimatePresence>
                         </div>
+
                         {/* Right Side Actions */}
                         <div className="flex items-center space-x-4 md:space-x-6">
                             {/* User Menu (Desktop) - Fixed with HIGH z-index */}

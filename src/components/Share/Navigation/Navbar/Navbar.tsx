@@ -61,6 +61,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isNavbarVisible, setIsNavbarVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
+    const searchRef = useRef<HTMLDivElement>(null);
 
     const searchInputRef = useRef<HTMLInputElement>(null);
     const conversionRates = { USD: 0.0091, EUR: 0.0084, BDT: 1 };
@@ -167,6 +168,31 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
             searchInputRef.current.focus();
         }
     }, [showMobileSearch]);
+
+    const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (searchQuery.trim()) {
+                router.push(`/shop/search?q=${encodeURIComponent(searchQuery)}`);
+                setSearchQuery('');
+                setShowSearchResults(false);
+                setShowMobileSearch(false);
+            }
+        }
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setShowSearchResults(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     const handleResultClick = (slug: string) => {
         router.push(`/shop/${slug}`);
@@ -369,34 +395,118 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                                 </Link>
                             </div>
 
+                            {/* Search Shopping Badge and Number Condition */}
+
+
                             <div className="flex items-center gap-4">
                                 {!isNavbarVisible ? (
-                                    <button
-                                        onClick={() => setIsCartOpen(true)}
-                                        className="relative p-2 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
-                                        aria-label="Open Cart"
-                                    >
-                                        {/* Cart Icon */}
-                                        <FaShoppingBag className="w-4 h-4 text-white group-hover:text-yellow-300 transition-colors duration-300" />
+                                    <>
+                                        {/* Search Bar (Desktop only) - যোগ করেছি Shopping Icon এর আগে */}
+                                        <div className="hidden lg:block flex-1 max-w-2xl relative" ref={searchRef}>
+                                            <div className="relative">
+                                                <input
+                                                    ref={searchInputRef}
+                                                    type="text"
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    onKeyPress={handleSearchKeyPress}
+                                                    onFocus={() => {
+                                                        if (searchQuery.trim()) {
+                                                            setShowSearchResults(true);
+                                                        }
+                                                    }}
+                                                    placeholder="Search Sooqra One"
+                                                    className="w-full px-4 pl-12 py-2.5 bg-white border-2 border-gray-300 rounded-full text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800 transition-all duration-300 shadow-sm text-sm"
+                                                />
+                                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600">
+                                                    <FaSearch className="text-sm" />
+                                                </div>
+                                            </div>
+                                            {/* Desktop Search Results Dropdown */}
+                                            <AnimatePresence>
+                                                {showSearchResults && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: -10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, y: -10 }}
+                                                        className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-[99999] max-h-[400px] overflow-y-auto"
+                                                    >
 
-                                        {/* Animated Badge */}
-                                        {cartCount > 0 && (
-                                            <span className="
-            absolute -top-2 -right-2 
-            min-w-5 h-5 px-1.5 
-            flex items-center justify-center 
-            bg-gradient-to-r from-yellow-400 to-amber-500 
-            text-gray-900 text-xs font-extrabold 
-            rounded-full 
-            shadow-lg 
-            ring-2 ring-white
-            animate-bounce 
-            hover:animate-none   
-        ">
-                                                {cartCount > 99 ? '99+' : cartCount}
-                                            </span>
-                                        )}
-                                    </button>
+                                                        {isSearching ? (
+                                                            <div className="p-4 text-center">
+                                                                <div className="inline-block w-6 h-6 border-2 border-gray-800 border-t-transparent rounded-full animate-spin"></div>
+                                                                <p className="text-gray-600 mt-2 text-sm font-medium">Searching...</p>
+                                                            </div>
+                                                        ) : searchResults.length > 0 ? (
+                                                            <div className="divide-y divide-gray-100">
+                                                                {searchResults.map((product) => (
+                                                                    <div
+                                                                        key={product._id}
+                                                                        onClick={() => handleResultClick(product.slug)}
+                                                                        className="flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                                                                    >
+                                                                        {/* Product Image */}
+                                                                        <div className="w-12 h-12 relative flex-shrink-0 mr-3 rounded-md overflow-hidden border border-gray-200">
+                                                                            <Image
+                                                                                src={product.mainImage}
+                                                                                alt={product.mainImageAlt}
+                                                                                width={48}
+                                                                                height={48}
+                                                                                className="object-cover"
+                                                                            />
+                                                                            {product.availability !== 'InStock' && (
+                                                                                <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+                                                                                    <span className="text-[10px] font-bold text-red-600 bg-white/90 px-1 rounded">OUT</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Product Details */}
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-gray-900 text-sm font-semibold truncate">{product.title}</p>
+                                                                            <div className="flex items-center justify-between mt-1">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                                                        {product.category.name}
+                                                                                    </span>
+                                                                                  
+                                                                                </div>
+                                                                                <span className="text-sm font-bold text-gray-900">
+                                                                                    ৳{product.bdtPrice.toLocaleString()}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : searchQuery.trim() ? (
+                                                            <div className="p-4 text-center">
+                                                                <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                                                                    <FaSearch className="text-gray-500" />
+                                                                </div>
+                                                                <p className="text-gray-800 font-medium mb-1">No products found</p>
+                                                                <p className="text-gray-600 text-sm">Try different keywords</p>
+                                                            </div>
+                                                        ) : null}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+
+                                        {/* Shopping Cart Button */}
+                                        <button
+                                            onClick={() => setIsCartOpen(true)}
+                                            className="relative p-2 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
+                                            aria-label="Open Cart"
+                                        >
+                                            <FaShoppingBag className="w-4 h-4 text-white group-hover:text-yellow-300 transition-colors duration-300" />
+                                            {cartCount > 0 && (
+                                                <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1.5 flex items-center justify-center bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 text-xs font-extrabold rounded-full shadow-lg ring-2 ring-white animate-bounce hover:animate-none">
+                                                    {cartCount > 99 ? '99+' : cartCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </>
                                 ) : (
                                     <a href={`tel:${contactNumber.replace(/\s+/g, '')}`} className="flex items-center gap-3">
                                         <div className="w-9 h-9 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full flex items-center justify-center">
@@ -409,6 +519,9 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                                     </a>
                                 )}
                             </div>
+
+
+
                         </div>
                     </div>
                 </motion.nav>

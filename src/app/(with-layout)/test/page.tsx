@@ -5,6 +5,15 @@ const page = () => {
   return (
     <div>
       <Banner />
+
+
+      
+
+
+                              {/* Search Shopping Badge and Number Condition */}
+                              
+                              
+
     </div>
   );
 };
