@@ -49,10 +49,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             {/* Sidebar Header */}
             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-                <h2 className="text-lg font-semibold text-gray-900">Categories</h2>
-                <p className="text-gray-600 text-sm mt-1">
-                    Filter by category
-                </p>
+                <h2 className="text-lg font-semibold text-gray-900 uppercase">Categories</h2>
+               
             </div>
 
             <div className="p-4">
@@ -61,7 +59,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                     <button
                         onClick={() => handleCategoryClick('all')}
                         className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${selectedCategory === 'all'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                ? 'bg-blue-50 text-gray-700 border border-gray-200'
                                 : 'text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
                             }`}
                     >
@@ -113,7 +111,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                                     )}
                                 </div>
                                 <div className="text-left flex-1">
-                                    <h3 className="font-medium truncate">
+                                    <h3 className=" truncate">
                                         {category.name}
                                     </h3>
                                 </div>
@@ -126,37 +124,14 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                                     {category.productCount || 0}
                                 </span>
                                 {selectedCategory === category.slug && (
-                                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                    <div className="w-2 h-2 rounded-full bg-gray-500"></div>
                                 )}
                             </div>
                         </button>
                     ))}
                 </div>
 
-                {/* Categories with 0 products (hidden by default) */}
-                {categories.length !== categoriesWithProducts.length && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                        <details className="group">
-                            <summary className="flex items-center justify-between cursor-pointer text-sm text-gray-500 hover:text-gray-700">
-                                <span>Empty categories ({categories.length - categoriesWithProducts.length})</span>
-                                <svg className="w-4 h-4 group-open:rotate-180 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
-                            </summary>
-                            <div className="mt-2 space-y-2">
-                                {categories
-                                    .filter(cat => !categoriesWithProducts.find(c => c._id === cat._id))
-                                    .map(category => (
-                                        <div key={category._id} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded text-sm text-gray-500">
-                                            <span>{category.name}</span>
-                                            <span className="px-2 py-0.5 bg-gray-200 rounded text-xs">0</span>
-                                        </div>
-                                    ))
-                                }
-                            </div>
-                        </details>
-                    </div>
-                )}
+                
             </div>
         </div>
     );

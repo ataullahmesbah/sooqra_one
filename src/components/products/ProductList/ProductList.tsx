@@ -8,12 +8,12 @@ import ProductCard from '../ProductCard/ProductCard';
 
 interface ProductListProps {
     initialProducts: Product[];
-    categorySlug?: string; // এই line add করো
+    categorySlug?: string; 
 }
 
 const ProductList: React.FC<ProductListProps> = ({
     initialProducts,
-    categorySlug // এই prop receive করো
+    categorySlug 
 }) => {
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [loading, setLoading] = useState(false);
