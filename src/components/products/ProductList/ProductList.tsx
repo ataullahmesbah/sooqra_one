@@ -1,19 +1,19 @@
+// src/components/products/ProductList/ProductList.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Product } from '@/src/types/index';
 import ProductCard from '../ProductCard/ProductCard';
 
-
 interface ProductListProps {
     initialProducts: Product[];
-    categorySlug?: string; 
+    categorySlug?: string;
 }
 
 const ProductList: React.FC<ProductListProps> = ({
     initialProducts,
-    categorySlug 
+    categorySlug
 }) => {
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [loading, setLoading] = useState(false);
@@ -24,47 +24,48 @@ const ProductList: React.FC<ProductListProps> = ({
     // Use categorySlug from props or from URL params
     const category = categorySlug || searchParams.get('category');
 
-    // Filter products by category
+    // Filter products by category on client side
     useEffect(() => {
-        const filterProductsByCategory = async () => {
-            if (category && category !== 'all') {
-                setLoading(true);
-                try {
-                    const response = await fetch(`/api/categories/${category}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        setProducts(data.products || []);
-                    }
-                } catch (error) {
-                    console.error('Error filtering products:', error);
-                } finally {
-                    setLoading(false);
-                }
-            } else {
-                setProducts(initialProducts);
-            }
-        };
+        if (category && category !== 'all') {
+            setLoading(true);
 
-        filterProductsByCategory();
+            // Filter from initialProducts instead of API call
+            // Check both category.slug and category directly
+            const filteredProducts = initialProducts.filter(product => {
+                // Check if product has a category object with slug
+                if (typeof product.category === 'object' && product.category !== null) {
+                    return (product.category as any).slug === category;
+                }
+                // Check if product has category as string
+                return product.category === category;
+            });
+
+            setProducts(filteredProducts);
+            setLoading(false);
+        } else {
+            setProducts(initialProducts);
+        }
     }, [category, initialProducts]);
 
     // Sort products
-    const sortedProducts = [...products].sort((a, b) => {
-        switch (sortBy) {
-            case 'price':
-                const priceA = a.prices[0]?.amount || 0;
-                const priceB = b.prices[0]?.amount || 0;
-                return priceA - priceB;
-            case 'name':
-                return a.title.localeCompare(b.title);
-            case 'rating':
-                const ratingA = a.aggregateRating?.ratingValue || 0;
-                const ratingB = b.aggregateRating?.ratingValue || 0;
-                return ratingB - ratingA;
-            default:
-                return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-        }
-    });
+    const sortedProducts = useMemo(() => {
+        return [...products].sort((a, b) => {
+            switch (sortBy) {
+                case 'price':
+                    const priceA = a.prices?.[0]?.amount || 0;
+                    const priceB = b.prices?.[0]?.amount || 0;
+                    return priceA - priceB;
+                case 'name':
+                    return a.title.localeCompare(b.title);
+                case 'rating':
+                    const ratingA = a.aggregateRating?.ratingValue || 0;
+                    const ratingB = b.aggregateRating?.ratingValue || 0;
+                    return ratingB - ratingA;
+                default:
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            }
+        });
+    }, [products, sortBy]);
 
     if (loading) {
         return (

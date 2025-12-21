@@ -31,7 +31,7 @@ interface ProductsPageProps {
 export async function generateMetadata({ searchParams }: ProductsPageProps) {
   const params = await searchParams;
   const categorySlug = params.category || '';
-  
+
   // Fetch category data for metadata
   let currentCategory = null;
   if (categorySlug) {
@@ -57,7 +57,7 @@ export async function generateMetadata({ searchParams }: ProductsPageProps) {
   // Fetch categories for keywords
   const categories = await getCategories();
   const categoryNames = categories.map(cat => cat.name).join(', ');
-  
+
   const keywords = currentCategory
     ? `${currentCategory.name}, buy ${currentCategory.name} online, ${currentCategory.name} products, ${currentCategory.name.toLowerCase()} collection, online shopping`
     : `online shopping, ecommerce, products, ${categoryNames}, buy online, shopping`;
@@ -216,7 +216,7 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps) => {
               <main className="lg:w-3/4">
                 <div
                   className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-                
+
                   itemType="https://schema.org/ItemList"
                   itemScope itemID={`${SITE_CONFIG.url}/products${categorySlug ? `?category=${categorySlug}` : ''}`}
                 >
@@ -260,9 +260,10 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps) => {
                       categorySlug={categorySlug}
                     />
                   </div>
+                 
                 </div>
 
-              
+
               </main>
             </div>
           </div>
@@ -271,8 +272,8 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps) => {
           <div className="hidden" aria-hidden="true">
             <h2>Product Categories Keywords</h2>
             <p>
-              {categories.map(cat => cat.name).join(', ')} products available for purchase. 
-              Shop online for best deals on {categories.slice(0, 5).map(cat => cat.name.toLowerCase()).join(', ')} 
+              {categories.map(cat => cat.name).join(', ')} products available for purchase.
+              Shop online for best deals on {categories.slice(0, 5).map(cat => cat.name.toLowerCase()).join(', ')}
               and more categories. Best prices, fast shipping, secure payment.
             </p>
           </div>
