@@ -260,7 +260,7 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps) => {
                       categorySlug={categorySlug}
                     />
                   </div>
-                 
+
                 </div>
 
 
