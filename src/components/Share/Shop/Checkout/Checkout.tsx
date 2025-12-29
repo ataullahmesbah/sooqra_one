@@ -7,6 +7,7 @@ import Image from 'next/image';
 import axios from 'axios';
 import 'react-phone-input-2/lib/style.css';
 import CheckoutPayment from '../CheckoutPayment/CheckoutPayment';
+import OTPVerification from '@/src/components/OTP/OTPVerification/OTPVerification';
 
 
 // Interface Definitions
@@ -147,6 +148,15 @@ export default function Checkout() {
     const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
     const [orderData, setOrderData] = useState<OrderData | null>(null);
 
+    // Add these states for OTP
+    const [showOTP, setShowOTP] = useState(false);
+    const [phoneVerified, setPhoneVerified] = useState(false);
+    const [verifyingPhone, setVerifyingPhone] = useState(false);
+    const [verificationError, setVerificationError] = useState('');
+
+    // Phone number field এর জন্য state
+    const [phoneNumber, setPhoneNumber] = useState('');
+
     // Add this useEffect to get user info if logged in
     useEffect(() => {
         if (status === 'authenticated' && session?.user) {
@@ -279,6 +289,51 @@ export default function Checkout() {
         fetchData();
     }, []);
 
+    // Handle phone verification
+    const handleVerifyPhone = async () => {
+        if (!phoneNumber || !/^(?:\+88|88)?(01[3-9]\d{8})$/.test(phoneNumber)) {
+            setVerificationError('Please enter a valid Bangladeshi phone number');
+            return;
+        }
+
+        setVerifyingPhone(true);
+        setVerificationError('');
+
+        try {
+            // Check if already verified
+            const checkResponse = await axios.post('/api/otp/check', { phone: phoneNumber });
+
+            if (checkResponse.data.verified) {
+                setPhoneVerified(true);
+                setCustomerInfo(prev => ({ ...prev, phone: phoneNumber }));
+                showCustomToast('Phone number already verified!', 'success');
+            } else {
+                setShowOTP(true);
+                setCustomerInfo(prev => ({ ...prev, phone: phoneNumber }));
+            }
+        } catch (error: any) {
+            setVerificationError('Verification check failed. Please try again.');
+        } finally {
+            setVerifyingPhone(false);
+        }
+    };
+
+    // Handle OTP verification success
+    const handleOTPVerified = (verified: boolean) => {
+        if (verified) {
+            setPhoneVerified(true);
+            setShowOTP(false);
+            showCustomToast('Phone number verified successfully!', 'success');
+        }
+    };
+
+    useEffect(() => {
+        if (phoneNumber) {
+            setCustomerInfo(prev => ({ ...prev, phone: phoneNumber }));
+        }
+    }, [phoneNumber]);
+
+
     // Cart validation function 
     const validateCart = async (): Promise<boolean> => {
         setValidatingCart(true);
@@ -345,6 +400,8 @@ export default function Checkout() {
             setValidatingCart(false);
         }
     };
+
+
 
     // Helper functions
     const getBDTPrice = (item: CartItem): number => {
@@ -425,11 +482,13 @@ export default function Checkout() {
         return cleanPhone;
     };
 
+    // Update handlePhoneChange function
     const handlePhoneChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-        setCustomerInfo((prev) => ({ ...prev, phone: value }));
+        setPhoneNumber(value);
         setValidationErrors(prev => ({ ...prev, phone: '' }));
-        validateForm();
+        setVerificationError('');
+        setPhoneVerified(false);
     };
 
     const handleQuantityChange = async (productId: string, newQuantity: number): Promise<void> => {
@@ -564,6 +623,14 @@ export default function Checkout() {
         e.preventDefault();
         setError('');
         setLoading(true);
+
+
+        // Check phone verification first
+        if (customerInfo.country === 'Bangladesh' && !phoneVerified) {
+            showCustomToast('Please verify your phone number before placing order', 'error');
+            return;
+        }
+
 
         // Basic validation
         if (customerInfo.country === 'Bangladesh') {
@@ -761,15 +828,10 @@ export default function Checkout() {
     };
 
 
+    // Update form validation to include phone verification
     const isSubmitDisabled = (): boolean => {
         if (loading || validatingCart || cart.length === 0 || !acceptedTerms || !isFormValid) {
             return true;
-        }
-
-        if (customerInfo.country === 'Bangladesh') {
-            if (!customerInfo.phone || customerInfo.phone.length !== 11 || !/^01[3-9]/.test(customerInfo.phone)) {
-                return true;
-            }
         }
 
         if (paymentMethod === 'bkash' && (!bkashNumber || !transactionId)) {
@@ -778,6 +840,7 @@ export default function Checkout() {
 
         return false;
     };
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 py-8 px-4 sm:px-6 lg:px-8">
@@ -889,37 +952,80 @@ export default function Checkout() {
                                         )}
                                     </div>
 
+                                    {/* Phone Number with Verification */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                                        <div className="flex">
-                                            <span className="inline-flex items-center px-3 text-sm bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg">
-                                                +88
-                                            </span>
-                                            <input
-                                                type="text"
-                                                name="phone"
-                                                value={customerInfo.phone}
-                                                onChange={handlePhoneChange}
-                                                className="w-full bg-white border border-gray-300 rounded-r-lg p-3 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent"
-                                                placeholder="01XXXXXXXXX"
-                                                maxLength={11}
-                                                required
-                                            />
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Phone Number *
+                                            {phoneVerified && (
+                                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Verified
+                                                </span>
+                                            )}
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <div className="flex-1">
+                                                <div className="flex">
+                                                    <span className="inline-flex items-center px-3 text-sm bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg">
+                                                        +88
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        name="phone"
+                                                        value={phoneNumber}
+                                                        onChange={handlePhoneChange}
+                                                        className={`w-full bg-white border border-gray-300 rounded-r-lg p-3 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent ${phoneVerified ? 'border-green-500' : ''}`}
+                                                        placeholder="01XXXXXXXXX"
+                                                        maxLength={11}
+                                                        required
+                                                        disabled={phoneVerified}
+                                                    />
+                                                </div>
+                                                {verificationError && (
+                                                    <p className="text-red-600 text-xs mt-1">{verificationError}</p>
+                                                )}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleVerifyPhone}
+                                                disabled={verifyingPhone || !phoneNumber || phoneNumber.length !== 11 || !/^01[3-9]/.test(phoneNumber) || phoneVerified}
+                                                className={`px-4 py-3 rounded-lg font-medium whitespace-nowrap ${phoneVerified
+                                                    ? 'bg-green-100 text-green-800 border border-green-200'
+                                                    : 'bg-gray-800 text-white hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed'}`}
+                                            >
+                                                {verifyingPhone ? (
+                                                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                ) : phoneVerified ? (
+                                                    'Verified'
+                                                ) : (
+                                                    'Verify'
+                                                )}
+                                            </button>
                                         </div>
-                                        {customerInfo.phone && customerInfo.phone.length === 11 && /^01[3-9]/.test(customerInfo.phone) && (
-                                            <p className="text-green-600 text-xs mt-1">
-                                                +88{customerInfo.phone}
-                                            </p>
-                                        )}
-                                        {validationErrors.phone && (
-                                            <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                                                <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                                </svg>
-                                                {validationErrors.phone}
+                                        {phoneNumber && phoneNumber.length === 11 && /^01[3-9]/.test(phoneNumber) && !phoneVerified && (
+                                            <p className="text-gray-600 text-xs mt-1">
+                                                Entered: +88{phoneNumber}
                                             </p>
                                         )}
                                     </div>
+
+                                    {/* OTP Verification Modal */}
+                                    {showOTP && (
+                                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                            <div className="bg-white rounded-xl max-w-md w-full">
+                                                <OTPVerification
+                                                    phone={phoneNumber}
+                                                    onVerified={handleOTPVerified}
+                                                    onCancel={() => setShowOTP(false)}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
@@ -1027,6 +1133,19 @@ export default function Checkout() {
                                             </span>
                                         </div>
                                     </div>
+
+                                    {/* Add verification warning message */}
+                                    {!phoneVerified && customerInfo.country === 'Bangladesh' && (
+                                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                            <p className="text-sm text-yellow-800 flex items-center">
+                                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                                Phone number must be verified before placing order
+                                            </p>
+                                        </div>
+                                    )}
+
                                 </form>
                             </div>
 
