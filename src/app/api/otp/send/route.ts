@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Format phone number
+        // Format phone number for SendMySMS (880XXXXXXXXXX)
         let formattedPhone = phone.replace(/\D/g, '');
         if (formattedPhone.length === 11 && formattedPhone.startsWith('01')) {
             formattedPhone = `880${formattedPhone.slice(1)}`;
@@ -29,42 +29,38 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check if OTP already exists and not expired
-        const existingOTP = await OTP.findOne({
+        // Generate 5-digit OTP
+        const otpCode = generateOTP(5);
+        const expiryTime = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
+
+        // Delete existing OTPs and create new one
+        await OTP.deleteMany({ phone: formattedPhone });
+        await OTP.create({
             phone: formattedPhone,
-            expiresAt: { $gt: new Date() }
+            otp: otpCode,
+            expiresAt: expiryTime,
+            verified: false,
+            attempts: 0
         });
 
-        let otpCode: string;
+        // Development mode check
+        const isProduction = process.env.NODE_ENV === 'production';
+        const disableSMS = process.env.DISABLE_SMS_SENDING === 'true';
 
-        if (existingOTP) {
-            // Use existing OTP if not expired
-            otpCode = existingOTP.otp;
-        } else {
-            // Generate new 5-digit OTP
-            otpCode = generateOTP(5);
-
-            // Delete any existing OTPs for this phone
-            await OTP.deleteMany({ phone: formattedPhone });
-
-            // Create new OTP with 2 minutes expiry
-            const expiryTime = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
-
-            await OTP.create({
-                phone: formattedPhone,
-                otp: otpCode,
-                expiresAt: expiryTime,
-                verified: false,
-                attempts: 0
+        if (!isProduction || disableSMS) {
+            // Development/Test mode - just log
+            console.log(`[DEV SMS] OTP for ${formattedPhone}: ${otpCode}`);
+            return NextResponse.json({
+                success: true,
+                message: 'OTP generated (dev mode)',
+                devOtp: process.env.NODE_ENV === 'development' ? otpCode : undefined
             });
         }
 
-        // Prepare SMS content
-        const message = `Your OTP is: ${otpCode}. Valid for 2 minutes. - SOOQRA`;
-
-        // Send SMS via Bulk SMS BD
-        const apiKey = process.env.NEXT_PUBLIC_BULK_SMS_BD_API_KEY;
-        const senderId = process.env.NEXT_PUBLIC_BULK_SMS_BD_SENDER_ID;
+        // Production - Send actual SMS via SendMySMS
+        const apiKey = process.env.NEXT_PUBLIC_SENDMYSMS_API_KEY;
+        const senderId = process.env.NEXT_PUBLIC_SENDMYSMS_SENDER_ID || 'SOOQRA';
+        const apiUrl = process.env.NEXT_PUBLIC_SENDMYSMS_API_URL || 'https://sendmysms.net/api';
 
         if (!apiKey || !senderId) {
             return NextResponse.json(
@@ -73,36 +69,41 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Send SMS
-        const smsResponse = await axios.post(
-            'https://bulksmsbd.net/api/smsapi',
-            null,
-            {
-                params: {
-                    api_key: apiKey,
-                    senderid: senderId,
-                    number: formattedPhone,
-                    message: message,
-                },
-            }
-        );
+        // SendMySMS API request
+        const message = `Your OTP is: ${otpCode}. Valid for 2 minutes. - ${senderId}`;
 
-        if (smsResponse.data.response_code === 202) {
-            console.log(`OTP sent to ${formattedPhone}: ${otpCode}`);
-            return NextResponse.json({
-                success: true,
-                message: 'OTP sent successfully',
-                // Development এর জন্য OTP না দেখানো better
+        try {
+            // SendMySMS API call
+            // Note: Check SendMySMS documentation for exact API format
+            const smsResponse = await axios.post(apiUrl, {
+                api_key: apiKey,
+                sender_id: senderId,
+                message: message,
+                to: formattedPhone,
+                // Add other required parameters as per SendMySMS docs
             });
-        } else {
-            throw new Error(smsResponse.data.error_message || 'Failed to send SMS');
+
+            // Check SendMySMS response format
+            if (smsResponse.data.success || smsResponse.data.status === 'success') {
+                console.log(`OTP sent via SendMySMS to ${formattedPhone}`);
+                return NextResponse.json({
+                    success: true,
+                    message: 'OTP sent successfully'
+                });
+            } else {
+                throw new Error(smsResponse.data.message || 'Failed to send SMS');
+            }
+        } catch (smsError: any) {
+            console.error('SendMySMS API error:', smsError.response?.data || smsError.message);
+            throw new Error(smsError.response?.data?.message || 'Failed to send SMS via SendMySMS');
         }
+
     } catch (error: any) {
         console.error('Error sending OTP:', error);
         return NextResponse.json(
             {
                 success: false,
-                message: error.response?.data?.error_message || error.message || 'Failed to send OTP',
+                message: error.message || 'Failed to send OTP',
             },
             { status: 500 }
         );
