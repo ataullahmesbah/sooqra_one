@@ -1,3 +1,5 @@
+//app/api/otp/check/route.ts
+
 import dbConnect from '@/src/lib/dbConnect';
 import OTP from '@/src/models/OTP';
 import { NextRequest, NextResponse } from 'next/server';
