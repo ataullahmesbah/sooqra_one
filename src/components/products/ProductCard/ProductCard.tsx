@@ -681,11 +681,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                         </Link>
 
                         {/* Short Description */}
-                        {product.shortDescription && (
+                        {/* {product.shortDescription && (
                             <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-1">
                                 {product.shortDescription}
                             </p>
-                        )}
+                        )} */}
 
                         {/* Price */}
                         <div className="mb-5">
