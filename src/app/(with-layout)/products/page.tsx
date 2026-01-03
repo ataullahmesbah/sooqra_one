@@ -1,5 +1,3 @@
-
-
 // src/app/products/page.tsx
 
 import { getCategories, getProducts, getCategoryBySlug } from '@/src/lib/data';
@@ -8,15 +6,10 @@ import ProductList from '@/src/components/products/ProductList/ProductList';
 import BreadcrumbNavigation from '@/src/components/products/BreadcrumbNavigation/BreadcrumbNavigation';
 import ProductsSchema from '@/src/components/SEO/ProductsSchema';
 
-
-
-
-
-
 // Site configuration
 const SITE_CONFIG = {
   url: process.env.NEXT_PUBLIC_SITE_URL || 'https://sooqraone.com',
-  name: 'Your E-commerce Store',
+  name: 'Sooqra One',
   logo: 'https://sooqraone.com/logo.png',
   twitterHandle: '@sooqraone',
   facebookPage: 'https://facebook.com/yourstore',
@@ -117,7 +110,7 @@ export async function generateMetadata({ searchParams }: ProductsPageProps) {
 
 const ProductsPage = async ({ searchParams }: ProductsPageProps) => {
   try {
-    // Get category from search paramsF
+    // Get category from search params
     const params = await searchParams;
     const categorySlug = params.category || '';
 
@@ -162,108 +155,56 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps) => {
           }}
         />
 
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-screen bg-gray-50">
           {/* Structured Data Breadcrumb */}
           <nav
             aria-label="breadcrumb"
             itemScope
             itemType="https://schema.org/BreadcrumbList"
-            className="bg-white border-b border-gray-200"
+            className="bg-white border-b border-gray-200 shadow-sm"
           >
-            <div className="container mx-auto px-4 py-12">
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
               <BreadcrumbNavigation
                 currentCategory={currentCategory}
                 categorySlug={categorySlug}
               />
-
-              {/* Page Title with Schema */}
-              <div className="mt-4">
-                <h1
-                  itemProp="name"
-                  className="text-2xl md:text-3xl font-bold text-gray-900"
-                >
-                  {currentCategory ? currentCategory.name : 'All Products'}
-                </h1>
-                <p
-                  itemProp="description"
-                  className="text-gray-600 mt-1 text-lg"
-                >
-                  {currentCategory
-                    ? `Browse our premium collection of ${currentCategory.name.toLowerCase()} products`
-                    : 'Discover our curated collection of premium products across all categories'}
-                </p>
-              </div>
             </div>
           </nav>
 
           {/* Main Content */}
-          <div className="container mx-auto px-4 py-8">
-            <div className="flex flex-col lg:flex-row gap-8">
+          <div className="w-full px-0 sm:px-4 lg:px-6 py-6 sm:py-8">
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full max-w-screen-2xl mx-auto">
               {/* Left Sidebar - Categories */}
               <aside
                 aria-label="Product categories"
-                className="lg:w-1/4"
+                className="lg:w-64 xl:w-72 flex-shrink-0 px-4 sm:px-6 lg:px-0"
                 itemScope
                 itemType="https://schema.org/WPSideBar"
               >
-                <CategorySidebar
-                  categories={categories}
-                  currentCategorySlug={categorySlug}
-                />
+                <div className="sticky top-6">
+                  <CategorySidebar
+                    categories={categories}
+                    currentCategorySlug={categorySlug}
+                  />
+                </div>
               </aside>
 
               {/* Right Content - Products */}
-              <main className="lg:w-3/4">
+              <main className="flex-1 w-full min-w-0 px-4 sm:px-6 lg:px-0">
                 <div
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-
+                  className="w-full"
                   itemType="https://schema.org/ItemList"
-                  itemScope itemID={`${SITE_CONFIG.url}/products${categorySlug ? `?category=${categorySlug}` : ''}`}
+                  itemScope
+                  itemID={`${SITE_CONFIG.url}/products${categorySlug ? `?category=${categorySlug}` : ''}`}
                 >
-                  {/* Products Header */}
-                  <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h2 className="text-xl font-bold text-gray-900">
-                          <span itemProp="name">
-                            {currentCategory
-                              ? `${currentCategory.name} Products`
-                              : 'All Products'}
-                          </span>
-                        </h2>
-                        <p className="text-gray-600 text-sm mt-1">
-                          <span itemProp="numberOfItems">{products.length}</span> products available
-                        </p>
-                      </div>
-
-                      {/* Category Indicator */}
-                      {currentCategory && (
-                        <div
-                          className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
-                          itemProp="category"
-                          itemScope
-                          itemType="https://schema.org/Thing"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                          Currently viewing: <span itemProp="name">{currentCategory.name}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Products List */}
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6 w-full">
                     <ProductList
                       initialProducts={products}
                       categorySlug={categorySlug}
                     />
                   </div>
-
                 </div>
-
-
               </main>
             </div>
           </div>

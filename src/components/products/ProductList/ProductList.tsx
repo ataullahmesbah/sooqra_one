@@ -17,8 +17,7 @@ const ProductList: React.FC<ProductListProps> = ({
 }) => {
     const [products, setProducts] = useState<Product[]>(initialProducts);
     const [loading, setLoading] = useState(false);
-    const [sortBy, setSortBy] = useState('createdAt');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'price-low-high' | 'price-high-low'>('newest');
     const searchParams = useSearchParams();
 
     // Use categorySlug from props or from URL params
@@ -30,7 +29,6 @@ const ProductList: React.FC<ProductListProps> = ({
             setLoading(true);
 
             // Filter from initialProducts instead of API call
-            // Check both category.slug and category directly
             const filteredProducts = initialProducts.filter(product => {
                 // Check if product has a category object with slug
                 if (typeof product.category === 'object' && product.category !== null) {
@@ -47,20 +45,26 @@ const ProductList: React.FC<ProductListProps> = ({
         }
     }, [category, initialProducts]);
 
-    // Sort products
+    // Sort products based on selected option
     const sortedProducts = useMemo(() => {
         return [...products].sort((a, b) => {
             switch (sortBy) {
-                case 'price':
+                case 'newest':
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+
+                case 'oldest':
+                    return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+
+                case 'price-low-high':
                     const priceA = a.prices?.[0]?.amount || 0;
                     const priceB = b.prices?.[0]?.amount || 0;
                     return priceA - priceB;
-                case 'name':
-                    return a.title.localeCompare(b.title);
-                case 'rating':
-                    const ratingA = a.aggregateRating?.ratingValue || 0;
-                    const ratingB = b.aggregateRating?.ratingValue || 0;
-                    return ratingB - ratingA;
+
+                case 'price-high-low':
+                    const priceC = a.prices?.[0]?.amount || 0;
+                    const priceD = b.prices?.[0]?.amount || 0;
+                    return priceD - priceC;
+
                 default:
                     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
             }
@@ -69,7 +73,7 @@ const ProductList: React.FC<ProductListProps> = ({
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="flex flex-col items-center justify-center min-h-[400px] bg-white rounded-xl">
                 <div className="relative">
                     <div className="w-16 h-16 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -84,7 +88,7 @@ const ProductList: React.FC<ProductListProps> = ({
 
     if (products.length === 0) {
         return (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-xl overflow-hidden">
                 <div className="p-12 text-center">
                     <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                         <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,25 +115,41 @@ const ProductList: React.FC<ProductListProps> = ({
     }
 
     return (
-        <div>
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="w-full">
+            {/* Sorting Controls */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <span className="text-gray-600 text-sm whitespace-nowrap">Sort by:</span>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="w-full sm:w-auto px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent"
+                    >
+                        <option value="newest">Newest</option>
+                        <option value="oldest">Oldest</option>
+                        <option value="price-low-high">Price: Low to High</option>
+                        <option value="price-high-low">Price: High to Low</option>
+                    </select>
+                </div>
+            </div>
+
+            {/* Products Grid - 4 columns on xl screens */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {sortedProducts.map((product) => (
                     <ProductCard key={product._id} product={product} />
                 ))}
             </div>
 
-            {/* Results Count */}
-            <div className="mt-8 text-center">
-                <p className="text-gray-600">
-                    Showing <span className="font-semibold">{sortedProducts.length}</span> products
-                    {category && category !== 'all' && (
-                        <span className="ml-2">
-                            in <span className="font-semibold text-blue-600">{category}</span> category
-                        </span>
-                    )}
-                </p>
-            </div>
+            {/* Pagination would go here */}
+            {sortedProducts.length > 12 && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                    <div className="flex justify-center">
+                        <button className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+                            Load More Products
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

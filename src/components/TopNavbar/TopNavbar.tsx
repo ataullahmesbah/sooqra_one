@@ -264,7 +264,7 @@ export default function TopNavbar() {
             links.push(
                 { name: 'Admin Dashboard', href: '/admin-dashboard', icon: <FaTachometerAlt /> },
                 { name: 'Manage Products', href: '/admin-dashboard/shop/all-products', icon: <FaBox /> },
-                { name: 'Manage Users', href: '/admin-dashboard/users/users-control', icon: <FaUserShield /> }
+            
             );
         } else if (session.user.role === 'moderator') {
             links.push(

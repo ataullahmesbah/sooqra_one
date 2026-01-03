@@ -484,16 +484,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                                                     {product.title}
                                                 </h2>
                                             </Link>
-                                            <div className="flex items-center gap-3 mb-3">
-                                                <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
-                                                    {product.brand}
-                                                </span>
-                                                {product.quantity > 0 && product.productType !== 'Affiliate' && (
-                                                    <span className="text-sm text-gray-500">
-                                                        {product.quantity} in stock
-                                                    </span>
-                                                )}
-                                            </div>
                                         </div>
 
                                         {/* Rating */}
@@ -544,11 +534,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                                                     </div>
                                                 </div>
                                             )}
-                                            {product.productType !== 'Affiliate' && (
-                                                <div className="text-sm text-gray-500">
-                                                    Max 3 per order
-                                                </div>
-                                            )}
                                         </div>
 
                                         {/* Action Buttons */}
@@ -596,7 +581,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                 </div>
             ) : (
                 // Grid View
-                <div className="group bg-white rounded-3xl border border-gray-200 hover:border-gray-300 hover:shadow-2xl transition-all duration-500 overflow-hidden h-full flex flex-col">
+                <div className="group bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-2xl transition-all duration-500 overflow-hidden h-full flex flex-col">
                     {/* Image Container */}
                     <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 to-black">
                         <Link href={`/products/${product.slug || product._id}`}>
@@ -661,42 +646,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
 
                     {/* Content */}
                     <div className="flex-1 p-5 flex flex-col">
-                        {/* Brand and Category */}
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full uppercase tracking-wider">
-                                {product.brand}
-                            </span>
-                            {product.quantity > 0 && product.productType !== 'Affiliate' && (
-                                <span className="text-xs text-gray-500">
-                                    {product.quantity} in stock
-                                </span>
-                            )}
-                        </div>
-
                         {/* Title */}
                         <Link href={`/products/${product.slug || product._id}`} className="flex-1">
-                            <h3 className="text-lg font-bold text-gray-900 hover:text-gray-700 transition-colors line-clamp-2 mb-3 leading-tight ">
+                            <h3 className="text-sm font-bold text-gray-900 hover:text-gray-700 transition-colors line-clamp-2 mb-3 leading-tight">
                                 {product.title}
                             </h3>
                         </Link>
-
-                        {/* Short Description */}
-                        {/* {product.shortDescription && (
-                            <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-1">
-                                {product.shortDescription}
-                            </p>
-                        )} */}
 
                         {/* Price */}
                         <div className="mb-5">
                             {mainPrice && (
                                 <div className="space-y-1">
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold text-gray-900">
+                                        <span className="text-xl font-bold text-gray-900">
                                             {mainPrice.currency === 'BDT' ? '৳' : '$'}{mainPrice.amount.toLocaleString()}
                                         </span>
                                         {hasDiscount && (
-                                            <span className="text-base text-gray-500 line-through">
+                                            <span className="text-sm text-gray-500 line-through">
                                                 {mainPrice.currency === 'BDT' ? '৳' : '$'}
                                                 {(mainPrice.amount * 1.15).toLocaleString()}
                                             </span>

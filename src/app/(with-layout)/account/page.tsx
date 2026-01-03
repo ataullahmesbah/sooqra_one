@@ -119,14 +119,13 @@ export default function AccountPage() {
         if (session.user.role === 'admin') {
             return [
                 { name: 'Admin Dashboard', href: '/admin-dashboard', icon: <FaTachometerAlt /> },
-                { name: 'Manage Products', href: '/admin-dashboard/shop/all-products', icon: <FaShoppingBag /> },
-                { name: 'Manage Users', href: '/admin-dashboard/users', icon: <FaUserShield /> },
-                { name: 'Manage Orders', href: '/admin-dashboard/orders', icon: <FaShoppingBag /> }
+                { name: 'Manage Products', href: 'admin-dashboard/shop/all-products', icon: <FaShoppingBag /> },
+                { name: 'Manage Orders', href: '/admin-dashboard/shop/order-status', icon: <FaShoppingBag /> }
             ];
         } else if (session.user.role === 'moderator') {
             return [
                 { name: 'Moderator Dashboard', href: '/moderator', icon: <FaTachometerAlt /> },
-                { name: 'Manage Content', href: '/moderator/content', icon: <FaEdit /> }
+                { name: 'Manage Content', href: '/moderator/shop/order-status', icon: <FaEdit /> }
             ];
         }
 
