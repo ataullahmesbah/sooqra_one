@@ -6,7 +6,6 @@ import Products from '@/src/models/Products';
 import Config from '@/src/models/Config';
 import UsedCoupon from '@/src/models/UsedCoupon';
 import Coupon from '@/src/models/Coupon';
-import OTP from '@/src/models/OTP';
 
 interface CustomerInfo {
     name: string;
@@ -48,10 +47,6 @@ interface CreateOrderRequestBody {
     userPhone?: string;
 }
 
-
-
-
-
 export async function GET(request: Request) {
     try {
         await dbConnect();
@@ -82,10 +77,6 @@ export async function GET(request: Request) {
 }
 
 
-
-
-
-
 export async function POST(request: Request) {
     try {
         await dbConnect();
@@ -114,32 +105,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required customer information' }, { status: 400 });
         }
 
-        // 2. Phone verification check for Bangladesh
-        if (customerInfo.country === 'Bangladesh') {
-            // Format phone number for verification check
-            let formattedPhone = customerInfo.phone.replace(/\D/g, '');
-            if (formattedPhone.length === 11 && formattedPhone.startsWith('01')) {
-                formattedPhone = `880${formattedPhone.slice(1)}`;
-            }
-
-            // Check if phone is verified
-            const verifiedOTP = await OTP.findOne({
-                phone: formattedPhone,
-                verified: true,
-                expiresAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Within 24 hours
-            });
-
-            if (!verifiedOTP) {
-                return NextResponse.json(
-                    {
-                        error: 'Phone number not verified. Please verify your phone number before placing order.'
-                    },
-                    { status: 400 }
-                );
-            }
-        }
-
-        // 3. Bkash validation
+        // 2. Bkash validation
         if (paymentMethod === 'bkash') {
             if (!customerInfo.bkashNumber || !customerInfo.transactionId) {
                 return NextResponse.json({ error: 'Bkash number and Transaction ID required' }, { status: 400 });
@@ -149,14 +115,14 @@ export async function POST(request: Request) {
             }
         }
 
-        // 4. COD & Bkash: District + Thana required
+        // 3. COD & Bkash: District + Thana required
         if ((paymentMethod === 'cod' || paymentMethod === 'bkash') && customerInfo.country === 'Bangladesh') {
             if (!customerInfo.district || !customerInfo.thana) {
                 return NextResponse.json({ error: 'District and thana required for delivery' }, { status: 400 });
             }
         }
 
-        // 5. Product validation (only check, don't reduce stock)
+        // 4. Product validation (only check, don't reduce stock)
         for (const item of products) {
             const product = await Products.findById(item.productId);
             if (!product) {
@@ -285,4 +251,3 @@ export async function POST(request: Request) {
         );
     }
 }
-
