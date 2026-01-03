@@ -192,22 +192,45 @@ export default function MyOrders() {
 
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-                            <p className="text-gray-600 mt-2">
+                {/* Header */}
+                <div className="mb-6 sm:mb-8 px-0">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
+                        {/* Title Section */}
+                        <div className="text-center md:text-left">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">My Orders</h1>
+                            <p className="text-gray-600 text-sm sm:text-base">
                                 Track and manage all your orders in one place
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <Link
-                                href="/shop"
-                                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-medium"
-                            >
-                                Continue Shopping
-                            </Link>
+                        {/* Button Group */}
+                        <div className="flex flex-col xs:flex-row items-center justify-center gap-3">
+                            <div className="w-full xs:w-auto">
+                                <Link
+                                    href="/products"
+                                    className="block w-full xs:w-auto px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium text-center shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+                                >
+                                    <span className="flex items-center justify-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                        </svg>
+                                        Continue Shopping
+                                    </span>
+                                </Link>
+                            </div>
+                            <div className="w-full xs:w-auto">
+                                <Link
+                                    href="/track/orders"
+                                    className="block w-full xs:w-auto px-4 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-center shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+                                >
+                                    <span className="flex items-center justify-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                        </svg>
+                                        Track Orders
+                                    </span>
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </div>

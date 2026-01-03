@@ -728,9 +728,9 @@ export default function Checkout() {
                     // Redirect to success page
                     setTimeout(() => {
                         if (paymentMethod === 'cod') {
-                            router.push(`/checkout/cod-success?orderId=${orderData.orderId}`);
+                            router.push(`/checkout/order-success?orderId=${orderData.orderId}&payment=COD`);
                         } else if (paymentMethod === 'bkash') {
-                            router.push(`/checkout/cod-success?orderId=${orderData.orderId}&payment=bkash`);
+                            router.push(`/checkout/order-success?orderId=${orderData.orderId}&payment=bkash`);
                         }
                     }, 1500);
 
@@ -797,7 +797,7 @@ export default function Checkout() {
                                 Your cart is empty. Please add some products to proceed with checkout.
                             </p>
                             <button
-                                onClick={() => router.push('/shop')}
+                                onClick={() => router.push('/products')}
                                 className="px-8 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-lg hover:from-gray-900 hover:to-gray-950 transition-all duration-300 shadow-lg hover:shadow-xl font-medium"
                             >
                                 Return To Shop

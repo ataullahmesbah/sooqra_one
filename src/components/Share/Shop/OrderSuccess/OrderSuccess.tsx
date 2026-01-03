@@ -1,4 +1,4 @@
-// src/app/checkout/cod-success/page.tsx - ফিক্সড
+// src/app/checkout/cod-success/page.tsx 
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -42,7 +42,7 @@ interface Order {
     status: string;
 }
 
-export default function CodSuccess() {
+export default function OrderSuccess() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const orderId = searchParams.get('orderId');
@@ -410,23 +410,18 @@ export default function CodSuccess() {
 
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                         <Link
-                            href="/shop"
+                            href="/products"
                             className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium"
                         >
                             Continue Shopping
                         </Link>
                         <button
-                            onClick={() => router.push('/orders')}
+                            onClick={() => router.push('/track/orders')}
                             className="px-6 py-3 bg-white border border-gray-300 text-gray-800 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                         >
                             View My Orders
                         </button>
-                        <button
-                            onClick={() => window.print()}
-                            className="px-6 py-3 bg-white border border-gray-300 text-gray-800 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                        >
-                            Print Receipt
-                        </button>
+
                     </div>
 
                     <p className="text-gray-500 text-xs mt-6">

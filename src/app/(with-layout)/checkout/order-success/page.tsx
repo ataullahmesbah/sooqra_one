@@ -1,4 +1,4 @@
-import CodSuccess from "@/src/components/Share/Shop/CodSuccess/CodSuccess";
+import OrderSuccess from "@/src/components/Share/Shop/OrderSuccess/OrderSuccess";
 
 
 
@@ -10,7 +10,7 @@ export const metadata = {
 export default function Page() {
     return (
         <div>
-            <CodSuccess />
+            <OrderSuccess />
         </div>
     );
 }
