@@ -63,16 +63,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
     useEffect(() => {
         setIsClient(true);
 
-        // Fetch conversion rates
-        const fetchConversionRates = async () => {
-            try {
-                const response = await axios.get('/api/products/conversion-rates');
-                setConversionRates(response.data);
-            } catch (error) {
-                console.error('Error fetching conversion rates:', error);
-            }
-        };
-        fetchConversionRates();
+        // Remove the API call since it doesn't exist
+        // Keep default conversion rates
+        setConversionRates({ USD: 123, EUR: 135, BDT: 1 });
+
+        // Alternatively, you can just set the default values directly:
+        // const defaultRates = { USD: 123, EUR: 135, BDT: 1 };
+        // setConversionRates(defaultRates);
     }, []);
 
     // Custom Toast Function
