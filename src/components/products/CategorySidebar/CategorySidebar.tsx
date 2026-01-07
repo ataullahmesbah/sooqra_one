@@ -34,9 +34,34 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
     }, [searchParams]);
 
     const handleCategoryClick = (categorySlug: string) => {
-        if (categorySlug === 'all') {
+        // If clicking the already selected category, clear filter (go to All Products)
+        if (selectedCategory === categorySlug) {
+            setSelectedCategory('all');
+            router.push('/products');
+        }
+        // If clicking "All Products" when it's already selected, do nothing
+        else if (categorySlug === 'all' && selectedCategory === 'all') {
+            return;
+        }
+        // If clicking a different category, select it
+        else {
+            setSelectedCategory(categorySlug);
+            if (categorySlug === 'all') {
+                router.push('/products');
+            } else {
+                router.push(`/products?category=${categorySlug}`);
+            }
+        }
+    };
+
+    const handleCategoryToggle = (categorySlug: string) => {
+        if (selectedCategory === categorySlug) {
+            // Clear filter if clicking the same category
+            setSelectedCategory('all');
             router.push('/products');
         } else {
+            // Select new category
+            setSelectedCategory(categorySlug);
             router.push(`/products?category=${categorySlug}`);
         }
     };
@@ -69,7 +94,7 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                                 </svg>
                             )}
                         </div>
-                        
+
                         {/* Category Name */}
                         <span className={`text-sm font-medium truncate ${selectedCategory === 'all' ? 'text-gray-900' : 'text-gray-700'}`}>
                             All Products
@@ -78,18 +103,18 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                 </div>
 
                 {/* Categories List with Scrollable Container */}
-                <div className="max-h-[400px] overflow-y-auto pr-1">
-                    <div className="space-y-1 px-3 py-1">
+                <div className="max-h-[360px] overflow-y-auto pr-1">
+                    <div className="space-y-0.5 px-3 py-1">
                         {visibleCategories.map((category) => (
                             <button
                                 key={category._id}
-                                onClick={() => handleCategoryClick(category.slug)}
+                                onClick={() => handleCategoryToggle(category.slug)}
                                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${selectedCategory === category.slug
                                     ? 'bg-gray-100 text-gray-900'
                                     : 'text-gray-700 hover:bg-gray-50'
                                     }`}
                             >
-                                {/* Checkbox */}
+                                {/* Checkbox - Toggle functionality */}
                                 <div className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${selectedCategory === category.slug
                                     ? 'bg-gray-800 border-gray-800'
                                     : 'border-gray-300 group-hover:border-gray-400'
@@ -131,6 +156,8 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
                     </div>
                 )}
             </div>
+
+           
         </div>
     );
 };

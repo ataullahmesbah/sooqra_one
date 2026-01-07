@@ -117,7 +117,7 @@ const ProductList: React.FC<ProductListProps> = ({
     return (
         <div className="w-full">
             {/* Sorting Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-2 sm:px-0">
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                     <span className="text-gray-600 text-sm whitespace-nowrap">Sort by:</span>
                     <select
@@ -133,8 +133,8 @@ const ProductList: React.FC<ProductListProps> = ({
                 </div>
             </div>
 
-            {/* Products Grid - 4 columns on xl screens */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {/* Products Grid - Mobile optimized with proper spacing */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 px-2 sm:px-0">
                 {sortedProducts.map((product) => (
                     <ProductCard key={product._id} product={product} />
                 ))}
@@ -142,7 +142,7 @@ const ProductList: React.FC<ProductListProps> = ({
 
             {/* Pagination would go here */}
             {sortedProducts.length > 12 && (
-                <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="mt-8 pt-6 border-t border-gray-200 px-2 sm:px-0">
                     <div className="flex justify-center">
                         <button className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
                             Load More Products
