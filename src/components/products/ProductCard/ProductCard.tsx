@@ -597,7 +597,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                             </div>
                         </Link>
 
-                        {/* Top Badges - Mobile Responsive */}
+                        {/* Top Badges - Mobile Responsive changes */}
                         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 space-y-1">
                             {/* Availability Badge - With opacity */}
                             <div className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-sm sm:rounded text-[8px] sm:text-[10px] font-medium tracking-wide backdrop-blur-sm ${product.productType === 'Affiliate'
