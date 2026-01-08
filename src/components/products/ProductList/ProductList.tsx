@@ -134,7 +134,7 @@ const ProductList: React.FC<ProductListProps> = ({
             </div>
 
             {/* Products Grid - Mobile optimized with proper spacing */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 px-2 sm:px-0">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4  sm:px-0">
                 {sortedProducts.map((product) => (
                     <ProductCard key={product._id} product={product} />
                 ))}

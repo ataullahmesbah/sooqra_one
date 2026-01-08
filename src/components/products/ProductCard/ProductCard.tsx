@@ -498,12 +498,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                                         )}
                                     </div>
 
-                                    {/* Short Description */}
-                                    {product.shortDescription && (
-                                        <p className="text-gray-600 mb-6 line-clamp-3">
-                                            {product.shortDescription}
-                                        </p>
-                                    )}
+
                                 </div>
 
                                 {/* Footer with Price and Actions */}
@@ -603,53 +598,43 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                         </Link>
 
                         {/* Top Badges - Mobile Responsive */}
-                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
-                            {/* Availability Badge - Smaller on mobile */}
-                            <span className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded text-[9px] sm:text-xs font-bold uppercase tracking-wider ${product.productType === 'Affiliate'
-                                ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
+                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 space-y-1">
+                            {/* Availability Badge - With opacity */}
+                            <div className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-sm sm:rounded text-[8px] sm:text-[10px] font-medium tracking-wide backdrop-blur-sm ${product.productType === 'Affiliate'
+                                ? 'bg-purple-500/20 text-purple-200 border border-purple-400/30'
                                 : actualAvailability === 'InStock'
-                                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
+                                    ? 'bg-green-600 text-white'
                                     : actualAvailability === 'PreOrder'
-                                        ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 text-white'
-                                        : 'bg-gradient-to-r from-red-600 to-red-700 text-white'
+                                        ? 'bg-yellow-500/20 text-yellow-200 border border-yellow-400/30'
+                                        : 'bg-red-600 text-red-200 '
                                 }`}>
-                                {product.productType === 'Affiliate'
-                                    ? 'Affiliate'
-                                    : actualAvailability === 'OutOfStock'
-                                        ? 'Out of Stock'
-                                        : actualAvailability === 'InStock'
-                                            ? 'In Stock'
-                                            : actualAvailability}
-                            </span>
+                                <span className="opacity-100 font-bold">
+                                    {product.productType === 'Affiliate'
+                                        ? 'Affiliate'
+                                        : actualAvailability === 'OutOfStock'
+                                            ? 'Out of Stock'
+                                            : actualAvailability === 'InStock'
+                                                ? 'In Stock'
+                                                : actualAvailability}
+                                </span>
+                            </div>
 
-                            {/* Discount Badge - Positioned separately to avoid overlap */}
+                            {/* Discount Badge - With opacity */}
                             {hasDiscount && (
-                                <div className="mt-1">
-                                    <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-gradient-to-r from-red-600 to-red-700 text-white text-[9px] sm:text-xs font-bold rounded">
-                                        -{discountPercentage}%
-                                    </span>
+                                <div className="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-red-600/90 backdrop-blur-sm text-white text-[9px] sm:text-xs font-bold rounded">
+                                    <span className="opacity-100">-{discountPercentage}%</span>
                                 </div>
                             )}
                         </div>
 
-                        {/* Rating Badge - Mobile responsive */}
-                        {product.aggregateRating?.ratingValue && (
-                            <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-sm rounded-full px-1.5 py-0.5 sm:top-3 sm:right-3 sm:px-2 sm:py-1 flex items-center gap-0.5 shadow">
-                                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-yellow-400 fill-current" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                                <span className="text-white text-[10px] sm:text-xs font-bold">
-                                    {product.aggregateRating.ratingValue.toFixed(1)}
-                                </span>
-                            </div>
-                        )}
+                        {/* REMOVED RATING BADGE - No longer displayed */}
                     </div>
 
                     {/* Content - Mobile Optimized */}
                     <div className="flex-1 p-2 sm:p-3 lg:p-4 flex flex-col">
-                        {/* Title - Proper mobile font size */}
+                        {/* Title - Show full title without truncation */}
                         <Link href={`/products/${product.slug || product._id}`} className="flex-1">
-                            <h3 className="text-xs sm:text-sm font-medium text-gray-900 hover:text-gray-700 transition-colors line-clamp-2 mb-2 sm:mb-3 leading-tight min-h-[2.5rem] sm:min-h-[3rem]">
+                            <h3 className="text-xs sm:text-sm font-medium text-gray-900 hover:text-gray-700 transition-colors mb-2 sm:mb-3 leading-tight break-words hyphens-auto overflow-visible">
                                 {product.title}
                             </h3>
                         </Link>
@@ -683,50 +668,113 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                             )}
                         </div>
 
-                        {/* Action Buttons - Mobile: Stack vertically, Desktop: Horizontal */}
+                        {/* Action Buttons - Responsive with different layouts */}
                         <div className="mt-auto">
-                            <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2">
-                                {/* Details Button - Full width on mobile */}
+                            {/* Mobile: Stacked buttons (one below other) */}
+                            <div className="flex flex-col gap-1.5 sm:hidden">
+                                {/* Buy Now Button - Always active */}
                                 <Link
                                     href={`/products/${product.slug || product._id}`}
-                                    className="w-full px-3 py-2 sm:px-3 sm:py-2 bg-gradient-to-r from-gray-800 to-gray-900 sm:from-gray-900 sm:to-black text-white font-medium text-xs sm:text-sm rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-300 shadow-sm hover:shadow flex items-center justify-center gap-1.5 sm:gap-2"
+                                    className="w-full px-2 py-1.5 bg-gradient-to-r from-gray-800 to-gray-900 text-white font-medium text-[10px] rounded hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex items-center justify-center gap-1"
                                 >
-                                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span>View Details</span>
+                                    Buy Now
                                 </Link>
 
-                                {/* Add to Cart Button - Full width on mobile */}
-                                <button
-                                    onClick={handleAddToCart}
-                                    disabled={isAddToCartDisabled() || isAddingToCart}
-                                    className={`w-full px-3 py-2 sm:px-3 sm:py-2 font-medium text-xs sm:text-sm rounded-lg transition-all duration-300 shadow-sm hover:shadow flex items-center justify-center gap-1.5 sm:gap-2 ${getAddToCartButtonStyle()}`}
-                                >
-                                    {isAddingToCart ? (
-                                        <svg className="animate-spin h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    ) : showSuccess ? (
-                                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    ) : product.productType === 'Affiliate' ? (
-                                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {/* Add to Cart Button - Disabled for Affiliate */}
+                                {product.productType === 'Affiliate' ? (
+                                    <button
+                                        disabled
+                                        className="w-full px-2 py-1.5 bg-gray-300 text-gray-500 font-medium text-[10px] rounded cursor-not-allowed flex items-center justify-center gap-1"
+                                    >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                         </svg>
-                                    ) : (
-                                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                        </svg>
-                                    )}
-                                    <span>
-                                        {getAddToCartButtonText()}
-                                    </span>
-                                </button>
+                                        <span>Affiliate</span>
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleAddToCart}
+                                        disabled={isAddToCartDisabled() || isAddingToCart}
+                                        className={`w-full px-2 py-1.5 font-medium text-[10px] rounded transition-all duration-200 flex items-center justify-center gap-1 ${getAddToCartButtonStyle()}`}
+                                    >
+                                        {isAddingToCart ? (
+                                            <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        ) : showSuccess ? (
+                                            <>
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                                <span>Added</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                                <span>Add to Cart</span>
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                             </div>
+
+                            {/* Tablet, Laptop, Desktop: Side by side buttons - Fixed responsive sizing */}
+                            <div className="hidden sm:flex gap-1.5 md:gap-2">
+                                {/* Buy Now Button - Always active */}
+                                <Link
+                                    href={`/products/${product.slug || product._id}`}
+                                    className="flex-1 min-w-0 px-2 py-1.5 md:px-3 md:py-2 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 bg-gradient-to-r from-gray-800 to-gray-900 text-white font-medium text-xs whitespace-nowrap rounded hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex items-center justify-center"
+                                >
+                                    Buy Now
+                                </Link>
+
+                                {/* Add to Cart Button - Disabled for Affiliate */}
+                                {product.productType === 'Affiliate' ? (
+                                    <button
+                                        disabled
+                                        className="flex-1 min-w-0 px-2 py-1.5 md:px-3 md:py-2 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 bg-gray-300 text-gray-500 font-medium text-xs whitespace-nowrap rounded cursor-not-allowed flex items-center justify-center gap-1"
+                                    >
+                                        <svg className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                        <span className="truncate">Affiliate</span>
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleAddToCart}
+                                        disabled={isAddToCartDisabled() || isAddingToCart}
+                                        className={`flex-1 min-w-0 px-2 py-1.5 md:px-3 md:py-2 lg:px-2.5 lg:py-1.5 xl:px-3 xl:py-2 font-medium text-xs whitespace-nowrap rounded transition-all duration-200 flex items-center justify-center gap-1 ${getAddToCartButtonStyle()}`}
+                                    >
+                                        {isAddingToCart ? (
+                                            <svg className="animate-spin h-3.5 w-3.5 md:h-4 md:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        ) : showSuccess ? (
+                                            <>
+                                                <svg className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                                <span className="truncate">Added</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                                <span className="truncate">Cart</span>
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+
                         </div>
+
+
                     </div>
                 </div>
             )}

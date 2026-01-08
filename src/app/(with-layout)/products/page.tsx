@@ -158,18 +158,18 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps) => {
         <div className="min-h-screen bg-gray-50 py-10">
           {/* Structured Data Breadcrumb */}
           <nav
-    aria-label="breadcrumb"
-    itemScope
-    itemType="https://schema.org/BreadcrumbList"
-    className=""
->
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <BreadcrumbNavigation
-            currentCategory={currentCategory}
-            categorySlug={categorySlug}
-        />
-    </div>
-</nav>
+            aria-label="breadcrumb"
+            itemScope
+            itemType="https://schema.org/BreadcrumbList"
+            className=""
+          >
+            <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <BreadcrumbNavigation
+                currentCategory={currentCategory}
+                categorySlug={categorySlug}
+              />
+            </div>
+          </nav>
 
           {/* Main Content */}
           <div className="w-full px-0 sm:px-4 lg:px-6 py-6 sm:py-8">
@@ -198,7 +198,7 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps) => {
                   itemID={`${SITE_CONFIG.url}/products${categorySlug ? `?category=${categorySlug}` : ''}`}
                 >
                   {/* Products List */}
-                  <div className="p-4 sm:p-6 w-full">
+                  <div className="p-2 sm:p-3 w-full">
                     <ProductList
                       initialProducts={products}
                       categorySlug={categorySlug}
