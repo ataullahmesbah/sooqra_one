@@ -69,7 +69,7 @@ export default function AllCategoriesPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
 
                 {/* Header Section */}
-                <div className="mb-8 md:mb-12">
+                <div className="mb-8 md:mb-8">
                     {/* Breadcrumb */}
                     <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
                         <Link href="/" className="hover:text-gray-900 transition-colors duration-200">
@@ -94,25 +94,7 @@ export default function AllCategoriesPage() {
                 {!loading && categories.length > 0 && (
                     <div className="mb-8 md:mb-10">
                         <div className="flex flex-wrap gap-4">
-                            <div className="px-4 py-2 bg-white border border-gray-300 rounded-lg">
-                                <span className="text-gray-600 text-sm">Showing </span>
-                                <span className="font-semibold text-gray-900">{stats.categoriesWithProducts}</span>
-                                <span className="text-gray-600 text-sm"> categories with products</span>
-                            </div>
-                            <div className="px-4 py-2 bg-white border border-gray-300 rounded-lg">
-                                <span className="text-gray-600 text-sm">Total </span>
-                                <span className="font-semibold text-gray-900">{stats.totalProducts}</span>
-                                <span className="text-gray-600 text-sm"> products</span>
-                            </div>
-                            {stats.totalCategories > stats.categoriesWithProducts && (
-                                <div className="px-4 py-2 bg-white border border-gray-300 rounded-lg">
-                                    <span className="text-gray-600 text-sm">Hidden </span>
-                                    <span className="font-semibold text-gray-900">
-                                        {stats.totalCategories - stats.categoriesWithProducts}
-                                    </span>
-                                    <span className="text-gray-600 text-sm"> empty categories</span>
-                                </div>
-                            )}
+
                         </div>
                     </div>
                 )}
@@ -128,37 +110,39 @@ export default function AllCategoriesPage() {
 
                 {/* Categories Grid - Only show if categories with products exist */}
                 {!loading && categories.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 px-2 sm:px-0">
                         {categories.map((category) => {
                             const imageSrc = category.image || category.latestProduct?.mainImage;
                             const imageAlt = category.latestProduct?.mainImageAlt || category.name;
 
                             return (
+
                                 <Link
                                     key={category._id}
                                     href={`/categories/${category.slug || category._id}`}
-                                    className="group block focus:outline-none focus:ring-2 focus:ring-gray-800 focus:ring-offset-2 rounded-xl"
+                                    className="group block focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-1 rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                                 >
-                                    <div className="bg-white rounded-xl border-2 border-gray-800 hover:border-gray-600 hover:shadow-xl transition-all duration-300 overflow-hidden h-full">
+                                    <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-lg sm:hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col">
 
-                                        {/* Image Section */}
-                                        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                                        {/* Image Section - Cleaner design */}
+                                        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                                             {imageSrc ? (
                                                 <div className="relative w-full h-full">
                                                     <Image
                                                         src={imageSrc}
                                                         alt={imageAlt}
                                                         fill
-                                                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 25vw"
                                                     />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+                                                    {/* Subtle overlay */}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                                 </div>
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <div className="text-center p-4">
-                                                        <div className="w-16 h-16 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                            <span className="text-2xl text-white font-bold">
+                                                <div className="w-full h-full flex items-center justify-center p-4">
+                                                    <div className="text-center">
+                                                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                                                            <span className="text-xl sm:text-2xl text-white font-bold">
                                                                 {category.name.charAt(0).toUpperCase()}
                                                             </span>
                                                         </div>
@@ -167,37 +151,33 @@ export default function AllCategoriesPage() {
                                             )}
                                         </div>
 
-                                        {/* Content Section */}
-                                        <div className="p-4">
-                                            <div className="mb-3">
-                                                <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-gray-700 transition-colors duration-200 line-clamp-1">
-                                                    {category.name}
-                                                </h3>
+                                        {/* Content Section - Compact and clean */}
+                                        <div className="flex-1 p-3 sm:p-4 flex flex-col">
+                                            {/* Category Name */}
+                                            <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-2 group-hover:text-gray-700 transition-colors duration-200 line-clamp-1 sm:line-clamp-2">
+                                                {category.name}
+                                            </h3>
 
-                                                {/* Product Count Badge */}
-                                                <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${category.productCount > 10
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-gray-100 text-gray-800'
+                                            {/* Product Count - Simplified badge */}
+                                            <div className="mb-3 sm:mb-4">
+                                                <div className={`inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium ${category.productCount > 0
+                                                    ? 'bg-gray-100 text-gray-700 border border-gray-200'
+                                                    : 'bg-gray-50 text-gray-500 border border-gray-100'
                                                     }`}>
-                                                    <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                                                     </svg>
-                                                    {category.productCount} {category.productCount === 1 ? 'product' : 'products'}
+                                                    <span className="truncate">
+                                                        {category.productCount} {category.productCount === 1 ? 'item' : 'items'}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            {/* Gray Link */}
-                                            <div className="pt-3 border-t border-gray-100">
-                                                <span className="inline-flex items-center text-gray-600 text-sm font-medium hover:text-gray-900 transition-colors duration-200">
-                                                    Browse products
-                                                    <svg className="w-3.5 h-3.5 ml-1.5 transform group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                                    </svg>
-                                                </span>
-                                            </div>
+
                                         </div>
                                     </div>
                                 </Link>
+
                             );
                         })}
                     </div>

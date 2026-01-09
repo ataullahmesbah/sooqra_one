@@ -36,7 +36,7 @@ const ReturnPolicy = () => {
                             Return & Refund Policy
                         </h1>
                         <div className="w-24 h-1 bg-green-500 mx-auto mb-4 rounded"></div>
-                        <p className="text-sm text-gray-300">Last Updated: July 17, 2025</p>
+                        <p className="text-sm text-gray-300">Last Updated: November 17, 2025</p>
                     </header>
 
                     {/* Introduction */}

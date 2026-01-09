@@ -19,11 +19,13 @@ const page = () => {
             {/* New Arrival */}
             <NewArrival />
 
+            {/* Product Listing */}
+            <AllProductsList />
+
             {/* Brand Story */}
             <BrandStorySection />
 
-            {/* Product Listing */}
-            <AllProductsList />
+
 
 
         </>

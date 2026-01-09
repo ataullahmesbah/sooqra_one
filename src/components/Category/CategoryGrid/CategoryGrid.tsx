@@ -91,26 +91,21 @@ const CategoryGrid = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 md:mb-12">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Top Categories
+              Shop By Categories
             </h2>
             <p className="text-gray-600">
-              Explore our most popular product categories
+              বিশুদ্ধ, প্রাকৃতিক ও স্বাস্থ্যকর খাবারের সেরা সংগ্রহ
             </p>
           </div>
 
           {/* Stats and Link */}
-          <div className="mt-4 md:mt-0 flex flex-col items-end gap-2">
-            {!loading && filteredCategories.length > 0 && (
-              <div className="text-sm text-gray-600">
-                Showing <span className="font-semibold text-gray-900">{filteredCategories.length}</span> of{' '}
-                <span className="font-semibold text-gray-900">{totalCategoriesWithProducts}</span> categories with products
-              </div>
-            )}
+          <div className="mt-4 md:mt-0 items-end">
+
             <Link
               href="/categories"
               className="inline-flex items-center text-gray-700 hover:text-gray-900 font-medium transition-colors duration-200"
             >
-              View all categories
+              All Categories
               <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
@@ -138,15 +133,6 @@ const CategoryGrid = () => {
                 <CategoryCard key={category._id} category={category} />
               ))}
             </div>
-
-            {/* Info Message if some categories were filtered out */}
-            {allCategories.length > filteredCategories.length && (
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-500">
-                  {allCategories.length - filteredCategories.length} categories without products are hidden
-                </p>
-              </div>
-            )}
           </>
         )}
 

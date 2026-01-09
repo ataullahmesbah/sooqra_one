@@ -256,132 +256,7 @@ export default function CustomerCarePage() {
                         </div>
                     </div>
 
-                    {/* Important Links Section */}
-                    <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-8 text-white">
-                        <h2 className="text-3xl font-bold mb-8 text-center">Important Links & Resources</h2>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                            {/* Shop & Products */}
-                            <div>
-                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                    <FiShoppingBag className="w-5 h-5" />
-                                    Shop
-                                </h3>
-                                <ul className="space-y-2">
-                                    <li>
-                                        <Link href="/shop" className="text-gray-300 hover:text-white transition-colors">
-                                            All Products
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/shop?category=electronics" className="text-gray-300 hover:text-white transition-colors">
-                                            Electronics
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/shop?category=fashion" className="text-gray-300 hover:text-white transition-colors">
-                                            Fashion
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/shop?category=home" className="text-gray-300 hover:text-white transition-colors">
-                                            Home & Living
-                                        </Link>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* Support & Help */}
-                            <div>
-                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                    <FiHelpCircle className="w-5 h-5" />
-                                    Support
-                                </h3>
-                                <ul className="space-y-2">
-                                    <li>
-                                        <Link href="/faq" className="text-gray-300 hover:text-white transition-colors">
-                                            FAQs
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/order-tracking" className="text-gray-300 hover:text-white transition-colors">
-                                            Track Order
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">
-                                            Contact Us
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/customer-care" className="text-gray-300 hover:text-white transition-colors font-semibold">
-                                            Customer Care
-                                        </Link>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* Policies */}
-                            <div>
-                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                    <FiShield className="w-5 h-5" />
-                                    Policies
-                                </h3>
-                                <ul className="space-y-2">
-                                    <li>
-                                        <Link href="/terms-of-service" className="text-gray-300 hover:text-white transition-colors">
-                                            Terms & Policy
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/privacy-policy" className="text-gray-300 hover:text-white transition-colors">
-                                            Privacy Policy
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/return-policy" className="text-gray-300 hover:text-white transition-colors">
-                                            Return Policy
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/shipping-policy" className="text-gray-300 hover:text-white transition-colors">
-                                            Shipping Policy
-                                        </Link>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* Company */}
-                            <div>
-                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                    <FiClock className="w-5 h-5" />
-                                    Company
-                                </h3>
-                                <ul className="space-y-2">
-                                    <li>
-                                        <Link href="/about-us" className="text-gray-300 hover:text-white transition-colors">
-                                            About Us
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/blog" className="text-gray-300 hover:text-white transition-colors">
-                                            Blog
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/careers" className="text-gray-300 hover:text-white transition-colors">
-                                            Careers
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link href="/partners" className="text-gray-300 hover:text-white transition-colors">
-                                            Partners
-                                        </Link>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+                  
 
                     {/* Emergency Contact Banner */}
                     <div className="mt-12 bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-8 text-white text-center">
@@ -400,7 +275,7 @@ export default function CustomerCarePage() {
                                     <FiPhone className="w-6 h-6" />
                                     জরুরী কল: +880 1571-083401
                                 </a>
-                                <p className="text-red-200 text-sm mt-3">সকাল ৯টা - রাত ১০টা (প্রতিদিন)</p>
+                                <p className="text-red-200 text-sm mt-3">সকাল ১০টা - রাত ১০টা (প্রতিদিন)</p>
                             </div>
                         </div>
                     </div>

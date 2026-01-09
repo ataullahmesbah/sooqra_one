@@ -39,7 +39,7 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
     const touchStartX = useRef(0);
     const touchEndX = useRef(0);
 
-    // রেসপন্সিভ ভিজিবল কাউন্ট সেট করা
+    // responsive visible
     useEffect(() => {
         const updateVisibleCount = () => {
             const width = window.innerWidth;
@@ -58,7 +58,7 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
         return () => window.removeEventListener('resize', updateVisibleCount);
     }, []);
 
-    // API থেকে প্রোডাক্ট ফেচ করা
+    // API product fetch
     useEffect(() => {
         if (initialProducts) {
             const sortedProducts = [...initialProducts]
@@ -90,7 +90,7 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
         fetchProducts();
     }, [initialProducts]);
 
-    // স্বয়ংক্রিয় স্লাইডিং
+    
     useEffect(() => {
         if (isHovering || isTransitioning || products.length === 0) {
             if (slideInterval.current) {
@@ -110,17 +110,17 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
         };
     }, [isHovering, isTransitioning, products.length]);
 
-    // টোটাল স্লাইড সংখ্যা
+    
     const totalSlides = Math.ceil(products.length / visibleCount);
 
-    // স্লাইডের প্রোডাক্টগুলো
+  
     const getSlideProducts = useCallback(() => {
         const start = currentIndex * visibleCount;
         const end = start + visibleCount;
 
         const slideProducts = products.slice(start, end);
 
-        // যদি শেষের দিকে পৌঁছে যায়, প্রথম থেকে প্রোডাক্ট যোগ করবে
+       
         if (slideProducts.length < visibleCount) {
             const remaining = visibleCount - slideProducts.length;
             const extraProducts = products.slice(0, remaining);
@@ -183,7 +183,7 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
         }, 300);
     };
 
-    // টাচ ইভেন্ট হ্যান্ডলার
+
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStartX.current = e.touches[0].clientX;
     };
@@ -209,11 +209,7 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
     };
 
     const formatPrice = (price: number) => {
-        return new Intl.NumberFormat('en-BD', {
-            style: 'currency',
-            currency: 'BDT',
-            minimumFractionDigits: 0,
-        }).format(price);
+        return `৳${price.toLocaleString('en-BD')}`;
     };
 
     const getProductPrice = (product: Product) => {
@@ -280,23 +276,22 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
 
     return (
         <section className="bg-gray-50 py-12">
-            <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+            <div className="container mx-auto px-2 sm:px-4  md:px-6 lg:px-8">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 sm:mb-10 gap-4">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          
-                            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">New Arrivals</h2>
-                        </div>
-                       
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 sm:mb-8">
+                    {/* Title */}
+                    <div>
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
+                            New Arrivals
+                        </h2>
                     </div>
 
                     {/* Navigation Buttons */}
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <div className="flex gap-2">
                         <button
                             onClick={prevSlide}
                             disabled={isTransitioning}
-                            className={`p-2 sm:p-3 rounded-full bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm ${isTransitioning ? 'opacity-50' : 'hover:shadow-md'}`}
+                            className={`p-2 sm:p-3 rounded-full bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm ${isTransitioning ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}`}
                             aria-label="Previous slide"
                         >
                             <FiChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
@@ -304,7 +299,7 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
                         <button
                             onClick={nextSlide}
                             disabled={isTransitioning}
-                            className={`p-2 sm:p-3 rounded-full bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm ${isTransitioning ? 'opacity-50' : 'hover:shadow-md'}`}
+                            className={`p-2 sm:p-3 rounded-full bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm ${isTransitioning ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}`}
                             aria-label="Next slide"
                         >
                             <FiChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
@@ -407,7 +402,7 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
 
                                                     {/* Order Button - Responsive Sizes */}
                                                     <Link
-                                                        href={`/shop/${product.slug}`}
+                                                        href={`/products/${product.slug}`}
                                                         className="flex items-center gap-1 xs:gap-2 bg-gray-900 hover:bg-black text-white font-medium px-2.5 xs:px-3 sm:px-4 py-1.5 xs:py-2 sm:py-2.5 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md flex-shrink-0"
                                                     >
                                                         <FiShoppingCart className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4" />
@@ -447,30 +442,10 @@ export default function NewArrival({ products: initialProducts }: NewArrivalProp
                         ))}
                     </div>
 
-                    {/* Slide Info */}
-                    <div className="text-xs sm:text-sm text-gray-500">
-                        <span className="font-medium text-gray-700">{currentIndex + 1}</span>
-                        <span className="mx-1.5 sm:mx-2">/</span>
-                        <span>{totalSlides}</span>
-                    </div>
+
                 </div>
 
-                {/* View All Button */}
-                <div className="text-center mt-8 sm:mt-12">
-                    <Link
-                        href="/shop"
-                        className="inline-flex items-center gap-2 sm:gap-3 border border-gray-300 hover:border-gray-900 hover:bg-gray-900 hover:text-white text-gray-900 font-medium sm:font-semibold px-6 py-2.5 sm:px-8 sm:py-3.5 rounded-lg sm:rounded-xl transition-all duration-300 group text-sm sm:text-base"
-                    >
-                        <span>Browse All Products</span>
-                        <motion.div
-                            animate={{ x: [0, 4, 0] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="inline-block"
-                        >
-                            <FiChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </motion.div>
-                    </Link>
-                </div>
+
             </div>
         </section>
     );

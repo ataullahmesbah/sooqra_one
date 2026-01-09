@@ -1,437 +1,239 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-    FiFacebook,
-    FiInstagram,
-    FiTwitter,
-    FiYoutube,
-    FiLinkedin,
-    FiMail,
-    FiPhone,
-    FiMapPin,
-    FiClock,
-    FiChevronRight,
-    FiShoppingBag,
-    FiShield,
-    FiTruck,
-    FiCreditCard,
-    FiHelpCircle
-} from 'react-icons/fi';
-import { FaWhatsapp, FaTiktok } from 'react-icons/fa';
 
-interface FooterLink {
-    title: string;
-    slug: string;
-    isActive: boolean;
-    order: number;
-}
-
-export default function Footer() {
-    const [email, setEmail] = useState('');
-    const [subscribed, setSubscribed] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    // Footer links data
-    const footerLinks = {
-        shop: [
-            { title: 'All Products', slug: '/shop' },
-            { title: 'New Arrivals', slug: '/shop?filter=new' },
-            { title: 'Best Sellers', slug: '/shop?filter=bestsellers' },
-            { title: 'Trending Now', slug: '/shop?filter=trending' },
-            { title: 'Special Offers', slug: '/shop?filter=offers' },
-            { title: 'Gift Cards', slug: '/gift-cards' }
-        ],
-        categories: [
-            { title: 'Electronics', slug: '/shop?category=electronics' },
-            { title: 'Fashion', slug: '/shop?category=fashion' },
-            { title: 'Home & Living', slug: '/shop?category=home' },
-            { title: 'Beauty & Health', slug: '/shop?category=beauty' },
-            { title: 'Sports & Outdoors', slug: '/shop?category=sports' },
-            { title: 'Books & Stationery', slug: '/shop?category=books' }
-        ],
-        company: [
-            { title: 'About Us', slug: '/about-us' },
-            { title: 'Our Story', slug: '/about-us#story' },
-            { title: 'Careers', slug: '/careers' },
-            { title: 'Press & Media', slug: '/press' },
-            { title: 'Affiliate Program', slug: '/affiliate' },
-            { title: 'Sell on Sooqra One', slug: '/sell-with-us' }
-        ],
-        help: [
-            { title: 'Customer Care', slug: '/customer-care' },
-            { title: 'FAQs', slug: '/faq' },
-            { title: 'Order Tracking', slug: '/track-order' },
-            { title: 'Size Guide', slug: '/size-guide' },
-            { title: 'Contact Us', slug: '/contact' },
-            { title: 'Site Map', slug: '/sitemap' }
-        ],
-        policies: [
-            { title: 'Privacy Policy', slug: '/privacy-policy' },
-            { title: 'Terms & Conditions', slug: '/terms-and-policy' },
-            { title: 'Return Policy', slug: '/return-policy' },
-            { title: 'Shipping Policy', slug: '/shipping-policy' },
-            { title: 'Cookie Policy', slug: '/cookie-policy' },
-            { title: 'Accessibility', slug: '/accessibility' }
-        ]
-    };
-
-    const socialLinks = [
-        { icon: <FiFacebook />, label: 'Facebook', url: 'https://facebook.com/sooqraone' },
-        { icon: <FiInstagram />, label: 'Instagram', url: 'https://instagram.com/sooqraone' },
-        { icon: <FaTiktok />, label: 'TikTok', url: 'https://tiktok.com/@sooqraone' },
-        { icon: <FiTwitter />, label: 'Twitter', url: 'https://twitter.com/sooqraone' },
-        { icon: <FiYoutube />, label: 'YouTube', url: 'https://youtube.com/@sooqraone' },
-        { icon: <FiLinkedin />, label: 'LinkedIn', url: 'https://linkedin.com/company/sooqraone' },
-        { icon: <FaWhatsapp />, label: 'WhatsApp', url: 'https://wa.me/8801571083401' }
-    ];
-
-    const features = [
-        {
-            icon: <FiTruck className="w-5 h-5" />,
-            title: 'Free Shipping',
-            description: 'On orders over ৳2000'
-        },
-        {
-            icon: <FiCreditCard className="w-5 h-5" />,
-            title: 'Secure Payment',
-            description: '100% secure payment'
-        },
-        {
-            icon: <FiShield className="w-5 h-5" />,
-            title: 'Quality Guarantee',
-            description: 'Best quality products'
-        },
-        {
-            icon: <FiHelpCircle className="w-5 h-5" />,
-            title: '24/7 Support',
-            description: 'Dedicated support'
-        }
-    ];
-
-    const paymentMethods = [
-        { name: 'Visa', logo: '💳' },
-        { name: 'MasterCard', logo: '💳' },
-        { name: 'bKash', logo: '📱' },
-        { name: 'Nagad', logo: '📱' },
-        { name: 'Rocket', logo: '🚀' },
-        { name: 'COD', logo: '💰' }
-    ];
-
-    const handleSubscribe = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email || !email.includes('@')) {
-            alert('Please enter a valid email address');
-            return;
-        }
-
-        setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            setSubscribed(true);
-            setEmail('');
-            setLoading(false);
-            alert('Thank you for subscribing to our newsletter!');
-        }, 1000);
-    };
-
+const Footer = () => {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="bg-gray-900 text-gray-300">
-            {/* Top Features */}
-            <div className="border-b border-gray-800">
-                <div className="max-w-7xl mx-auto px-4 py-8">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        {features.map((feature, index) => (
-                            <div key={index} className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center">
-                                    <div className="text-gray-300">
-                                        {feature.icon}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="font-semibold text-white text-sm">{feature.title}</h4>
-                                    <p className="text-xs text-gray-400">{feature.description}</p>
-                                </div>
+        <footer className="bg-gray-900 text-gray-300 pt-10 pb-6 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+                {/* Main Footer Content */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-10">
+                    {/* 1st Section: Brand & Description */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="relative w-10 h-10">
+                                <Image
+                                    src="/sooqra.svg"
+                                    alt="Sooqra One"
+                                    fill
+                                    className="object-contain"
+                                />
                             </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Footer */}
-            <div className="max-w-7xl mx-auto px-4 py-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
-                    {/* Brand & Newsletter */}
-                    <div className="lg:col-span-2">
-                        <div className="mb-6">
-                            <Link href="/" className="inline-flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center">
-                                    <span className="text-white font-bold text-xl">SO</span>
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-white">Sooqra One</h2>
-                                    <p className="text-sm text-gray-400">Your Trusted Shopping Partner</p>
-                                </div>
-                            </Link>
+                            <div>
+                                <h3 className="text-white text-lg font-bold">Sooqra One</h3>
+                                <p className="text-sm text-gray-400">Your Trusted Source</p>
+                            </div>
                         </div>
 
-                        <p className="text-gray-400 mb-6 max-w-md">
-                            Bangladesh's leading e-commerce platform offering quality products with fast delivery and excellent customer service.
+                        <p className="text-sm leading-relaxed">
+                            Sooqra One is your trusted source for safe, organic, and premium quality food products.
+                            We maintain the highest quality standards in delivery and product sourcing, offering a
+                            diverse range of health-focused items including organic products, pure essentials,
+                            and premium food items for a healthier lifestyle.
                         </p>
+                    </div>
 
-                        {/* Newsletter Subscription */}
-                        <div className="mb-8">
-                            <h3 className="text-lg font-semibold text-white mb-4">Subscribe to Newsletter</h3>
-                            <form onSubmit={handleSubscribe} className="flex gap-2 max-w-md">
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="Enter your email"
-                                    className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-transparent text-white placeholder-gray-500"
-                                    required
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="px-6 py-3 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-900 hover:to-black text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-70"
-                                >
-                                    {loading ? 'Subscribing...' : 'Subscribe'}
-                                </button>
-                            </form>
-                            <p className="text-xs text-gray-500 mt-2">
-                                Get updates on new products and exclusive offers
-                            </p>
+                    {/* 2nd Section: Company Links */}
+                    <div>
+                        <h4 className="text-white font-bold text-lg mb-4 pb-2 border-b border-gray-700">Company</h4>
+                        <ul className="space-y-3">
+                            <li>
+                                <Link href="/about-us" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    About Us
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    Privacy Policy
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/terms-of-service" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    Terms & Conditions
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/return-policy" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    Return & Refund Policy
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    Contact Us
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/customer-care" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    Customer Care
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* 3rd Section: Quick Links */}
+                    <div>
+                        <h4 className="text-white font-bold text-lg mb-4 pb-2 border-b border-gray-700">Quick Links</h4>
+                        <ul className="space-y-3">
+                            <li>
+                                <Link href="/products" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    All Products
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/categories" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    All Categories
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/faq" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    FAQs
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/blog" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    Blogs
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/track/orders" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    Track Order
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/offers" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
+                                    Special Offers
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* 4th Section: Contact & Social */}
+                    <div className="space-y-6">
+                        {/* Contact Info */}
+                        <div>
+                            <h4 className="text-white font-bold text-lg mb-4 pb-2 border-b border-gray-700">Contact Us</h4>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Call Us</p>
+                                        <a href="tel:+8801571083401" className="text-white hover:text-gray-300 transition-colors duration-300 text-sm font-medium">
+                                            +880 1571-083401
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Email Us</p>
+                                        <a href="mailto:sooqraone@info.com" className="text-white hover:text-gray-300 transition-colors duration-300 text-sm font-medium">
+                                            sooqraone@info.com
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-400">Business Hours</p>
+                                        <p className="text-white text-sm">10:00 AM - 10:00 PM</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Social Links */}
                         <div>
-                            <h3 className="text-lg font-semibold text-white mb-4">Follow Us</h3>
-                            <div className="flex flex-wrap gap-3">
-                                {socialLinks.map((social, index) => (
-                                    <a
-                                        key={index}
-                                        href={social.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-lg flex items-center justify-center transition-colors duration-200"
-                                        aria-label={social.label}
-                                    >
-                                        <span className="text-gray-300 hover:text-white">
-                                            {social.icon}
-                                        </span>
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Shop Links */}
-                    <div>
-                        <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-                            <FiShoppingBag className="w-5 h-5" />
-                            Shop
-                        </h3>
-                        <ul className="space-y-3">
-                            {footerLinks.shop.map((link, index) => (
-                                <li key={index}>
-                                    <Link
-                                        href={link.slug}
-                                        className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center gap-2 group"
-                                    >
-                                        <FiChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        {link.title}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {/* Categories Links */}
-                    <div>
-                        <h3 className="text-lg font-semibold text-white mb-6">Categories</h3>
-                        <ul className="space-y-3">
-                            {footerLinks.categories.map((link, index) => (
-                                <li key={index}>
-                                    <Link
-                                        href={link.slug}
-                                        className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center gap-2 group"
-                                    >
-                                        <FiChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        {link.title}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {/* Company & Help Links */}
-                    <div className="space-y-8">
-                        <div>
-                            <h3 className="text-lg font-semibold text-white mb-6">Company</h3>
-                            <ul className="space-y-3">
-                                {footerLinks.company.map((link, index) => (
-                                    <li key={index}>
-                                        <Link
-                                            href={link.slug}
-                                            className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center gap-2 group"
-                                        >
-                                            <FiChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            {link.title}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h3 className="text-lg font-semibold text-white mb-6">Help & Support</h3>
-                            <ul className="space-y-3">
-                                {footerLinks.help.map((link, index) => (
-                                    <li key={index}>
-                                        <Link
-                                            href={link.slug}
-                                            className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center gap-2 group"
-                                        >
-                                            <FiChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            {link.title}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Contact Info */}
-            <div className="bg-gray-800/50">
-                <div className="max-w-7xl mx-auto px-4 py-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <FiPhone className="w-5 h-5 text-gray-300" />
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-white mb-1">Phone Support</h4>
-                                <a href="tel:+8801571083401" className="text-gray-300 hover:text-white transition-colors">
-                                    +880 1571-083401
-                                </a>
-                                <p className="text-sm text-gray-500 mt-1">10 AM - 8 PM (Daily)</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <FiMail className="w-5 h-5 text-gray-300" />
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-white mb-1">Email Support</h4>
-                                <a href="mailto:support@sooqraone.com" className="text-gray-300 hover:text-white transition-colors">
-                                    support@sooqraone.com
-                                </a>
-                                <p className="text-sm text-gray-500 mt-1">Response within 2-4 hours</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <FiMapPin className="w-5 h-5 text-gray-300" />
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-white mb-1">Office Address</h4>
-                                <address className="text-gray-300 not-italic">
-                                    Dhaka, Bangladesh
-                                </address>
-                                <p className="text-sm text-gray-500 mt-1">Registered Office</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bottom Footer */}
-            <div className="border-t border-gray-800">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                        {/* Copyright */}
-                        <div className="text-center md:text-left">
-                            <p className="text-gray-400 text-sm">
-                                © {currentYear} Sooqra One. All rights reserved.
-                            </p>
-                            <p className="text-gray-500 text-xs mt-1">
-                                Made with ❤️ in Bangladesh
-                            </p>
-                        </div>
-
-                        {/* Payment Methods */}
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-400">We Accept:</span>
-                            <div className="flex items-center gap-2">
-                                {paymentMethods.map((method, index) => (
-                                    <div
-                                        key={index}
-                                        className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-sm"
-                                        title={method.name}
-                                    >
-                                        {method.logo}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Policy Links */}
-                        <div className="flex flex-wrap justify-center gap-4 text-sm">
-                            {footerLinks.policies.map((policy, index) => (
-                                <Link
-                                    key={index}
-                                    href={policy.slug}
-                                    className="text-gray-400 hover:text-white transition-colors"
+                            <h4 className="text-white font-bold text-lg mb-4 pb-2 border-b border-gray-700">Follow Us</h4>
+                            <div className="flex gap-3">
+                                <a
+                                    href="https://facebook.com/sooqraone"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-10 h-10 bg-gray-800 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors duration-300"
+                                    aria-label="Facebook"
                                 >
-                                    {policy.title}
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
+                                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
+                                    </svg>
+                                </a>
 
-                    {/* Trust Badges */}
-                    <div className="mt-8 pt-6 border-t border-gray-800">
-                        <div className="flex flex-wrap justify-center items-center gap-8">
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-white">10K+</div>
-                                <div className="text-xs text-gray-400">Happy Customers</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-white">64</div>
-                                <div className="text-xs text-gray-400">Districts Covered</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-white">99%</div>
-                                <div className="text-xs text-gray-400">Positive Reviews</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-white">24/7</div>
-                                <div className="text-xs text-gray-400">Support Available</div>
+                                <a
+                                    href="https://instagram.com/sooqraone"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-10 h-10 bg-gray-800 hover:bg-pink-600 rounded-full flex items-center justify-center transition-colors duration-300"
+                                    aria-label="Instagram"
+                                >
+                                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.097 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clipRule="evenodd" />
+                                    </svg>
+                                </a>
+
+                                <a
+                                    href="https://wa.me/8801571083401"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-10 h-10 bg-gray-800 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors duration-300"
+                                    aria-label="WhatsApp"
+                                >
+                                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path fillRule="evenodd" d="M12.008 2c-5.546 0-10.004 4.458-10.004 10.004 0 1.768.472 3.488 1.367 4.997L1.997 22l5.253-1.389c1.465.872 3.136 1.393 4.858 1.393 5.546 0 10.004-4.458 10.004-10.004S17.554 2 12.008 2zm6.732 13.843c-.212.597-1.227 1.092-1.697 1.141-.446.048-.964.073-2.945-.611-2.395-.832-3.962-2.865-4.082-2.997-.121-.132-.976-1.277-.976-2.438 0-1.161.59-1.722.788-1.946.198-.224.436-.28.59-.28.148 0 .297 0 .424.006.132.007.31-.046.481.345.173.396.587 1.362.64 1.461.053.099.087.224.026.346-.062.122-.091.224-.181.33-.091.105-.185.232-.264.31-.099.099-.198.209-.085.408.114.198.51.857 1.093 1.385.755.681 1.394.893 1.596.993.132.066.287.055.396-.066.109-.121.462-.541.585-.727.122-.185.244-.154.41-.092.165.062 1.055.497 1.237.588.181.091.307.137.354.215.047.077.047.445-.165 1.042z" clipRule="evenodd" />
+                                    </svg>
+                                </a>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Back to Top */}
-                    <div className="mt-8 text-center">
-                        <button
-                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
-                        >
-                            <FiChevronRight className="w-4 h-4 rotate-270" />
-                            Back to Top
-                        </button>
                     </div>
                 </div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-800 my-6"></div>
+
+                {/* Copyright & Bottom */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="text-center md:text-left">
+                        <p className="text-sm text-gray-400">
+                            © {currentYear} Sooqra One. All rights reserved.
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Safe & Organic Food Products | Premium Quality Guaranteed
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                        <Link href="/sitemap" className="text-gray-400 hover:text-white text-xs sm:text-sm transition-colors duration-300">
+                            Sitemap
+                        </Link>
+                        <Link href="/disclaimer" className="text-gray-400 hover:text-white text-xs sm:text-sm transition-colors duration-300">
+                            Disclaimer
+                        </Link>
+                        <Link href="/accessibility" className="text-gray-400 hover:text-white text-xs sm:text-sm transition-colors duration-300">
+                            Accessibility
+                        </Link>
+                    </div>
+                </div>
+
+               
             </div>
         </footer>
     );
-}
+};
+
+export default Footer;

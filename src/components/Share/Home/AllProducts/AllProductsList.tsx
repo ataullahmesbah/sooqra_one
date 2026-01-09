@@ -3,17 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import ProductCard from '@/src/components/products/ProductCard/ProductCard';
 import { Product } from '@/src/types/index';
+import Link from 'next/link';
 
 interface AllProductsListProps {
   limit?: number;
-  showLatestFirst?: boolean;
 }
 
-const AllProductsList: React.FC<AllProductsListProps> = ({ 
-  limit = 50, 
-  showLatestFirst = true 
+const AllProductsList: React.FC<AllProductsListProps> = ({
+  limit = 35 // Default to 35 as requested
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,20 +23,18 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
         setLoading(true);
         // Direct data fetch from your existing lib/data.ts
         const { getProducts } = await import('@/src/lib/data');
-        const allProducts = await getProducts();
+        const fetchedProducts = await getProducts();
 
         // Sort products - latest first (by createdAt)
-        let sortedProducts = [...allProducts];
-        
-        if (showLatestFirst) {
-          sortedProducts.sort((a, b) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return dateB - dateA; // Latest first
-          });
-        }
+        const sortedProducts = [...fetchedProducts].sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA; // Latest first
+        });
 
-        // Take limited number of products
+        setAllProducts(sortedProducts);
+
+        // Take limited number of products (max 35)
         const limitedProducts = sortedProducts.slice(0, limit);
         setProducts(limitedProducts);
       } catch (err) {
@@ -48,12 +46,14 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
     };
 
     fetchProducts();
-  }, [limit, showLatestFirst]);
+  }, [limit]);
+
+  const hasMoreProducts = allProducts.length > limit;
 
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center py-20">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900"></div>
         <p className="mt-4 text-gray-600">Loading products...</p>
       </div>
     );
@@ -90,29 +90,32 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
   }
 
   return (
-    <div className="py-8">
-      <div className="container mx-auto px-4">
-        {/* Header with product count */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+    <div className="py-6 sm:py-8">
+      <div className="container mx-auto px-2 sm:px-4">
+        {/* Header - Simplified without product count */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">All Products</h2>
-            <p className="text-gray-600 mt-2">
-              Showing {products.length} {products.length === 1 ? 'product' : 'products'}
-              {showLatestFirst && ' (Latest first)'}
-            </p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">All Products</h2>
           </div>
-          <div className="mt-4 md:mt-0">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-              </svg>
-              Latest Products First
-            </span>
-          </div>
+
+          {/* View All Button - Only show if more than 35 products */}
+          {hasMoreProducts && (
+            <div className="mt-4 md:mt-0">
+              <Link
+                href="/products"
+                className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white font-medium px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-colors duration-300"
+              >
+                <span>View All Products</span>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </Link>
+            </div>
+          )}
         </div>
 
-        {/* Products Grid - 5 columns on large screens */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+        {/* Products Grid - Responsive: 2(mobile), 3(tablet), 4(laptop), 5(desktop+) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
           {products.map((product) => (
             <ProductCard
               key={product._id}
@@ -122,15 +125,18 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
           ))}
         </div>
 
-        {/* Footer with more info */}
-        {products.length >= limit && (
-          <div className="mt-12 text-center">
-            <p className="text-gray-600">
-              Showing first {limit} products. 
-              <a href="/products" className="ml-2 text-blue-600 hover:text-blue-800 font-medium">
-                View all products →
-              </a>
-            </p>
+        {/* View All Button - Bottom (for mobile users) */}
+        {hasMoreProducts && (
+          <div className="mt-8 sm:mt-10 flex justify-center">
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-300 shadow-sm hover:shadow-md"
+            >
+              <span>View All {allProducts.length} Products</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </Link>
           </div>
         )}
       </div>

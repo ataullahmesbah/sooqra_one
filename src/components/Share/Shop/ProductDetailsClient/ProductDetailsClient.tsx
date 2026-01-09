@@ -8,6 +8,7 @@ import CartSlider from '../CartSlider/CartSlider';
 import axios from 'axios';
 import { CiDeliveryTruck } from "react-icons/ci";
 import { useState, useEffect, useRef } from 'react';
+import { TbCategoryFilled } from "react-icons/tb";
 
 // Define proper interfaces
 interface ProductPrice {
@@ -522,8 +523,8 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                         </li>
                         <li className="text-gray-400">/</li>
                         <li>
-                            <Link href="/shop" className="text-gray-600 hover:text-gray-800 transition-colors">
-                                Shop
+                            <Link href="/products" className="text-gray-600 hover:text-gray-800 transition-colors">
+                                Product
                             </Link>
                         </li>
                         <li className="text-gray-400">/</li>
@@ -600,12 +601,19 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                                 {product.title}
                             </h1>
                             {product.category && (
-                                <span className="inline-block mt-2 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+
+                                <div className="flex gap-2 items-center mt-2">
+
+                                <span className=''>
+                                    <TbCategoryFilled />
+                                </span>
+                                <span className="inline-block py-1 font-semibold bg-gray-100 text-gray-700 rounded-full text-sm">
                                     {product.category.name}
                                 </span>
+                                </div>
                             )}
                             {product.brand && (
-                                <p className="text-sm text-gray-600 mt-2">Brand: {product.brand}</p>
+                                <p className="text-sm font-semibold text-gray-600 mt-2">Brand: {product.brand}</p>
                             )}
                             {product.aggregateRating?.ratingValue && (
                                 <div className="mt-3 flex items-center">
@@ -743,7 +751,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
 
                         {/* Product Info */}
                         <div className="space-y-3 pt-6 border-t border-gray-200">
-                            <div className="flex items-center gap-3 text-sm text-gray-600">
+                            <div className="flex items-center gap-3 font-semibold text-sm text-gray-600">
                                 <CiDeliveryTruck className="w-5 h-5" />
                                 <span>Delivery: 3-7 business days</span>
                             </div>

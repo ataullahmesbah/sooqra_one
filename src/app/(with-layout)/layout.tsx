@@ -11,8 +11,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="pt-16 lg:pt-32">
         {children}
       </main>
-
-      {/* <Footer /> */}
+      <Footer />
     </div>
   );
 }

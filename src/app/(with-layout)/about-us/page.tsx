@@ -88,7 +88,7 @@ export default function AboutUsPage() {
                                 To become Bangladesh&apos;s most trusted and loved e-commerce platform, setting new standards in online shopping through innovation, quality, and customer satisfaction.
                             </p>
                             <div className="mt-8 p-6 bg-blue-50 rounded-xl">
-                                <h3 className="font-semibold text-gray-900 mb-2">By 2025, we aim to:</h3>
+                                <h3 className="font-semibold text-gray-900 mb-2">By 2026, we aim to:</h3>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="bg-white p-3 rounded-lg">
                                         <div className="font-bold text-blue-600">50K+</div>
