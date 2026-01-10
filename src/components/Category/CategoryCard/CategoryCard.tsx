@@ -29,7 +29,7 @@ const CategoryCard = ({ category }: CategoryCardProps) => {
   const categoryUrl = slug ? `/categories/${slug}` : `/categories/${_id}`;
 
   return (
-    <Link href={categoryUrl} className="group block focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg">
+    <Link href={categoryUrl} className="group block focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 rounded-lg">
       <div className="relative aspect-square bg-white rounded-lg border border-gray-200 hover:border-gray-400 hover:shadow-lg transition-all duration-300 overflow-hidden">
 
         {/* Image Container */}

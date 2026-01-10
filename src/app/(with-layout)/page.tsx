@@ -1,4 +1,5 @@
 import CategoryGrid from "@/src/components/Category/CategoryGrid/CategoryGrid";
+import EmailSubscription from "@/src/components/EmailSubscription/EmailSubscription";
 import ProductCard from "@/src/components/products/ProductCard/ProductCard";
 import AllProductsList from "@/src/components/Share/Home/AllProducts/AllProductsList";
 import Banner from "@/src/components/Share/Home/Banner/Banner";
@@ -24,6 +25,9 @@ const page = () => {
 
             {/* Brand Story */}
             <BrandStorySection />
+
+            {/* Subscribe Email */}
+            <EmailSubscription />
 
 
 

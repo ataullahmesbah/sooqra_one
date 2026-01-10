@@ -95,7 +95,7 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
         {/* Header - Simplified without product count */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">All Products</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Popular Products</h2>
           </div>
 
           {/* View All Button - Only show if more than 35 products */}

@@ -1,4 +1,5 @@
-// src/app/shop/[slug]/page.tsx
+// src/app/(with-layout)/products/[slug]/page.tsx
+
 import ProductDetailsClient from '@/src/components/Share/Shop/ProductDetailsClient/ProductDetailsClient';
 import { Suspense } from 'react';
 import { Metadata } from 'next';
@@ -65,12 +66,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
                 product.description.slice(0, 160),
             keywords: product.keywords?.join(', ') || undefined,
             alternates: {
-                canonical: `${process.env.NEXTAUTH_URL}/shop/${slug}`,
+                canonical: `${process.env.NEXTAUTH_URL}/products/${slug}`,
             },
             openGraph: {
                 title: product.metaTitle || product.title,
                 description: product.shortDescription || product.description.slice(0, 160),
-                url: `${process.env.NEXTAUTH_URL}/shop/${slug}`,
+                url: `${process.env.NEXTAUTH_URL}/products/${slug}`,
                 images: [
                     {
                         url: product.mainImage,
