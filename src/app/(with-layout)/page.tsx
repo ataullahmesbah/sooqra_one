@@ -11,8 +11,10 @@ const page = () => {
     return (
         <>
             {/* Hero Banner */}
+            <div className="container mx-auto py-10 justify-center">
+                <Banner />
+            </div>
 
-            <Banner />
 
             {/* Category Grid */}
             <CategoryGrid />

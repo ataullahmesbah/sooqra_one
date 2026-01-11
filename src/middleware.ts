@@ -23,9 +23,16 @@ export default withAuth(
       }
     }
 
-    // Protect moderator routes
-    if (pathname.startsWith('/moderator')) {
-      if (token?.role !== 'admin' && token?.role !== 'moderator') {
+    // Protect moderator routes (only moderator, not admin)
+    if (pathname.startsWith('/moderator-dashboard')) {
+      if (token?.role !== 'moderator') {
+        return NextResponse.redirect(new URL('/unauthorized', req.url));
+      }
+    }
+
+    // Protect user routes
+    if (pathname.startsWith('/user-dashboard')) {
+      if (token?.role !== 'user') {
         return NextResponse.redirect(new URL('/unauthorized', req.url));
       }
     }
@@ -58,8 +65,8 @@ export default withAuth(
           '/api/products/search',
         ];
 
-        const isPublicRoute = publicRoutes.some(route => 
-          req.nextUrl.pathname === route || 
+        const isPublicRoute = publicRoutes.some(route =>
+          req.nextUrl.pathname === route ||
           req.nextUrl.pathname.startsWith(route + '/')
         );
 
@@ -77,7 +84,8 @@ export default withAuth(
 export const config = {
   matcher: [
     '/admin-dashboard/:path*',
-    '/moderator/:path*',
+    '/moderator-dashboard/:path*',
+    '/user-dashboard/:path*',
     '/account/:path*',
     '/auth/signin',
     '/auth/signup',
