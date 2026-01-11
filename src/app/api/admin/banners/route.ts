@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/src/lib/dbConnect';
 import Banner from '@/src/models/Banner';
-import { uploadToCloudinary } from '@/src/utils/cloudinary';
+import { uploadBannerToCloudinary, uploadToCloudinary } from '@/src/utils/cloudinary';
 
 interface BannerButton {
     text: string;
@@ -48,39 +48,54 @@ export async function POST(request: NextRequest) {
         const order = formData.get('order') as string || '0';
         const isActive = formData.get('isActive') as string || 'true';
         const buttons = formData.get('buttons') as string;
+        const buttonPosition = formData.get('buttonPosition') as string || 'center-bottom';
         const imageFile = formData.get('image') as File;
 
-        // NEW: Add button position
-        const buttonPosition = formData.get('buttonPosition') as string || 'center-bottom';
-
-        // Validate required fields - Title is now optional
+        // VALIDATION
         if (!imageFile) {
             return NextResponse.json(
-                { success: false, error: 'Image is required' },
+                { success: false, error: 'Banner image is required' },
                 { status: 400 }
             );
         }
 
-        // Upload image to Cloudinary
+        // Validate image file type
+        if (!imageFile.type.startsWith('image/')) {
+            return NextResponse.json(
+                { success: false, error: 'File must be an image' },
+                { status: 400 }
+            );
+        }
+
+        // Validate image size (max 5MB)
+        if (imageFile.size > 5 * 1024 * 1024) {
+            return NextResponse.json(
+                { success: false, error: 'Image size must be less than 5MB' },
+                { status: 400 }
+            );
+        }
+
+        // Upload image to Cloudinary with banner-specific function
         let imageResult;
         try {
             const bytes = await imageFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
 
-            imageResult = await uploadToCloudinary(buffer, {
-                folder: 'sooqra/banners',
-                width: 1920,
-                height: 600,
-                crop: 'fill',
-                format: 'webp',
-                quality: 'auto:good',
+            imageResult = await uploadBannerToCloudinary(buffer, {
+                // You can override options here if needed
+                // width: 1920, // Don't set width/height - upload original
+                // height: 600,
             });
+
+            if (!imageResult.success) {
+                throw new Error(imageResult.error || 'Upload failed');
+            }
         } catch (uploadError) {
-            console.error('Error uploading image:', uploadError);
+            console.error('Error uploading banner image:', uploadError);
             return NextResponse.json(
                 {
                     success: false,
-                    error: 'Failed to upload image',
+                    error: 'Failed to upload banner image',
                     details: uploadError instanceof Error ? uploadError.message : 'Unknown error'
                 },
                 { status: 500 }
@@ -98,17 +113,21 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Create banner with optional title/subtitle
+        // Create banner
         const bannerData = {
-            title: title ? title.trim() : '', // Optional
-            subtitle: subtitle ? subtitle.trim() : '', // Optional
+            title: title ? title.trim() : '',
+            subtitle: subtitle ? subtitle.trim() : '',
             image: imageResult.secure_url,
             imagePublicId: imageResult.public_id,
             buttons: parsedButtons,
-            buttonPosition: buttonPosition, // NEW: Store button position
+            buttonPosition: buttonPosition,
             isActive: isActive === 'true',
             order: parseInt(order) || 0,
-            duration: parseInt(duration) || 5
+            duration: parseInt(duration) || 5,
+            // Store original dimensions (optional)
+            originalWidth: 1920, // Default assumption
+            originalHeight: 600, // Default assumption
+            aspectRatio: 3.2 // 1920/600
         };
 
         const banner = await Banner.create(bannerData);
@@ -116,7 +135,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             message: 'Banner created successfully',
-            data: banner
+            data: banner,
+            recommendations: {
+                optimalSize: '1920×600px (16:5 aspect ratio)',
+                maxSize: '5MB',
+                formats: 'JPG, PNG, WebP',
+                notes: 'Image will be automatically optimized for all devices'
+            }
         }, { status: 201 });
 
     } catch (error: any) {
@@ -124,7 +149,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error: error.message || 'Failed to create banner'
+                error: error.message || 'Failed to create banner',
+                recommendation: 'Use 1920×600px images for best results'
             },
             { status: 500 }
         );

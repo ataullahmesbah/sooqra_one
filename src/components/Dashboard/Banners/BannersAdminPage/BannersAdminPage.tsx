@@ -2,7 +2,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import BannerForm from '../BannerForm/BannerForm';
-
 import { toast, Toaster } from 'react-hot-toast';
 import BannerList from '../BannerList/BannerList ';
 

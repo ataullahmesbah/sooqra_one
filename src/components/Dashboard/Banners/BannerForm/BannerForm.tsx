@@ -278,8 +278,11 @@ export default function BannerForm({
       {/* Image Upload - Required */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Banner Image *
-        </label>
+    Banner Image *
+    <span className="ml-2 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">
+      Recommended: 1920×600px
+    </span>
+  </label>
 
         {imagePreview && (
           <div className="mb-4 relative">
@@ -369,6 +372,7 @@ export default function BannerForm({
         </div>
 
         {/* Position Buttons Grid */}
+
         <div className="grid grid-cols-3 gap-2">
           {buttonPositions.map((pos) => (
             <button
