@@ -10,8 +10,7 @@ import NewArrival from "@/src/components/Share/Home/NewArrival/NewArrival";
 const page = () => {
     return (
         <>
-            {/* Hero Banner */}
-            <div className="container mx-auto py-10 justify-center">
+            <div className="container mx-auto py-10">
                 <Banner />
             </div>
 

@@ -1,4 +1,4 @@
-// File: components/Banner.tsx - FIXED RESPONSIVE VERSION
+// File: components/Banner.tsx - FIXED URL PARSING
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
@@ -29,13 +29,13 @@ export default function Banner() {
   const [fade, setFade] = useState(true);
   const [windowWidth, setWindowWidth] = useState(0);
 
-  // Track window width for responsive image
+  // Track window width
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
 
-    handleResize(); // Initial call
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -58,7 +58,7 @@ export default function Banner() {
     fetchBanners();
   }, []);
 
-  // Auto-slide with fade effect
+  // Auto-slide
   useEffect(() => {
     if (banners.length <= 1 || isPaused) return;
 
@@ -78,27 +78,110 @@ export default function Banner() {
     return () => clearTimeout(timer);
   }, [banners, currentIndex, isPaused]);
 
-  // Get optimized image URL based on screen size
-  const getOptimizedImageUrl = (originalUrl: string): string => {
+  // 🔥 FIXED: Get Responsive Image URL for ALL Devices
+  const getResponsiveImageUrl = (originalUrl: string): string => {
     if (!originalUrl) return '';
 
-    // If it's already a Cloudinary URL with responsive parameters
-    if (originalUrl.includes('cloudinary.com') && originalUrl.includes('upload')) {
-      let transformation = '';
-
-      // Add responsive transformations based on screen size
-      if (windowWidth >= 1024) { // Desktop
-        transformation = 'c_fill,w_1920,h_600,q_auto,f_webp/';
-      } else if (windowWidth >= 768) { // Tablet
-        transformation = 'c_fill,w_1024,h_320,q_auto,f_webp/';
-      } else { // Mobile
-        transformation = 'c_fill,w_768,h_240,q_auto,f_webp/';
-      }
-
-      // Insert transformation into Cloudinary URL
-      return originalUrl.replace('/upload/', `/upload/${transformation}`);
+    // If not Cloudinary URL, return as is
+    if (!originalUrl.includes('cloudinary.com')) {
+      return originalUrl;
     }
 
+    // Extract public ID from URL - FIXED METHOD
+    const getPublicId = (url: string): string | null => {
+      try {
+        // Cloudinary URL format: https://res.cloudinary.com/cloudname/image/upload/v1234567890/folder/filename.jpg
+        const urlObj = new URL(url);
+        const pathParts = urlObj.pathname.split('/');
+
+        // Find 'upload' index
+        const uploadIndex = pathParts.indexOf('upload');
+        if (uploadIndex === -1) return null;
+
+        // Get everything after upload (skip version if exists)
+        const afterUpload = pathParts.slice(uploadIndex + 1);
+
+        // Remove version (v1234567890) if present
+        const versionIndex = afterUpload.findIndex(part => part.startsWith('v'));
+        const finalParts = versionIndex !== -1
+          ? afterUpload.slice(versionIndex + 1)
+          : afterUpload;
+
+        // Join and remove file extension
+        const fullPath = finalParts.join('/');
+        return fullPath.split('.')[0];
+      } catch (error) {
+        console.error('Error parsing Cloudinary URL:', error);
+        return null;
+      }
+    };
+
+    const publicId = getPublicId(originalUrl);
+
+    // If can't parse public ID, return original URL
+    if (!publicId) {
+      console.warn('Could not parse public ID from URL:', originalUrl);
+      return originalUrl;
+    }
+
+    // 🔥 CRITICAL FIX: Different sizes for different devices
+    let width, height;
+
+    // Mobile First Approach
+    if (windowWidth < 375) { // Very small mobile
+      width = 375;
+      height = 200;
+    } else if (windowWidth < 640) { // Mobile
+      width = 640;
+      height = 250;
+    } else if (windowWidth < 768) { // Small tablet
+      width = 768;
+      height = 300;
+    } else if (windowWidth < 1024) { // Tablet
+      width = 1024;
+      height = 350;
+    } else if (windowWidth < 1280) { // Small laptop
+      width = 1280;
+      height = 400;
+    } else if (windowWidth < 1440) { // Laptop
+      width = 1440;
+      height = 450;
+    } else if (windowWidth < 1536) { // Desktop
+      width = 1536;
+      height = 480;
+    } else if (windowWidth < 1920) { // Large desktop
+      width = 1920;
+      height = 550;
+    } else { // 4K and above
+      width = 1920;
+      height = 600;
+    }
+
+    // Extract cloud name from URL - FIXED
+    let cloudName = '';
+    try {
+      const urlObj = new URL(originalUrl);
+      // URL format: https://res.cloudinary.com/cloudname/image/upload/...
+      const hostnameParts = urlObj.hostname.split('.');
+      if (hostnameParts[0] === 'res') {
+        cloudName = hostnameParts[1]; // res.cloudinary.com -> cloudinary
+      }
+    } catch (error) {
+      console.error('Error extracting cloud name:', error);
+      // Default fallback
+      cloudName = 'demo'; // Replace with your actual cloud name
+    }
+
+    // Construct Cloudinary URL with transformations
+    const transformation = `c_fill,w_${width},h_${height},q_auto,f_webp`;
+
+    // Return optimized URL
+    return `https://res.cloudinary.com/${cloudName}/image/upload/${transformation}/${publicId}`;
+  };
+
+  // ALTERNATIVE SIMPLER SOLUTION: Use Next.js Image with sizes prop
+  const getSimpleResponsiveUrl = (originalUrl: string): string => {
+    // Just return original URL, Next.js will handle optimization
     return originalUrl;
   };
 
@@ -148,10 +231,9 @@ export default function Banner() {
     }
   };
 
-  // Get position classes - RESPONSIVE VERSION
+  // Get position classes
   const getPositionClasses = (position = 'center-bottom') => {
-    // Adjust padding based on screen size
-    const padding = windowWidth < 768 ? '4' : '10';
+    const padding = windowWidth < 768 ? '6' : '10';
 
     switch (position) {
       case 'left-top':
@@ -219,7 +301,7 @@ export default function Banner() {
 
   if (loading) {
     return (
-      <div className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[450px] xl:h-[500px] bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse rounded-lg"></div>
+      <div className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[450px] xl:h-[550px] bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse"></div>
     );
   }
 
@@ -229,68 +311,81 @@ export default function Banner() {
 
   const currentBanner = banners[currentIndex];
   const position = getPositionClasses(currentBanner.buttonPosition);
-  const optimizedImageUrl = getOptimizedImageUrl(currentBanner.image);
+
+  // 🔥 SIMPLER APPROACH: Use original URL with Next.js optimization
+  const imageUrl = currentBanner.image; // Use original URL
+
+  console.log('Banner Debug:', {
+    windowWidth,
+    originalUrl: currentBanner.image,
+    hasTitle: !!currentBanner.title,
+    hasButtons: currentBanner.buttons?.length || 0
+  });
 
   // Responsive height calculation
   const getBannerHeight = () => {
-    if (windowWidth < 640) return '250px'; // Mobile
-    if (windowWidth < 768) return '300px'; // Small tablet
-    if (windowWidth < 1024) return '350px'; // Tablet
-    if (windowWidth < 1280) return '450px'; // Laptop
-    return '500px'; // Desktop
+    if (windowWidth < 375) return '180px';   // Very small mobile
+    if (windowWidth < 640) return '220px';   // Mobile
+    if (windowWidth < 768) return '260px';   // Small tablet
+    if (windowWidth < 1024) return '320px';  // Tablet
+    if (windowWidth < 1280) return '380px';  // Small laptop
+    if (windowWidth < 1440) return '450px';  // Laptop
+    if (windowWidth < 1536) return '500px';  // Desktop
+    return '550px';                          // Large desktop
   };
 
   return (
     <div
-      className="relative w-full overflow-hidden shadow-lg rounded-lg"
+      className="relative w-full overflow-hidden"
       style={{ height: getBannerHeight() }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Banner Image with Fade Effect */}
+      {/* Banner Image - SIMPLIFIED VERSION */}
       <div className={`relative w-full h-full transition-opacity duration-500 ${fade ? 'opacity-100' : 'opacity-95'}`}>
-        {/* Use optimized image URL */}
         <Image
-          src={optimizedImageUrl}
+          src={imageUrl}
           alt={currentBanner.title || 'Banner Image'}
           fill
           className="object-cover"
           priority
-          sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, (max-width: 1280px) 100vw, 1920px"
+          sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, (max-width: 1280px) 100vw, (max-width: 1440px) 100vw, (max-width: 1536px) 100vw, 1920px"
           quality={windowWidth < 768 ? 75 : 90}
         />
 
-        {/* Responsive gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-black/5 to-black/10 sm:from-black/20 sm:via-black/10 sm:to-black/20"></div>
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/15 via-black/5 to-black/15"></div>
       </div>
 
-      {/* Content Container - Responsive */}
+      {/* Content Container */}
       <div className={`absolute inset-0 flex ${position.container}`}>
         <div className={`max-w-4xl w-full transition-all duration-500 transform ${fade ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'} flex flex-col ${position.content === 'text-center' ? 'items-center' : position.content === 'text-right' ? 'items-end' : 'items-start'}`}>
 
-          {/* Title - Responsive font sizes */}
+          {/* Title */}
           {currentBanner.title && (
-            <h1 className={`font-bold text-white mb-2 sm:mb-3 md:mb-4 leading-tight tracking-wide drop-shadow-lg ${position.content}
+            <h1 className={`font-bold text-white mb-2 sm:mb-3 md:mb-4 leading-tight drop-shadow-lg ${position.content}
               ${windowWidth < 640 ? 'text-xl sm:text-2xl' :
-                windowWidth < 768 ? 'text-2xl md:text-3xl' :
-                  windowWidth < 1024 ? 'text-3xl lg:text-4xl' :
-                    'text-4xl xl:text-5xl'}`}>
+                windowWidth < 768 ? 'text-2xl' :
+                  windowWidth < 1024 ? 'text-3xl' :
+                    windowWidth < 1280 ? 'text-4xl' :
+                      'text-5xl'}`}>
               {currentBanner.title}
             </h1>
           )}
 
-          {/* Subtitle - Responsive */}
+          {/* Subtitle */}
           {currentBanner.subtitle && (
-            <p className={`text-white mb-4 sm:mb-5 md:mb-6 lg:mb-8 leading-relaxed max-w-2xl drop-shadow-md ${position.content}
+            <p className={`text-white mb-3 sm:mb-4 md:mb-6 lg:mb-8 leading-relaxed max-w-2xl drop-shadow-md ${position.content}
               ${windowWidth < 640 ? 'text-sm' :
                 windowWidth < 768 ? 'text-base' :
                   windowWidth < 1024 ? 'text-lg' :
-                    'text-xl'}`}>
+                    windowWidth < 1280 ? 'text-xl' :
+                      'text-2xl'}`}>
               {currentBanner.subtitle}
             </p>
           )}
 
-          {/* Buttons - Responsive spacing and size */}
+          {/* Buttons */}
           {currentBanner.buttons && currentBanner.buttons.length > 0 && (
             <div className={`flex flex-wrap gap-2 sm:gap-3 md:gap-4 w-full ${position.buttons}`}>
               {currentBanner.buttons.map((button, index) => (
@@ -308,7 +403,7 @@ export default function Banner() {
         </div>
       </div>
 
-      {/* Navigation Controls - Responsive */}
+      {/* Navigation Controls */}
       {banners.length > 1 && (
         <>
           <button
@@ -331,15 +426,15 @@ export default function Banner() {
             </svg>
           </button>
 
-          {/* Slide Indicators - Responsive */}
+          {/* Slide Indicators */}
           <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1 sm:space-x-2">
             {banners.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
                 className={`rounded-full transition-all duration-300 ${index === currentIndex
-                    ? 'bg-white h-1.5 sm:h-2 w-4 sm:w-8'
-                    : 'bg-white/50 hover:bg-white/80 h-1.5 sm:h-2 w-1.5 sm:w-2'
+                  ? 'bg-white h-1.5 sm:h-2 w-4 sm:w-8'
+                  : 'bg-white/50 hover:bg-white/80 h-1.5 sm:h-2 w-1.5 sm:w-2'
                   }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
