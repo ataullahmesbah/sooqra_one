@@ -264,7 +264,7 @@ export default function TopNavbar() {
             links.push(
                 { name: 'Admin Dashboard', href: '/admin-dashboard', icon: <FaTachometerAlt /> },
                 { name: 'Manage Products', href: '/admin-dashboard/shop/all-products', icon: <FaBox /> },
-            
+
             );
         } else if (session.user.role === 'moderator') {
             links.push(
@@ -293,24 +293,22 @@ export default function TopNavbar() {
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo and Brand Name - Left */}
-                        <div className="flex items-center space-x-2 md:space-x-3 flex-shrink-0">
-                            <Link href="/" className="flex items-center space-x-2 md:space-x-3 group">
-                                {/* Store Icon - Responsive */}
-                                <div className="relative">
-                                    <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shadow-md">
-                                        <FaStore className="text-white text-base sm:text-lg md:text-xl" />
-                                    </div>
-                                    <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 bg-gradient-to-r from-gray-600 to-gray-700 rounded-full animate-pulse"></div>
-                                </div>
-                                {/* Brand Name - Responsive */}
-                                <div className="flex flex-col">
-                                    <span className="text-lg sm:text-xl md:text-2xl font-extrabold text-gray-900 font-['Poppins'] tracking-tight leading-tight">
-                                        SOOQRA ONE
-                                    </span>
-                                </div>
-                            </Link>
-                        </div>
-                        
+
+
+                        {/* Logo and Brand Name  */}
+                        <Link href="/" className="flex items-center mr-6 hover:opacity-90 transition-opacity">
+                            <div className="w-40 h-10 md:w-48 md:h-12 lg:w-56 lg:h-14 relative">
+                                <Image
+                                    src="/sooqra.svg"
+                                    alt="Sooqra One"
+                                    width={250}    // Original SVG width
+                                    height={100}   // Original SVG height
+                                    className="object-contain w-full h-full"
+                                    priority
+                                />
+                            </div>
+                        </Link>
+
                         {/* Search Bar - Middle (Desktop only) */}
                         <div className="hidden lg:block flex-1 max-w-2xl mx-6 xl:mx-8 relative" ref={searchRef}>
                             <div className="relative">

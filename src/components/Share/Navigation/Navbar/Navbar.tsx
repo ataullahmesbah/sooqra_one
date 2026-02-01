@@ -535,57 +535,53 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
 
             {/* Mobile & Tablet Navbar */}
             <div className="lg:hidden">
-                <nav className="bg-gradient-to-r from-gray-100 to-gray-50 shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16">
-                    <div className="container mx-auto px-4 flex items-center justify-between h-16">
-                        {/* Logo */}
-                        <Link href="/" className="flex items-center space-x-2">
-                            <div className="relative">
-                                <div className="w-7 h-7 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-md">
-                                    <FaStore className="text-white text-lg" />
-                                </div>
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-gray-600 to-gray-700 rounded-full animate-pulse"></div>
+
+
+                {/* Mobile & Tablet Navbar */}
+                <div className="lg:hidden">
+                    <nav className="bg-gradient-to-r from-gray-100 to-gray-50 shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16">
+                        <div className="container mx-auto px-4 flex items-center justify-between h-16">
+
+
+                            {/* Logo mobile and TabletF */}
+                            <Link href="/" className="flex-shrink-0">
+                                <Image
+                                    src="/sooqra.svg"
+                                    alt="SOOQRA ONE"
+                                    width={250}
+                                    height={58}
+                                    className="h-14 w-auto md:h-16 lg:hidden"  /* Mobile: 56px, Tablet: 64px */
+                                    priority
+                                />
+                            </Link>
+
+                            {/* Icons - Right Side */}
+                            <div className="flex items-center space-x-4">
+                                <button onClick={() => { setShowMobileSearch(prev => !prev); setMobileMenuOpen(false); }}>
+                                    <FaSearch className="text-xl text-gray-700" />
+                                </button>
+                                <button
+                                    onClick={() => setIsCartOpen(true)}
+                                    className="relative p-2 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all duration-300 group"
+                                    aria-label="Open Cart"
+                                >
+                                    <FaShoppingBag className="w-3 h-3 text-white group-hover:text-yellow-300 transition-colors duration-300" />
+
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 text-xs font-extrabold rounded-full shadow-md ring-3 ring-white animate-bounce hover:animate-none [animation-duration:1s]">
+                                            {cartCount > 99 ? '99+' : cartCount}
+                                        </span>
+                                    )}
+                                </button>
+                                <button onClick={() => { setMobileMenuOpen(prev => !prev); setShowMobileSearch(false); }}>
+                                    {mobileMenuOpen ? <FaTimes className="text-2xl" /> : <FaBars className="text-2xl" />}
+                                </button>
                             </div>
-                            <span className="text-lg font-extrabold text-gray-900">SOOQRA ONE</span>
-                        </Link>
-
-                        {/* Icons */}
-                        <div className="flex items-center space-x-4">
-                            <button onClick={() => { setShowMobileSearch(prev => !prev); setMobileMenuOpen(false); }}>
-                                <FaSearch className="text-xl text-gray-700" />
-                            </button>
-                            <button
-                                onClick={() => setIsCartOpen(true)}
-                                className="relative p-2 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all duration-300 group"
-                                aria-label="Open Cart"
-                            >
-
-                                <FaShoppingBag className="w-3 h-3 text-white group-hover:text-yellow-300 transition-colors duration-300" />
-
-
-                                {cartCount > 0 && (
-                                    <span className="
-            absolute -top-1.5 -right-1.5 
-            min-w-[22px] h-[22px] px-1.5
-            flex items-center justify-center 
-            bg-gradient-to-r from-yellow-400 to-amber-500 
-            text-gray-900 text-xs font-extrabold 
-            rounded-full 
-            shadow-md 
-            ring-3 ring-white
-            animate-bounce 
-            hover:animate-none
-            [animation-duration:1s]
-        ">
-                                        {cartCount > 99 ? '99+' : cartCount}
-                                    </span>
-                                )}
-                            </button>
-                            <button onClick={() => { setMobileMenuOpen(prev => !prev); setShowMobileSearch(false); }}>
-                                {mobileMenuOpen ? <FaTimes className="text-2xl" /> : <FaBars className="text-2xl" />}
-                            </button>
                         </div>
-                    </div>
-                </nav>
+                    </nav>
+
+                    {/* ... Rest of your mobile code ... */}
+                </div>
 
                 {/* Mobile Search */}
                 <AnimatePresence>

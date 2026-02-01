@@ -13,20 +13,19 @@ const Footer = () => {
                 {/* Main Footer Content */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-10">
                     {/* 1st Section: Brand & Description */}
+
+
                     <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="relative w-10 h-10">
-                                <Image
-                                    src="/sooqra.svg"
-                                    alt="Sooqra One"
-                                    fill
-                                    className="object-contain"
-                                />
-                            </div>
-                            <div>
-                                <h3 className="text-white text-lg font-bold">Sooqra One</h3>
-                                <p className="text-sm text-gray-400">Your Trusted Source</p>
-                            </div>
+                        {/* Logo */}
+                        <div className="h-10 md:h-12 lg:h-14 w-auto">
+                            <Image
+                                src="/sooqra.svg"
+                                alt="Sooqra One"
+                                width={250}
+                                height={58}
+                                className="h-full w-auto object-contain"
+                                priority
+                            />
                         </div>
 
                         <p className="text-sm leading-relaxed">
@@ -230,7 +229,7 @@ const Footer = () => {
                     </div>
                 </div>
 
-               
+
             </div>
         </footer>
     );
