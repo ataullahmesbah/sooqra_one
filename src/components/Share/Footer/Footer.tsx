@@ -16,7 +16,7 @@ const Footer = () => {
 
 
                     <div className="space-y-4">
-                        {/* Logo */}
+                        {/* Logo and brand name SVG */}
                         <div className="h-10 md:h-12 lg:h-14 w-auto">
                             <Image
                                 src="/sooqra.svg"

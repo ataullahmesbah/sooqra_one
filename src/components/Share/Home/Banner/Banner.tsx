@@ -29,7 +29,7 @@ export default function Banner() {
   const [fade, setFade] = useState(true);
   const [windowWidth, setWindowWidth] = useState(0);
 
-  // Track window width
+  // Track window width ---- 
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
