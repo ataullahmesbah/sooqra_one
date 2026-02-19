@@ -1,10 +1,11 @@
-import Config from "@/app/Dashboard/Shop/Config/Config";
+import Coupons from "@/src/components/Dashboard/Shop/Coupons/Coupons";
+
 
 
 const page = () => {
     return (
         <div>
-            <Config />
+            <Coupons />
         </div>
     );
 };

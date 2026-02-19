@@ -1,4 +1,5 @@
 // src/app/api/products/coupons/route.ts
+
 import dbConnect from '@/src/lib/dbConnect';
 import Coupon from '@/src/models/Coupon';
 import { NextResponse } from 'next/server';

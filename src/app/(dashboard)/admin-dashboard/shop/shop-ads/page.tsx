@@ -1,4 +1,4 @@
-import NavAdsAdmin from "@/app/Dashboard/Shop/NavAdsAdmin/NavAdsAdmin";
+import NavAdsAdmin from "@/src/components/Dashboard/Shop/NavAdsAdmin/NavAdsAdmin";
 
 
 const page = () => {
