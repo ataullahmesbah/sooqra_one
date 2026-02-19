@@ -1,4 +1,5 @@
 
+import ShopAds from "@/src/components/Dashboard/Shop/ShopAds/ShopAds";
 import Footer from "@/src/components/Share/Footer/Footer";
 import Navbar from "@/src/components/Share/Navigation/Navbar/Navbar";
 import TopNavbar from "@/src/components/TopNavbar/TopNavbar";
@@ -8,7 +9,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       <TopNavbar />
       <Navbar />
+      
       <main className="pt-16 lg:pt-32">
+        <ShopAds />
         {children}
       </main>
       <Footer />

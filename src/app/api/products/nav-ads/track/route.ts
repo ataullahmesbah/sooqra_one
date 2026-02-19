@@ -1,5 +1,4 @@
 // src/app/api/products/nav-ads/track/route.ts
-
 import { NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/dbConnect';
 import NavAd from '@/src/models/NavAd';

@@ -48,6 +48,9 @@ const ShippingLabel: FC<ShippingLabelProps> = ({ order, onClose }) => {
     const barcodeRef = useRef<SVGSVGElement>(null);
     const [isPrinting, setIsPrinting] = useState(false);
 
+    // Calculate subtotal
+    const subtotal = order.products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
+
     // Generate barcode
     useEffect(() => {
         if (barcodeRef.current && order.orderId) {
@@ -274,14 +277,30 @@ const ShippingLabel: FC<ShippingLabelProps> = ({ order, onClose }) => {
                         margin-top: 0.5mm;
                     }
                     
-                    .total-row {
+                    /* Price Summary Section */
+                    .price-summary {
+                        margin-top: 2mm;
+                        padding-top: 1mm;
+                        border-top: 1px solid #94a3b8;
+                    }
+                    
+                    .price-row {
                         display: flex;
                         justify-content: space-between;
+                        font-size: 2.8mm;
+                        padding: 0.5mm 0;
+                    }
+                    
+                    .price-row.discount {
+                        color: #059669;
+                    }
+                    
+                    .price-row.total {
                         font-weight: 700;
                         font-size: 3.2mm;
                         color: #1e3a8a;
                         border-top: 2px solid #94a3b8;
-                        margin-top: 2mm;
+                        margin-top: 1mm;
                         padding-top: 1mm;
                     }
                     
@@ -388,9 +407,32 @@ const ShippingLabel: FC<ShippingLabelProps> = ({ order, onClose }) => {
                                     </div>
                                 ` : ''}
                             </div>
-                            <div class="total-row">
-                                <span>TOTAL:</span>
-                                <span>৳${order.total.toLocaleString()}</span>
+                            
+                            <!-- Price Summary - Subtotal, Discount, Shipping, Total -->
+                            <div class="price-summary">
+                                <div class="price-row">
+                                    <span>Subtotal:</span>
+                                    <span>৳${subtotal.toLocaleString()}</span>
+                                </div>
+                                
+                                ${order.discount > 0 ? `
+                                    <div class="price-row discount">
+                                        <span>Discount:</span>
+                                        <span>-৳${order.discount.toLocaleString()}</span>
+                                    </div>
+                                ` : ''}
+                                
+                                ${order.shippingCharge > 0 ? `
+                                    <div class="price-row">
+                                        <span>Shipping Charge:</span>
+                                        <span>৳${order.shippingCharge.toLocaleString()}</span>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="price-row total">
+                                    <span>Total:</span>
+                                    <span>৳${order.total.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -542,9 +584,29 @@ const ShippingLabel: FC<ShippingLabelProps> = ({ order, onClose }) => {
                                         <div className="text-[6px] text-gray-500 text-right">+{order.products.length - 3} more</div>
                                     )}
                                 </div>
-                                <div className="flex justify-between font-bold text-[8px] text-blue-900 border-t border-gray-300 mt-1 pt-1">
-                                    <span>TOTAL:</span>
-                                    <span>৳{order.total.toLocaleString()}</span>
+
+                                {/* Price Summary - Preview */}
+                                <div className="mt-1 pt-1 border-t border-gray-300">
+                                    <div className="flex justify-between text-[7px]">
+                                        <span>Subtotal:</span>
+                                        <span>৳{subtotal.toLocaleString()}</span>
+                                    </div>
+                                    {order.discount > 0 && (
+                                        <div className="flex justify-between text-[7px] text-green-600">
+                                            <span>Discount:</span>
+                                            <span>-৳{order.discount.toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    {order.shippingCharge > 0 && (
+                                        <div className="flex justify-between text-[7px]">
+                                            <span>Shipping:</span>
+                                            <span>৳{order.shippingCharge.toLocaleString()}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between font-bold text-[8px] text-blue-900 border-t border-gray-300 mt-0.5 pt-0.5">
+                                        <span>Total:</span>
+                                        <span>৳{order.total.toLocaleString()}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

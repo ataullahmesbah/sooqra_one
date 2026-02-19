@@ -4,13 +4,16 @@ import dbConnect from '@/src/lib/dbConnect';
 import NavAd from '@/src/models/NavAd';
 
 interface CreateNavAdRequestBody {
-    title: string;
-    image: string;
-    link: string;
+    shopName: string;
+    adText: string;
+    couponCode?: string;
+    buttonText: string;
+    buttonLink?: string;
+    backgroundColor: string;
+    textColor: string;
+    startDate: string;
+    endDate: string;
     isActive: boolean;
-    startDate: Date;
-    endDate: Date;
-    // Add other fields as per your NavAd model
 }
 
 export async function GET() {
@@ -25,7 +28,7 @@ export async function GET() {
             startDate: { $lte: now },
             endDate: { $gte: now }
         }).sort({
-            createdAt: -1 // Show newest first
+            createdAt: -1
         });
 
         return NextResponse.json({
@@ -47,7 +50,25 @@ export async function POST(request: Request) {
     try {
         const body: CreateNavAdRequestBody = await request.json();
 
-        const navAd = new NavAd(body);
+        // Validate required fields
+        if (!body.shopName || !body.adText || !body.startDate || !body.endDate) {
+            return NextResponse.json(
+                { 
+                    success: false, 
+                    error: 'Shop name, ad text, start date, and end date are required' 
+                },
+                { status: 400 }
+            );
+        }
+
+        // Convert date strings to Date objects
+        const navAdData = {
+            ...body,
+            startDate: new Date(body.startDate),
+            endDate: new Date(body.endDate)
+        };
+
+        const navAd = new NavAd(navAdData);
         await navAd.save();
 
         return NextResponse.json({

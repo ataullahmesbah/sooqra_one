@@ -1,3 +1,4 @@
+// src/app/layout.tsx
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "../providers/providers";
@@ -43,7 +44,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`}>
+      <body 
+        className={`${inter.className} antialiased`}
+        suppressHydrationWarning={true}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

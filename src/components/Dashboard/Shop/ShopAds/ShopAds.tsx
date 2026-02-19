@@ -1,48 +1,60 @@
+// src/components/ShopAds.tsx
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 
-// Interface definitions
 interface NavAd {
     _id: string;
     shopName: string;
     adText: string;
     couponCode?: string;
+    buttonText: string;
     buttonLink?: string;
-    buttonText?: string;
     backgroundColor: string;
     textColor: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+    impressions: number;
+    clicks: number;
 }
 
-interface NavAdsResponse {
+interface ApiResponse {
     success: boolean;
     data: NavAd[];
 }
 
 export default function ShopAds() {
     const [navAds, setNavAds] = useState<NavAd[]>([]);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [isVisible, setIsVisible] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState<number>(0);
+    const [isVisible, setIsVisible] = useState<boolean>(false);
+    const [copied, setCopied] = useState<boolean>(false);
     const autoSlideRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         fetchNavAds();
+
+        // Cleanup on unmount
+        return () => {
+            if (autoSlideRef.current) {
+                clearInterval(autoSlideRef.current);
+            }
+        };
     }, []);
 
-    const fetchNavAds = async () => {
+    const fetchNavAds = async (): Promise<void> => {
         try {
             const res = await fetch('/api/products/nav-ads');
-            const { data }: NavAdsResponse = await res.json();
+            const responseData: ApiResponse = await res.json();
 
-            if (data && data.length > 0) {
-                setNavAds(data);
+            if (responseData.data && responseData.data.length > 0) {
+                setNavAds(responseData.data);
                 setIsVisible(true);
-                trackImpression(data[0]._id);
+                trackImpression(responseData.data[0]._id);
 
                 // Start auto slide if multiple ads
-                if (data.length > 1) {
+                if (responseData.data.length > 1) {
                     startAutoSlide();
                 }
             }
@@ -51,14 +63,19 @@ export default function ShopAds() {
         }
     };
 
-    const startAutoSlide = () => {
+    const startAutoSlide = (): void => {
+        // Clear existing interval if any
+        if (autoSlideRef.current) {
+            clearInterval(autoSlideRef.current);
+        }
+
         // Change ad every 10 seconds
         autoSlideRef.current = setInterval(() => {
             nextSlide();
         }, 10000);
     };
 
-    const nextSlide = useCallback(() => {
+    const nextSlide = useCallback((): void => {
         if (navAds.length === 0) return;
 
         const nextIndex = (currentIndex + 1) % navAds.length;
@@ -66,7 +83,7 @@ export default function ShopAds() {
         trackImpression(navAds[nextIndex]._id);
     }, [navAds, currentIndex]);
 
-    const prevSlide = useCallback(() => {
+    const prevSlide = useCallback((): void => {
         if (navAds.length === 0) return;
 
         const prevIndex = (currentIndex - 1 + navAds.length) % navAds.length;
@@ -74,7 +91,7 @@ export default function ShopAds() {
         trackImpression(navAds[prevIndex]._id);
     }, [navAds, currentIndex]);
 
-    const trackImpression = async (adId: string) => {
+    const trackImpression = async (adId: string): Promise<void> => {
         try {
             await fetch('/api/products/nav-ads/track', {
                 method: 'POST',
@@ -86,7 +103,7 @@ export default function ShopAds() {
         }
     };
 
-    const trackClick = async (adId: string) => {
+    const trackClick = async (adId: string): Promise<void> => {
         try {
             await fetch('/api/products/nav-ads/track', {
                 method: 'POST',
@@ -98,7 +115,7 @@ export default function ShopAds() {
         }
     };
 
-    const copyCouponCode = async () => {
+    const copyCouponCode = async (): Promise<void> => {
         const currentAd = navAds[currentIndex];
         if (currentAd?.couponCode) {
             try {
@@ -111,7 +128,7 @@ export default function ShopAds() {
         }
     };
 
-    const closeAd = () => {
+    const closeAd = (): void => {
         setIsVisible(false);
         if (autoSlideRef.current) {
             clearInterval(autoSlideRef.current);
@@ -121,15 +138,6 @@ export default function ShopAds() {
             setCurrentIndex(0);
         }, 300);
     };
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (autoSlideRef.current) {
-                clearInterval(autoSlideRef.current);
-            }
-        };
-    }, []);
 
     if (!navAds.length) return null;
 
@@ -147,8 +155,7 @@ export default function ShopAds() {
                 >
                     <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
                         <div className="flex items-center justify-between py-2 sm:py-3">
-
-                            {/* Left Side - Shop Name (Hidden on mobile) */}
+                            {/* Left Side - Shop Name */}
                             <div className="hidden sm:flex items-center flex-shrink-0">
                                 <motion.span
                                     initial={{ scale: 0.8 }}
@@ -197,7 +204,7 @@ export default function ShopAds() {
 
                             {/* Right Side - Button, Navigation & Close */}
                             <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 flex-shrink-0">
-                                {/* Navigation for Multiple Ads (Hidden on mobile) */}
+                                {/* Navigation for Multiple Ads */}
                                 {navAds.length > 1 && (
                                     <div className="hidden sm:flex items-center space-x-1">
                                         <motion.button
@@ -255,7 +262,7 @@ export default function ShopAds() {
                             </div>
                         </div>
 
-                        {/* Mobile Navigation Dots (Only show on mobile for multiple ads) */}
+                        {/* Mobile Navigation Dots */}
                         {navAds.length > 1 && (
                             <div className="sm:hidden flex justify-center space-x-1 pb-2">
                                 {navAds.map((_, index) => (
@@ -274,7 +281,7 @@ export default function ShopAds() {
                         )}
                     </div>
 
-                    {/* Auto Slide Progress Bar - Only show if multiple ads */}
+                    {/* Auto Slide Progress Bar */}
                     {navAds.length > 1 && (
                         <div className="w-full h-0.5 bg-gray-600/50">
                             <motion.div
@@ -283,11 +290,10 @@ export default function ShopAds() {
                                 initial={{ width: "100%" }}
                                 animate={{ width: "0%" }}
                                 transition={{
-                                    duration: 10, // 10 seconds
+                                    duration: 10,
                                     ease: "linear"
                                 }}
                                 onAnimationComplete={() => {
-                                    // Auto move to next slide when progress completes
                                     if (navAds.length > 1) {
                                         nextSlide();
                                     }
