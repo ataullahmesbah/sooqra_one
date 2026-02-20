@@ -160,8 +160,6 @@ export default function UpdateProduct() {
         );
     }
 
-    // ✅ এখন useEffect গুলো declare করো
-    // Category change-এর জন্য useEffect
     useEffect(() => {
         if (formData.category && formData.category !== 'new') {
             const fetchSubCategories = async () => {
@@ -189,7 +187,7 @@ export default function UpdateProduct() {
 
             setIsLoading(true);
             try {
-                console.log('Fetching product data for ID:', productId);
+
 
                 // Product fetch
                 const productRes = await fetch(`/api/products/${productId}`);
@@ -200,7 +198,7 @@ export default function UpdateProduct() {
                 }
 
                 const product = await productRes.json();
-                console.log('Fetched product:', product);
+
 
                 // Categories fetch
                 const categoriesRes = await fetch('/api/products?type=categories');
@@ -496,15 +494,11 @@ export default function UpdateProduct() {
                 data.append('sizes', JSON.stringify(formData.sizes));
             }
 
-            // ✅ সঠিকভাবে aggregateRating append করুন
+
             data.append('aggregateRating.ratingValue', formData.aggregateRating.ratingValue || '0');
             data.append('aggregateRating.reviewCount', formData.aggregateRating.reviewCount || '0');
 
-            // Debug
-            console.log('Sending FormData for update...');
-            for (let [key, value] of data.entries()) {
-                console.log(`${key}:`, value instanceof File ? `${value.name} (${value.size} bytes)` : value);
-            }
+
 
             const res = await fetch(`/api/products/${productId}`, {
                 method: 'PUT',
@@ -512,7 +506,7 @@ export default function UpdateProduct() {
             });
 
             const result = await res.json();
-            console.log('API Response:', result);
+
 
             if (!res.ok) {
                 if (result.details) {

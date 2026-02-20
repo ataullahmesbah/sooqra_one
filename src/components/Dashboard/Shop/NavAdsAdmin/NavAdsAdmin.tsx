@@ -1,3 +1,4 @@
+// src/app/admin/nav-ads/page.tsx or wherever your component is
 'use client';
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
@@ -17,7 +18,6 @@ interface NavAd {
     isActive: boolean;
     impressions?: number;
     clicks?: number;
-    [key: string]: any; // For any additional properties
 }
 
 interface NavAdFormData {
@@ -54,6 +54,7 @@ export default function NavAdsAdmin() {
         isActive: true
     });
     const [loading, setLoading] = useState<boolean>(false);
+    const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
     useEffect(() => {
         fetchNavAds();
@@ -65,7 +66,7 @@ export default function NavAdsAdmin() {
             const responseData: ApiResponse = await res.json();
             setNavAds(responseData.data || []);
         } catch (error) {
-            console.error('Error fetching nav ads:', error);
+            // Silent fail - no console
         }
     };
 
@@ -98,30 +99,53 @@ export default function NavAdsAdmin() {
                 });
                 fetchNavAds();
             } else {
-                alert(result.error);
+                alert(result.error || 'Failed to create nav ad');
             }
-        } catch (error: unknown) {
-            const err = error as Error;
-            alert('Error creating nav ad: ' + err.message);
+        } catch {
+            alert('Error creating nav ad');
         } finally {
             setLoading(false);
         }
     };
 
     const deleteNavAd = async (id: string): Promise<void> => {
+        if (!id) {
+            alert('Invalid ad ID');
+            return;
+        }
+
         if (confirm('Are you sure you want to delete this nav ad?')) {
+            setDeleteLoading(id);
+
             try {
-                await fetch(`/api/products/nav-ads/${id}`, { method: 'DELETE' });
-                fetchNavAds();
-                alert('Nav ad deleted successfully!');
-            } catch (error: unknown) {
-                const err = error as Error;
-                alert('Error deleting nav ad: ' + err.message);
+                const res = await fetch(`/api/products/nav-ads/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!res.ok) {
+                    alert('Failed to delete nav ad');
+                    return;
+                }
+
+                const result = await res.json();
+
+                if (result.success) {
+                    alert('Nav ad deleted successfully!');
+                    fetchNavAds();
+                } else {
+                    alert(result.error || 'Failed to delete nav ad');
+                }
+            } catch {
+                alert('Error deleting nav ad');
+            } finally {
+                setDeleteLoading(null);
             }
         }
     };
 
-    // Event handlers
     const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({
@@ -137,7 +161,6 @@ export default function NavAdsAdmin() {
         }));
     };
 
-    // Helper function to format date
     const formatDate = (dateString: string): string => {
         return new Date(dateString).toLocaleDateString();
     };
@@ -295,7 +318,7 @@ export default function NavAdsAdmin() {
                     transition={{ delay: 0.2 }}
                     className="bg-white/10 backdrop-blur-md rounded-lg p-6"
                 >
-                    <h2 className="text-xl font-semibold mb-4">Active Nav Ads</h2>
+                    <h2 className="text-xl font-semibold mb-4">Nav Ads List</h2>
 
                     {navAds.length > 0 ? (
                         <div className="space-y-4">
@@ -307,7 +330,7 @@ export default function NavAdsAdmin() {
                                     className="border border-gray-600 rounded-lg p-4"
                                 >
                                     <div className="flex justify-between items-start">
-                                        <div>
+                                        <div className="flex-1">
                                             <h3 className="font-semibold text-lg">{ad.shopName}</h3>
                                             <p className="text-gray-300 mt-1">{ad.adText}</p>
                                             {ad.couponCode && (
@@ -316,7 +339,7 @@ export default function NavAdsAdmin() {
                                             <div className="flex space-x-4 text-sm text-gray-400 mt-2">
                                                 <span>Impressions: {ad.impressions || 0}</span>
                                                 <span>Clicks: {ad.clicks || 0}</span>
-                                                <span>Active: {ad.isActive ? 'Yes' : 'No'}</span>
+                                                <span>Status: {ad.isActive ? 'Active' : 'Inactive'}</span>
                                             </div>
                                             <div className="text-xs text-gray-500 mt-1">
                                                 {formatDate(ad.startDate)} - {formatDate(ad.endDate)}
@@ -326,9 +349,13 @@ export default function NavAdsAdmin() {
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
                                             onClick={() => deleteNavAd(ad._id)}
-                                            className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                                            disabled={deleteLoading === ad._id}
+                                            className={`px-3 py-1 rounded text-sm transition-colors ${deleteLoading === ad._id
+                                                    ? 'bg-gray-500 cursor-not-allowed'
+                                                    : 'bg-red-500 hover:bg-red-600'
+                                                } text-white`}
                                         >
-                                            Delete
+                                            {deleteLoading === ad._id ? 'Deleting...' : 'Delete'}
                                         </motion.button>
                                     </div>
                                 </motion.div>

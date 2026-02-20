@@ -97,7 +97,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
     try {
         const { id: productId } = await params;
 
-        console.log('Updating product ID:', productId);
+
 
         if (!mongoose.Types.ObjectId.isValid(productId)) {
             return Response.json({ error: 'Invalid product ID' }, { status: 400 });
@@ -109,7 +109,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         }
 
         const formData = await request.formData();
-        console.log('FormData keys:', [...formData.keys()]);
+
 
 
         for (const [key, value] of formData.entries()) {
@@ -172,7 +172,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             reviewCount: parseInt(formData.get('aggregateRating.reviewCount') as string || '0', 10)
         };
 
-        console.log('Aggregate Rating from form:', aggregateRating);
+
 
         // Handle sizes
         let sizes: Size[] = [];
@@ -469,7 +469,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             updatedAt: new Date()
         };
 
-        console.log('Updating product with data:', JSON.stringify(updateData, null, 2));
+
 
         const updatedProduct = await Product.findByIdAndUpdate(
             productId,
@@ -497,19 +497,25 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
 }
 
 
-export async function DELETE(request: Request, { params }: { params: Params }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     await dbConnect();
     const session = await getServerSession(authOptions);
+
     if (!session) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
-        const productId = params.id;
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
+
+        const { id } = await params;
+
+
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
             return Response.json({ error: 'Invalid product ID' }, { status: 400 });
         }
-        const product = await Product.findById(productId);
+
+        const product = await Product.findById(id);
         if (!product) {
             return Response.json({ error: 'Product not found' }, { status: 404 });
         }
@@ -529,9 +535,11 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
             }
         }
 
-        await Product.findByIdAndDelete(productId);
-        return Response.json({ message: 'Product deleted' }, { status: 200 });
+        await Product.findByIdAndDelete(id);
+        return Response.json({ message: 'Product deleted successfully' }, { status: 200 });
+
     } catch (error: any) {
+        console.error('Delete error:', error);
         return Response.json({ error: `Failed to delete product: ${error.message}` }, { status: 500 });
     }
 }

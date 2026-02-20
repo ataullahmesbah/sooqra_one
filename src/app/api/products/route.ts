@@ -59,20 +59,29 @@ export async function GET(request: Request) {
         }
     }
 
-    // সাবক্যাটেগরিগুলো ফেচ করার জন্য
+
     if (type === 'subcategories' && categoryId) {
         try {
+
+
             if (!mongoose.Types.ObjectId.isValid(categoryId)) {
                 return Response.json({ error: 'Invalid category ID' }, { status: 400 });
             }
+
             const subCategories = await SubCategory.find({ category: categoryId }).lean();
+
+
             return Response.json(subCategories, { status: 200 });
         } catch (error: any) {
+            console.error('Subcategory fetch error:', error);
             return Response.json({ error: `Failed to fetch subcategories: ${error.message}` }, { status: 500 });
         }
     }
 
-    // প্রোডাক্টগুলো ফেচ করার জন্য
+
+
+
+
     try {
         let query = Product.find({})
             .populate('category')
@@ -102,7 +111,7 @@ export async function POST(request: Request) {
 
     try {
         const formData = await request.formData();
-        console.log('Received formData keys:', [...formData.keys()]);
+
 
         // Validate isGlobal fields
         if (formData.get('isGlobal') !== 'true') {
@@ -336,8 +345,7 @@ export async function POST(request: Request) {
 
         const additionalAlts = formData.getAll('additionalAlts') as string[];
 
-        console.log('additionalImagesFiles:', additionalImagesFiles.map(f => f.name));
-        console.log('additionalAlts:', additionalAlts);
+
 
         const additionalImages: AdditionalImage[] = await Promise.all(
             additionalImagesFiles.map(async (file, index) => {
@@ -372,7 +380,7 @@ export async function POST(request: Request) {
             })
         );
 
-        console.log('Processed additionalImages:', additionalImages);
+
 
         // Process bullet points
         const bulletPointsInput = formData.get('bulletPoints')?.toString() || '';
@@ -489,7 +497,7 @@ export async function POST(request: Request) {
             faqs,
             reviews: [],
             aggregateRating: {
-                ratingValue: parseFloat(formData.get('aggregateRating.ratingValue')?.toString() || '0'),
+                ratingValue: parseFloat(formData.get('aggregateRating.ratingValue')?.toString() || '1'),
                 reviewCount: parseInt(formData.get('aggregateRating.reviewCount')?.toString() || '0'),
             },
             specifications,
@@ -501,7 +509,7 @@ export async function POST(request: Request) {
             isGlobal: formData.get('isGlobal') === 'true',
         };
 
-        console.log('Product to save:', JSON.stringify(productData, null, 2));
+
 
         const product = new Product(productData);
         await product.save();

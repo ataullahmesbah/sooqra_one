@@ -61,8 +61,17 @@ const productSchema = new mongoose.Schema({
     faqs: [faqSchema],
     reviews: [reviewSchema],
     aggregateRating: {
-        ratingValue: { type: Number, min: 1, max: 5 },
-        reviewCount: { type: Number, default: 0 },
+        ratingValue: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 5
+        },
+        reviewCount: {
+            type: Number,
+            required: true,
+            min: 0
+        }
     },
     targetCountry: { type: String, default: 'Bangladesh' },
     targetCity: { type: String, default: 'Dhaka' },

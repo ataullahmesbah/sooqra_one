@@ -3,13 +3,20 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/dbConnect';
 import NavAd from '@/src/models/NavAd';
 
-interface Params {
-    id: string;
-}
-
-export async function DELETE(request: Request, { params }: { params: Params }) {
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     await dbConnect();
-    const { id } = params;
+
+    const { id } = await params;
+
+    if (!id) {
+        return NextResponse.json(
+            { success: false, error: 'No ID provided' },
+            { status: 400 }
+        );
+    }
 
     try {
         const navAd = await NavAd.findByIdAndDelete(id);
@@ -26,9 +33,8 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
             message: 'Nav ad deleted successfully'
         });
     } catch (error: any) {
-        console.error('Error deleting nav ad:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to delete nav ad' },
+            { success: false, error: error.message || 'Failed to delete nav ad' },
             { status: 500 }
         );
     }

@@ -99,7 +99,7 @@ export default function CreateProduct() {
         specifications: [],
         sizeRequirement: 'Optional',
         sizes: [],
-        aggregateRating: { ratingValue: '', reviewCount: '' },
+        aggregateRating: { ratingValue: '1', reviewCount: '0' },
         isGlobal: false,
         targetCountry: 'Bangladesh',
         targetCity: 'Dhaka',
@@ -155,24 +155,33 @@ export default function CreateProduct() {
     }, [session, status, router, isClient]);
 
 
+
     useEffect(() => {
         if (formData.category && formData.category !== 'new') {
             const fetchSubCategories = async () => {
                 try {
-                    const res = await fetch(`/api/products/subcategories?categoryId=${formData.category}`);
-                    if (!res.ok) throw new Error('Failed to fetch subcategories');
+
+                    const res = await fetch(`/api/products?type=subcategories&categoryId=${formData.category}`);
+                    if (!res.ok) {
+                        const errorData = await res.json();
+                        throw new Error(errorData.error || 'Failed to fetch subcategories');
+                    }
                     const data = await res.json();
+
                     setSubCategories(data);
                 } catch (err: any) {
                     console.error('Subcategory fetch error:', err);
-
+                    setErrors(prev => ({ ...prev, subCategory: err.message }));
                 }
             };
             fetchSubCategories();
         } else {
             setSubCategories([]);
+
+            setFormData(prev => ({ ...prev, subCategory: '' }));
         }
-    }, [formData.category]);
+    }, [formData.category, setErrors]);
+
 
     // Cleanup effect for image URLs - moved to proper position
     useEffect(() => {
@@ -315,6 +324,7 @@ export default function CreateProduct() {
         data.append('targetCity', formData.targetCity || '');
 
 
+
         if (formData.subCategory && formData.subCategory !== 'new') {
             data.append('subCategory', formData.subCategory);
         }
@@ -322,11 +332,7 @@ export default function CreateProduct() {
             data.append('newSubCategory', formData.newSubCategory);
         }
 
-        // Log FormData to debug
-        console.log('FormData entries:');
-        for (let [key, value] of data.entries()) {
-            console.log(`${key}:`, value instanceof File ? value.name : value);
-        }
+
 
         formData.additionalImages.forEach((img, index) => {
             if (img) {
@@ -658,7 +664,7 @@ export default function CreateProduct() {
                                 onChange={(e) => setFormData({
                                     ...formData,
                                     subCategory: e.target.value,
-                                    newSubCategory: e.target.value === 'new' ? formData.newSubCategory : ''
+                                    newSubCategory: e.target.value === 'new' ? formData.newSubCategory : '' // নতুন subcategory এর জন্য
                                 })}
                                 className={`w-full p-3 bg-gray-800 text-white rounded-lg border ${errors.subCategory ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
                             >
@@ -666,9 +672,10 @@ export default function CreateProduct() {
                                 {subCategories.map((sub) => (
                                     <option key={sub._id} value={sub._id}>{sub.name}</option>
                                 ))}
-                                <option value="new">➕ Add New Subcategory</option>
+                                <option value="new">➕ Add New Subcategory</option> {/* এই অপশনটি যোগ করুন */}
                             </select>
 
+                            {/* নতুন subcategory এর ইনপুট ফিল্ড */}
                             {formData.subCategory === 'new' && (
                                 <div className="mt-2">
                                     <input
@@ -685,8 +692,9 @@ export default function CreateProduct() {
                                 </div>
                             )}
 
+                            {/* Error message */}
                             {errors.subCategory && formData.subCategory !== 'new' && (
-                                <p className="mt-1 text-sm text-red-500">Subcategory is required</p>
+                                <p className="mt-1 text-sm text-red-500">{errors.subCategory}</p>
                             )}
                         </div>
 
