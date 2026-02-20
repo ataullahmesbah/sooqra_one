@@ -21,9 +21,8 @@ interface BannerFormData {
   badgeColor: string;
   features: Array<{ icon: string; text: string }>;
   link: string;
-  image?: File;
+  image?: string;
   id?: string;
-  // New fields for Cloudinary options
   folder?: string;
   width?: string;
   height?: string;
@@ -34,9 +33,9 @@ interface BannerFormData {
 
 // Helper type for safe assignment
 type BannerFormField = keyof BannerFormData;
-type StringFields = 'title' | 'subtitle' | 'cta' | 'bg' | 'textColor' | 'badgeColor' | 'link' | 'folder' | 'width' | 'height' | 'crop' | 'format' | 'quality' | 'id';
+type StringFields = 'title' | 'subtitle' | 'cta' | 'bg' | 'textColor' | 'badgeColor' | 'link' | 'folder' | 'width' | 'height' | 'crop' | 'format' | 'quality' | 'id' | 'image';
 type ArrayFields = 'highlights' | 'features';
-type FileFields = 'image';
+
 
 export async function GET(): Promise<NextResponse<ApiResponse<IShopBanner[]>>> {
   try {
@@ -279,6 +278,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse<ApiRespons
       }
 
       updateData.image = uploadResult.secure_url;
+
+      (updateData as any).image = uploadResult.secure_url;
     }
 
     // Remove undefined values before update
