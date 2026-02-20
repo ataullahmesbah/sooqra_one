@@ -1,5 +1,5 @@
 // src/app/shop/page.tsx
-import ShopAds from '@/src/components/Share/Shop/ShopAds/ShopAds';
+
 import ShopClient from '@/src/components/Share/Shop/ShopClient/ShopClient';
 import ShopHeroSection from '@/src/components/Share/Shop/ShopHeroSection/ShopHeroSection';
 import { Suspense } from 'react';
@@ -126,7 +126,7 @@ export default async function Shop() {
     return (
         <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             {/* Shop Ads */}
-            <ShopAds />
+       
 
             {/* Hero Banner */}
             <ShopHeroSection />
