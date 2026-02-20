@@ -49,7 +49,7 @@ const CouponSchema: Schema = new Schema({
 });
 
 // Index for better performance
-CouponSchema.index({ code: 1 });
+// CouponSchema.index({ code: 1 });
 CouponSchema.index({ expiresAt: 1 });
 CouponSchema.index({ isActive: 1 });
 

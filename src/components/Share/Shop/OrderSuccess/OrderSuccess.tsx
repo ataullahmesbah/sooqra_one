@@ -1,4 +1,4 @@
-// src/app/checkout/cod-success/page.tsx 
+// src/app/checkout/OrderSuccess/page.tsx 
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';

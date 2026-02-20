@@ -1,5 +1,5 @@
-import OrderSuccess from "@/src/components/Share/Shop/OrderSuccess/OrderSuccess";
-
+import OrderSuccess from '@/src/components/Share/Shop/OrderSuccess/OrderSuccess';
+import { Suspense } from 'react';
 
 
 export const metadata = {
@@ -9,8 +9,15 @@ export const metadata = {
 
 export default function Page() {
     return (
-        <div>
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center px-4">
+                <div className="text-center max-w-md">
+                    <div className="h-12 w-12 border-4 border-gray-200 border-t-gray-800 rounded-full animate-spin mx-auto"></div>
+                    <p className="text-gray-600 mt-4">Loading order details...</p>
+                </div>
+            </div>
+        }>
             <OrderSuccess />
-        </div>
+        </Suspense>
     );
 }
