@@ -189,7 +189,7 @@ OrderSchema.pre('save', function (next) {
 });
 
 // Index for better query performance
-OrderSchema.index({ orderId: 1 });
+// OrderSchema.index({ orderId: 1 });
 OrderSchema.index({ 'customerInfo.email': 1 });
 OrderSchema.index({ userId: 1 }); // Add this index
 OrderSchema.index({ userEmail: 1 }); // Add this index
