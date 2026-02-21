@@ -19,9 +19,36 @@ const schemaData = {
     "lastReviewed": "2025-05-18"
 };
 
+export const viewport = {
+    width: 'device-width',
+    initialScale: 1,
+};
+
+export const metadata: Metadata = {
+    title: 'Return & Refund Policy - Sooqra One',
+    description: "Sooqra One's exchange and return policy. Learn about our refund process, eligibility criteria, and how to request returns for e-commerce purchases.",
+    keywords: 'return policy, refund policy, exchange policy, Sooqra One, e-commerce returns, customer support, online shopping returns',
+    authors: [{ name: 'Sooqra One' }],
+    robots: 'index, follow',
+    openGraph: {
+        title: 'Return & Refund Policy - Sooqra One',
+        description: "Learn about Sooqra One's exchange and return policy for e-commerce purchases, including refund processes and eligibility.",
+        url: 'https://sooqraone.com/return-policy',
+        type: 'website',
+        siteName: 'Sooqra One',
+        images: [{ url: 'https://sooqraone.com/images/og-return-policy.jpg' }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Return & Refund Policy - Sooqra One',
+        description: "Sooqra One's exchange and return policy. Learn about our refund process and eligibility criteria for online shopping.",
+        images: ['https://sooqraone.com/images/og-return-policy.jpg'],
+    },
+};
+
 const ReturnPolicy = () => {
     return (
-        <div className="bg-gray-100 min-h-screen font-sans">
+        <div className="bg-gray-50 min-h-screen font-sans">
             <section className="bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 px-6 py-16 md:px-12 lg:px-24">
                 <div className="max-w-5xl mx-auto space-y-12">
                     {/* JSON-LD Schema */}
@@ -46,7 +73,6 @@ const ReturnPolicy = () => {
 
                     {/* Policy Sections */}
                     <div className="space-y-10">
-                        {/* Return Eligibility */}
                         <article className="bg-gray-800 p-6 rounded-xl shadow-xl border-l-4 border-green-500">
                             <h2 className="text-2xl font-bold text-white mb-4">1. Return Eligibility</h2>
                             <ul className="list-disc list-inside space-y-3 text-gray-300">
@@ -57,7 +83,6 @@ const ReturnPolicy = () => {
                             </ul>
                         </article>
 
-                        {/* Exchange Policy */}
                         <article className="bg-gray-800 p-6 rounded-xl shadow-xl border-l-4 border-blue-500">
                             <h2 className="text-2xl font-bold text-white mb-4">2. Exchange Policy</h2>
                             <div className="space-y-4 text-gray-300">
@@ -78,7 +103,6 @@ const ReturnPolicy = () => {
                             </div>
                         </article>
 
-                        {/* Refund Policy */}
                         <article className="bg-gray-800 p-6 rounded-xl shadow-xl border-l-4 border-yellow-500">
                             <h2 className="text-2xl font-bold text-white mb-4">3. Refund Policy</h2>
                             <ul className="list-disc list-inside space-y-3 text-gray-300">
@@ -89,7 +113,6 @@ const ReturnPolicy = () => {
                             </ul>
                         </article>
 
-                        {/* Return Process */}
                         <article className="bg-gray-800 p-6 rounded-xl shadow-xl border-l-4 border-purple-500">
                             <h2 className="text-2xl font-bold text-white mb-4">4. Return Process</h2>
                             <p className="text-gray-200 mb-4">To initiate a return or exchange, contact our support team with:</p>
@@ -113,7 +136,6 @@ const ReturnPolicy = () => {
                             </div>
                         </article>
 
-                        {/* Non-Returnable Items */}
                         <article className="bg-gray-800 p-6 rounded-xl shadow-xl border-l-4 border-red-500">
                             <h2 className="text-2xl font-bold text-white mb-4">5. Non-Returnable Items</h2>
                             <div className="space-y-3 text-gray-300">
@@ -129,38 +151,25 @@ const ReturnPolicy = () => {
                             </div>
                         </article>
 
-                        {/* Contact Information */}
                         <article className="bg-gray-800 p-6 rounded-xl shadow-xl border-l-4 border-cyan-500">
                             <h2 className="text-2xl font-bold text-white mb-4">6. Contact Information</h2>
                             <p className="text-gray-200 mb-4">For questions about our exchange and return policy, reach out to us:</p>
                             <ul className="space-y-4 text-gray-300">
                                 <li className="flex items-start">
                                     <span className="font-medium text-gray-200 min-w-20">Email:</span>
-                                    <a
-                                        href="mailto:support@sooqraone.com"
-                                        className="text-cyan-400 hover:underline ml-2"
-                                        aria-label="Email customer support"
-                                    >
+                                    <a href="mailto:support@sooqraone.com" className="text-cyan-400 hover:underline ml-2" aria-label="Email customer support">
                                         support@sooqraone.com
                                     </a>
                                 </li>
                                 <li className="flex items-start">
                                     <span className="font-medium text-gray-200 min-w-20">Phone:</span>
-                                    <a
-                                        href="tel:+8801571083401"
-                                        className="text-cyan-400 hover:underline ml-2"
-                                        aria-label="Call customer support"
-                                    >
+                                    <a href="tel:+8801571083401" className="text-cyan-400 hover:underline ml-2" aria-label="Call customer support">
                                         +880 1571-083401
                                     </a>
                                 </li>
                                 <li className="flex items-start">
                                     <span className="font-medium text-gray-200 min-w-20">Return Form:</span>
-                                    <a
-                                        href="/contact"
-                                        className="text-cyan-400 hover:underline ml-2"
-                                        aria-label="Access return contact form"
-                                    >
+                                    <a href="/contact" className="text-cyan-400 hover:underline ml-2" aria-label="Access return contact form">
                                         Online Return Request Form
                                     </a>
                                 </li>
@@ -185,29 +194,6 @@ const ReturnPolicy = () => {
             </section>
         </div>
     );
-};
-
-export const metadata: Metadata = {
-    title: 'Return & Refund Policy - Sooqra One',
-    description: "Sooqra One's exchange and return policy. Learn about our refund process, eligibility criteria, and how to request returns for e-commerce purchases.",
-    keywords: 'return policy, refund policy, exchange policy, Sooqra One, e-commerce returns, customer support, online shopping returns',
-    authors: [{ name: 'Sooqra One' }],
-    robots: 'index, follow',
-    viewport: 'width=device-width, initial-scale=1',
-    openGraph: {
-        title: 'Return & Refund Policy - Sooqra One',
-        description: "Learn about Sooqra One's exchange and return policy for e-commerce purchases, including refund processes and eligibility.",
-        url: 'https://sooqraone.com/return-policy',
-        type: 'website',
-        siteName: 'Sooqra One',
-        images: [{ url: 'https://sooqraone.com/images/og-return-policy.jpg' }],
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'Return & Refund Policy - Sooqra One',
-        description: "Sooqra One's exchange and return policy. Learn about our refund process and eligibility criteria for online shopping.",
-        images: ['https://sooqraone.com/images/og-return-policy.jpg'],
-    },
 };
 
 export default ReturnPolicy;

@@ -19,9 +19,36 @@ const schemaData = {
     "lastReviewed": "2025-05-18"
 };
 
+export const viewport = {
+    width: 'device-width',
+    initialScale: 1,
+};
+
+export const metadata: Metadata = {
+    title: 'Privacy Policy - Sooqra One',
+    description: "Learn how Sooqra One e-commerce website collects, uses, and protects your personal information. We value your privacy and ensure transparency with data practices.",
+    keywords: 'privacy policy, Sooqra One, e-commerce, data protection, user rights, personal information, website privacy, cookies',
+    authors: [{ name: 'Sooqra One' }],
+    robots: 'index, follow',
+    openGraph: {
+        title: 'Privacy Policy - Sooqra One',
+        description: "Understand how Sooqra One collects, uses, and protects your personal information for e-commerce transactions.",
+        url: 'https://sooqraone.com/privacy-policy',
+        type: 'website',
+        siteName: 'Sooqra One',
+        images: [{ url: 'https://sooqraone.com/images/og-privacy-policy.jpg' }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Privacy Policy - Sooqra One',
+        description: "Learn about Sooqra One's privacy practices and data protection policies for online shopping.",
+        images: ['https://sooqraone.com/images/og-privacy-policy.jpg'],
+    },
+};
+
 const PrivacyPolicy = () => {
     return (
-        <div className="bg-gray-100 min-h-screen font-sans">
+        <div className="bg-gray-50 min-h-screen font-sans">
             <section className="bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 px-6 py-16 md:px-12 lg:px-24">
                 <div className="max-w-5xl mx-auto space-y-12">
                     {/* JSON-LD Schema */}
@@ -46,7 +73,6 @@ const PrivacyPolicy = () => {
 
                     {/* Policy Sections */}
                     <div className="space-y-10">
-                        {/* Data Collection */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">1. What We Collect</h2>
                             <ul className="list-disc list-inside space-y-3 text-gray-300">
@@ -59,7 +85,6 @@ const PrivacyPolicy = () => {
                             </ul>
                         </article>
 
-                        {/* Usage of Data */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">2. How We Use Your Information</h2>
                             <ul className="list-disc list-inside space-y-3 text-gray-300">
@@ -72,7 +97,6 @@ const PrivacyPolicy = () => {
                             </ul>
                         </article>
 
-                        {/* Data Protection */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">3. Data Protection</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -80,16 +104,11 @@ const PrivacyPolicy = () => {
                             </p>
                         </article>
 
-                        {/* User Rights */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">4. Your Rights</h2>
                             <p className="text-gray-200 mb-4">
                                 You can contact us at{' '}
-                                <a
-                                    href="mailto:support@sooqraone.com"
-                                    className="text-blue-400 hover:underline"
-                                    aria-label="Email customer support"
-                                >
+                                <a href="mailto:support@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
                                     support@sooqraone.com
                                 </a>{' '}
                                 to:
@@ -103,7 +122,6 @@ const PrivacyPolicy = () => {
                             </ul>
                         </article>
 
-                        {/* Children's Privacy */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">5. Children's Privacy</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -111,7 +129,6 @@ const PrivacyPolicy = () => {
                             </p>
                         </article>
 
-                        {/* Policy Updates */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">6. Policy Updates</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -119,7 +136,6 @@ const PrivacyPolicy = () => {
                             </p>
                         </article>
 
-                        {/* Cookies */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">7. Cookies & Tracking Technologies</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -127,7 +143,6 @@ const PrivacyPolicy = () => {
                             </p>
                         </article>
 
-                        {/* Third-Party Services */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">8. Third-Party Services</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -140,19 +155,11 @@ const PrivacyPolicy = () => {
                     <footer className="pt-8 border-t border-gray-700 mt-12">
                         <p className="text-sm italic text-gray-400 text-center">
                             For any privacy-related concerns, please reach out to us at{' '}
-                            <a
-                                href="mailto:support@sooqraone.com"
-                                className="text-blue-400 hover:underline"
-                                aria-label="Email customer support"
-                            >
+                            <a href="mailto:support@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
                                 support@sooqraone.com
                             </a>{' '}
                             or through our{' '}
-                            <a
-                                href="/contact"
-                                className="text-blue-400 hover:underline"
-                                aria-label="Contact page"
-                            >
+                            <a href="/contact" className="text-blue-400 hover:underline" aria-label="Contact page">
                                 Contact Page
                             </a>.
                         </p>
@@ -161,29 +168,6 @@ const PrivacyPolicy = () => {
             </section>
         </div>
     );
-};
-
-export const metadata: Metadata = {
-    title: 'Privacy Policy - Sooqra One',
-    description: "Learn how Sooqra One e-commerce website collects, uses, and protects your personal information. We value your privacy and ensure transparency with data practices.",
-    keywords: 'privacy policy, Sooqra One, e-commerce, data protection, user rights, personal information, website privacy, cookies',
-    authors: [{ name: 'Sooqra One' }],
-    robots: 'index, follow',
-    viewport: 'width=device-width, initial-scale=1',
-    openGraph: {
-        title: 'Privacy Policy - Sooqra One',
-        description: "Understand how Sooqra One collects, uses, and protects your personal information for e-commerce transactions.",
-        url: 'https://sooqraone.com/privacy-policy',
-        type: 'website',
-        siteName: 'Sooqra One',
-        images: [{ url: 'https://sooqraone.com/images/og-privacy-policy.jpg' }],
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'Privacy Policy - Sooqra One',
-        description: "Learn about Sooqra One's privacy practices and data protection policies for online shopping.",
-        images: ['https://sooqraone.com/images/og-privacy-policy.jpg'],
-    },
 };
 
 export default PrivacyPolicy;

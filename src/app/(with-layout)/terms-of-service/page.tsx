@@ -19,9 +19,36 @@ const schemaData = {
     "lastReviewed": "2025-05-18"
 };
 
+export const viewport = {
+    width: 'device-width',
+    initialScale: 1,
+};
+
+export const metadata: Metadata = {
+    title: 'Terms of Service - SoorqaOne',
+    description: "Official Terms of Service for using SoorqaOne e-commerce website and services. Learn your rights, responsibilities, and limitations.",
+    keywords: 'Terms of Service, SoorqaOne, e-commerce, website usage, user responsibilities, intellectual property, refund policy',
+    authors: [{ name: 'SoorqaOne' }],
+    robots: 'index, follow',
+    openGraph: {
+        title: 'Terms of Service - SoorqaOne',
+        description: "Official Terms of Service for using SoorqaOne e-commerce website and services.",
+        url: 'https://sooqraone.com/terms-of-service',
+        type: 'website',
+        siteName: 'SoorqaOne',
+        images: [{ url: 'https://sooqraone.com/images/og-terms-policy.jpg' }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Terms of Service - SoorqaOne',
+        description: "Learn the Terms of Service for using SoorqaOne e-commerce website and services.",
+        images: ['https://sooqraone.com/images/og-terms-policy.jpg'],
+    },
+};
+
 const TermsOfService = () => {
     return (
-        <div className="bg-gray-100 min-h-screen font-sans">
+        <div className="bg-gray-50 min-h-screen font-sans">
             <section className="bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 px-6 py-16 md:px-12 lg:px-24">
                 <div className="max-w-5xl mx-auto space-y-12">
                     {/* JSON-LD Schema */}
@@ -63,7 +90,6 @@ const TermsOfService = () => {
 
                     {/* Terms Sections */}
                     <div className="space-y-10">
-                        {/* Intellectual Property */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">1. Intellectual Property</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -71,7 +97,6 @@ const TermsOfService = () => {
                             </p>
                         </article>
 
-                        {/* Restrictions & Prohibited Activities */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">2. Restrictions & Prohibited Activities</h2>
                             <ul className="list-disc list-inside space-y-3 text-gray-300">
@@ -81,7 +106,6 @@ const TermsOfService = () => {
                             </ul>
                         </article>
 
-                        {/* Legal Action */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">3. Legal Consequences for Violations</h2>
                             <p className="text-gray-200 mb-4">Violators may face:</p>
@@ -91,7 +115,6 @@ const TermsOfService = () => {
                             </ul>
                         </article>
 
-                        {/* Account Credentials */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">4. Account Credentials & Termination</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -99,7 +122,6 @@ const TermsOfService = () => {
                             </p>
                         </article>
 
-                        {/* Liability Disclaimer */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">5. Liability Disclaimer</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -107,7 +129,6 @@ const TermsOfService = () => {
                             </p>
                         </article>
 
-                        {/* Third-Party Links */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">6. Third-Party Links</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -115,7 +136,6 @@ const TermsOfService = () => {
                             </p>
                         </article>
 
-                        {/* Changes to Terms */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">7. Changes to the Terms</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -123,7 +143,6 @@ const TermsOfService = () => {
                             </p>
                         </article>
 
-                        {/* Order and Delivery Policy */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">8. Order and Delivery Policy</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -131,22 +150,16 @@ const TermsOfService = () => {
                             </p>
                         </article>
 
-                        {/* Personal Information */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">9. Personal Information for Orders</h2>
                             <p className="text-gray-200 leading-relaxed">
                                 We collect email addresses and phone numbers for order processing, used solely for confirmation, updates, and delivery coordination. For details on how we handle and protect your data, please review our{' '}
-                                <a
-                                    href="/privacy-policy"
-                                    className="text-blue-400 hover:underline"
-                                    aria-label="View Privacy Policy"
-                                >
+                                <a href="/privacy-policy" className="text-blue-400 hover:underline" aria-label="View Privacy Policy">
                                     Privacy Policy
                                 </a>.
                             </p>
                         </article>
 
-                        {/* Payment Methods */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">10. Payment Methods</h2>
                             <p className="text-gray-200 leading-relaxed">
@@ -154,45 +167,29 @@ const TermsOfService = () => {
                             </p>
                         </article>
 
-                        {/* Refund & Return Policy */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">11. Refund & Return Policy</h2>
                             <p className="text-gray-200 leading-relaxed">
                                 For order issues, refer to our{' '}
-                                <a
-                                    href="/return-policy"
-                                    className="text-blue-400 hover:underline"
-                                    aria-label="View Return Policy"
-                                >
+                                <a href="/return-policy" className="text-blue-400 hover:underline" aria-label="View Return Policy">
                                     Return Policy
                                 </a>.
                             </p>
                         </article>
 
-                        {/* Contact */}
                         <article className="bg-gray-800 p-6 rounded-lg shadow-lg">
                             <h2 className="text-2xl font-semibold text-white mb-4">12. Contact</h2>
                             <p className="text-gray-200 mb-4">For questions about these Terms, contact us:</p>
                             <ul className="space-y-3 text-gray-300">
                                 <li>
                                     <span className="font-medium text-gray-200">Email:</span>{' '}
-                                    <a
-                                        href="mailto:support@sooqraone.com"
-                                        className="text-blue-400 hover:underline"
-                                        aria-label="Email customer support"
-                                    >
+                                    <a href="mailto:support@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
                                         support@sooqraone.com
                                     </a>
                                 </li>
                                 <li>
                                     <span className="font-medium text-gray-200">Facebook:</span>{' '}
-                                    <a
-                                        href="https://facebook.com/sooqraone"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-400 hover:underline"
-                                        aria-label="Contact via Facebook"
-                                    >
+                                    <a href="https://facebook.com/sooqraone" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" aria-label="Contact via Facebook">
                                         SoorqaOne Support
                                     </a>
                                 </li>
@@ -210,29 +207,6 @@ const TermsOfService = () => {
             </section>
         </div>
     );
-};
-
-export const metadata: Metadata = {
-    title: 'Terms of Service - SoorqaOne',
-    description: "Official Terms of Service for using SoorqaOne e-commerce website and services. Learn your rights, responsibilities, and limitations.",
-    keywords: 'Terms of Service, SoorqaOne, e-commerce, website usage, user responsibilities, intellectual property, refund policy',
-    authors: [{ name: 'SoorqaOne' }],
-    robots: 'index, follow',
-    viewport: 'width=device-width, initial-scale=1',
-    openGraph: {
-        title: 'Terms of Service - SoorqaOne',
-        description: "Official Terms of Service for using SoorqaOne e-commerce website and services.",
-        url: 'https://sooqraone.com/terms-of-service',
-        type: 'website',
-        siteName: 'SoorqaOne',
-        images: [{ url: 'https://sooqraone.com/images/og-terms-policy.jpg' }],
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'Terms of Service - SoorqaOne',
-        description: "Learn the Terms of Service for using SoorqaOne e-commerce website and services.",
-        images: ['https://sooqraone.com/images/og-terms-policy.jpg'],
-    },
 };
 
 export default TermsOfService;
