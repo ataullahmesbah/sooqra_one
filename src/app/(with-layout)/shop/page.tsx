@@ -3,6 +3,7 @@
 import ShopClient from '@/src/components/Share/Shop/ShopClient/ShopClient';
 import ShopHeroSection from '@/src/components/Share/Shop/ShopHeroSection/ShopHeroSection';
 import { Suspense } from 'react';
+export const dynamic = 'force-dynamic';
 
 // Interface definitions
 interface Product {

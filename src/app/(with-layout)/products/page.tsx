@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { Suspense } from 'react';
 import { getCategories, getProducts, getCategoryBySlug } from '@/src/lib/data';
 import CategorySidebar from '@/src/components/products/CategorySidebar/CategorySidebar';
@@ -9,7 +10,7 @@ import ProductsPageLoading from '@/src/components/products/ProductsPageLoading/P
 
 // Site configuration
 const SITE_CONFIG = {
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://sooqraone.com',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'NEXTAUTH_URL',
   name: 'Sooqra One',
   logo: 'https://sooqraone.com/logo.png',
   twitterHandle: '@sooqraone',
