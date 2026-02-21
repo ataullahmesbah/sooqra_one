@@ -33,6 +33,9 @@ export function formatPhoneForSMS(phone: string): string {
 /**
  * Validate Bangladeshi phone number
  */
+/**
+ * Validate Bangladeshi phone number
+ */
 export function isValidBangladeshiPhone(phone: string): boolean {
   const cleaned = phone.replace(/\D/g, '');
   return /^(01[3-9]\d{8})$/.test(cleaned) || /^8801[3-9]\d{8}$/.test(cleaned);
