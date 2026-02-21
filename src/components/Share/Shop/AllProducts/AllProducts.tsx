@@ -58,7 +58,7 @@ export default function AllProducts() {
     const fetchProducts = async () => {
         try {
             setIsRefreshing(true);
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'NEXTAUTH_URL';
             const res = await fetch(`${apiUrl}/api/products`, {
                 cache: 'no-store'
             });
