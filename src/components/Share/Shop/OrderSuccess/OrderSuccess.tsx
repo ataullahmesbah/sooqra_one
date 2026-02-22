@@ -62,11 +62,11 @@ export default function OrderSuccess() {
                     return;
                 }
 
-                console.log('Fetching order:', orderId);
+        
 
                 const response = await axios.get(`/api/products/orders?orderId=${orderId}`);
 
-                console.log('Order API Response:', response.data);
+               
 
                 if (response.data && Array.isArray(response.data) && response.data.length > 0) {
                     const orderData = response.data[0];

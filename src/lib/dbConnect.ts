@@ -46,7 +46,7 @@ if (!global.mongoose) {
 async function dbConnect(): Promise<typeof mongoose> {
     // Return cached connection if exists
     if (cached.conn) {
-        console.log('✅ Using cached MongoDB connection');
+      
         return cached.conn;
     }
 
@@ -60,11 +60,11 @@ async function dbConnect(): Promise<typeof mongoose> {
             socketTimeoutMS: 45000,
         } as mongoose.ConnectOptions;
 
-        console.log('🔄 Creating new MongoDB connection...');
+        
 
         cached.promise = mongoose.connect(MONGODB_URI_STRING, connectionOptions)
             .then((mongooseInstance) => {
-                console.log('✅ MongoDB Connected Successfully');
+              
                 return mongooseInstance;
             })
             .catch((error) => {

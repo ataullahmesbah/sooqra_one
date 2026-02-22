@@ -17,16 +17,18 @@ const Footer = () => {
 
                     <div className="space-y-4">
                         {/* Logo and brand name SVG */}
-                        <div className="h-10 md:h-12 lg:h-14 w-auto">
-                            <Image
-                                src="/path.png"
-                                alt="Sooqra One"
-                                width={250}
-                                height={58}
-                                className="h-full w-auto object-contain"
-                                priority
-                            />
-                        </div>
+                        <div
+                            className="h-10 md:h-12 lg:h-14 w-auto bg-no-repeat bg-contain"
+                            style={{
+                                backgroundImage: 'url("/path.png")',
+                                backgroundSize: 'contain',
+                                backgroundPosition: 'left',
+                                width: '250px',
+                                height: '58px',
+                            }}
+                            role="img"
+                            aria-label="Sooqra One"
+                        />
 
                         <p className="text-sm leading-relaxed">
                             Sooqra One is your trusted source for safe, organic, and premium quality food products.

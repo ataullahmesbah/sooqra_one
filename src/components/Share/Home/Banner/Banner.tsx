@@ -244,8 +244,8 @@ export default function Banner() {
                 key={index}
                 onClick={() => goToSlide(index)}
                 className={`rounded-full transition-all duration-300 ${index === currentIndex
-                    ? 'bg-white w-6 sm:w-8 h-2 sm:h-3'
-                    : 'bg-white/50 hover:bg-white/80 w-2 sm:w-3 h-2 sm:h-3'
+                  ? 'bg-white w-6 sm:w-8 h-2 sm:h-3'
+                  : 'bg-white/50 hover:bg-white/80 w-2 sm:w-3 h-2 sm:h-3'
                   }`}
                 aria-label={`Go to slide ${index + 1}`}
               />

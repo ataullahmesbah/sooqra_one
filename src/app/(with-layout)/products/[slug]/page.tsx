@@ -3,6 +3,7 @@
 import ProductDetailsClient from '@/src/components/Share/Shop/ProductDetailsClient/ProductDetailsClient';
 import { Suspense } from 'react';
 import { Metadata } from 'next';
+import NotFound from '@/src/app/not-found';
 
 type Params = {
     slug: string;
@@ -127,22 +128,8 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
         ]);
     } catch (error: any) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-                <div className="text-center max-w-md">
-                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.232 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                        </svg>
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-800 mb-3">Product Not Found</h1>
-                    <p className="text-gray-600 mb-6">{error.message}</p>
-                    <a
-                        href="/shop"
-                        className="inline-block px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium"
-                    >
-                        ← Back to Shop
-                    </a>
-                </div>
+            <div className="">
+                < NotFound />
             </div>
         );
     }

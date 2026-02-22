@@ -26,7 +26,18 @@ export default function BrandStorySection({
                     >
                         {/* Logo Display */}
                         <div className="mb-8">
-                            <div className="relative w-full max-w-xs mx-auto lg:mx-0 h-20">
+                            <div
+                                className="relative w-full max-w-xs mx-auto lg:mx-0 h-20 bg-no-repeat bg-contain bg-center"
+                                style={{
+                                    backgroundImage: 'url("/sooqraone.png")',
+                                    backgroundSize: 'contain',
+                                    backgroundPosition: 'center'
+                                }}
+                                aria-label="Sooqra One - অর্গানিক লাইফস্টাইল"
+                                role="img"
+                            />
+
+                            {/* <div className="relative w-full max-w-xs mx-auto lg:mx-0 h-20">
                                 <Image
                                     src="/sooqraone.png"
                                     alt="Sooqra One - অর্গানিক লাইফস্টাইল"
@@ -34,7 +45,7 @@ export default function BrandStorySection({
                                     className="object-contain"
                                     priority
                                 />
-                            </div>
+                            </div> */}
                             <p className="mt-4 text-lg font-medium text-gray-700">
                                 অর্গানিক পণ্যের বিশ্বস্ত Marketplace
                             </p>
