@@ -3,7 +3,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
-import sooqra from '@/public/sooqra.svg';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FaShoppingBag,
@@ -381,7 +380,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                                         <div className="w-40 h-10 md:w-48 md:h-12 lg:w-56 lg:h-14 relative flex items-center">
                                             {/* পুরো Logo + Text একসাথে */}
                                             <Image
-                                                src="/sooqra.svg"  // তোমার 250×100 SVG
+                                                src="/sooqraone.png"  // তোমার 250×100 SVG
                                                 alt="Sooqra One"
                                                 width={200}    // Original: 250px → 80% scale
                                                 height={80}    // Original: 100px → 80% scale
@@ -546,7 +545,7 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                             {/* Logo mobile and TabletF */}
                             <Link href="/" className="flex-shrink-0">
                                 <Image
-                                    src="/sooqra.svg"
+                                    src="/sooqraone.png"
                                     alt="SOOQRA ONE"
                                     width={250}
                                     height={58}

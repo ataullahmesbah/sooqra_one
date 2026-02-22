@@ -299,7 +299,7 @@ export default function TopNavbar() {
                         <Link href="/" className="flex items-center mr-6 hover:opacity-90 transition-opacity">
                             <div className="w-40 h-10 md:w-48 md:h-12 lg:w-56 lg:h-14 relative">
                                 <Image
-                                    src="/sooqra.svg"
+                                    src="/sooqraone.png"
                                     alt="Sooqra One"
                                     width={250}    // Original SVG width
                                     height={100}   // Original SVG height

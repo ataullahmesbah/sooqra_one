@@ -28,7 +28,7 @@ export default function BrandStorySection({
                         <div className="mb-8">
                             <div className="relative w-full max-w-xs mx-auto lg:mx-0 h-20">
                                 <Image
-                                    src="/sooqra.svg"
+                                    src="/sooqraone.png"
                                     alt="Sooqra One - অর্গানিক লাইফস্টাইল"
                                     fill
                                     className="object-contain"
@@ -163,7 +163,7 @@ export default function BrandStorySection({
                             </div>
 
                             <p className="text-center mt-4 text-green-100 text-sm">
-                                🌿 "প্রকৃতির সেরা উপহার, আপনার সুস্থ জীবনের প্রতিশ্রুতি"
+                                🌿 প্রকৃতির সেরা উপহার, আপনার সুস্থ জীবনের প্রতিশ্রুতি
                             </p>
                         </div>
                     </motion.div>

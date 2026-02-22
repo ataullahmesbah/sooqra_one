@@ -19,7 +19,7 @@ const Footer = () => {
                         {/* Logo and brand name SVG */}
                         <div className="h-10 md:h-12 lg:h-14 w-auto">
                             <Image
-                                src="/sooqra.svg"
+                                src="/path.png"
                                 alt="Sooqra One"
                                 width={250}
                                 height={58}
