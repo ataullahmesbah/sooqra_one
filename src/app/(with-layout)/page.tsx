@@ -15,7 +15,7 @@ const page = () => {
             {/* ShopAds  */}
             <ShopAds />
 
-            <div className="container mx-auto py-10">
+            <div className="container mx-auto py-10 p-2">
                 <Banner />
             </div>
 

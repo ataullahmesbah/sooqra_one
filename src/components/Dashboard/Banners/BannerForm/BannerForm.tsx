@@ -149,22 +149,54 @@ export default function BannerForm({
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        alert('Image size should be less than 5MB');
-        return;
-      }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+
+    if (!file.type.startsWith('image/')) {
+      alert('Image File Selected (jpg, png, webp etc)');
+      return;
     }
+
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ইমেজের সাইজ ৫ MB এর কম হতে হবে');
+      return;
+    }
+
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const previewUrl = reader.result as string;
+      setImagePreview(previewUrl);
+
+
+      const img = new Image();
+      img.onload = () => {
+        if (img.width < 1920 || img.height < 600) {
+          alert(
+            `সাজেস্টেড সাইজ: কমপক্ষে ১৯২০×৬০০ পিক্সেল\n` +
+            `আপনার ইমেজ: ${img.width}×${img.height} px\n` +
+            `ছোট হলে ব্যানার ক্রপ বা ব্লার হতে পারে`
+          );
+          // চাইলে এখানে ফাইল ক্লিয়ার করতে পারো:
+          // setImageFile(null);
+          // setImagePreview('');
+          // e.target.value = '';  // input clear
+        }
+
+      };
+
+      img.onerror = () => {
+        alert('ইমেজ লোড করতে সমস্যা হয়েছে। অন্য ফাইল ট্রাই করুন।');
+      };
+
+      img.src = previewUrl;
+    };
+
+    reader.readAsDataURL(file);
+
+
+    setImageFile(file);
   };
 
   const addButton = () => {
@@ -278,11 +310,11 @@ export default function BannerForm({
       {/* Image Upload - Required */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-    Banner Image *
-    <span className="ml-2 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">
-      Recommended: 1920×600px
-    </span>
-  </label>
+          Banner Image *
+          <span className="ml-2 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">
+            Recommended: 1920×600px
+          </span>
+        </label>
 
         {imagePreview && (
           <div className="mb-4 relative">
@@ -380,8 +412,8 @@ export default function BannerForm({
               type="button"
               onClick={() => setButtonPosition(pos.value)}
               className={`p-3 border rounded-lg flex flex-col items-center gap-1 transition-all ${buttonPosition === pos.value
-                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
-                  : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm'
+                : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400'
                 }`}
               disabled={isSubmitting}
             >
@@ -414,11 +446,11 @@ export default function BannerForm({
                 }]);
               }}
               className={`px-3 py-2 text-xs rounded-lg font-medium transition-colors ${btn.type === 'gray' ? 'bg-gray-800 text-white hover:bg-gray-900' :
-                  btn.type === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700' :
-                    btn.type === 'outline' ? 'border border-gray-600 text-gray-700 hover:bg-gray-100' :
-                      btn.type === 'secondary' ? 'bg-gray-600 text-white hover:bg-gray-700' :
-                        btn.type === 'success' ? 'bg-emerald-600 text-white hover:bg-emerald-700' :
-                          'bg-orange-600 text-white hover:bg-orange-700'
+                btn.type === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700' :
+                  btn.type === 'outline' ? 'border border-gray-600 text-gray-700 hover:bg-gray-100' :
+                    btn.type === 'secondary' ? 'bg-gray-600 text-white hover:bg-gray-700' :
+                      btn.type === 'success' ? 'bg-emerald-600 text-white hover:bg-emerald-700' :
+                        'bg-orange-600 text-white hover:bg-orange-700'
                 }`}
               disabled={isSubmitting}
             >

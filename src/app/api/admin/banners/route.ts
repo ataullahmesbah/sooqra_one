@@ -82,9 +82,11 @@ export async function POST(request: NextRequest) {
             const buffer = Buffer.from(bytes);
 
             imageResult = await uploadBannerToCloudinary(buffer, {
-                // You can override options here if needed
-                // width: 1920, // Don't set width/height - upload original
-                // height: 600,
+                width: 1920,
+                height: 600,
+                crop: 'fill',
+                quality: 'auto:good',
+                format: 'webp'
             });
 
             if (!imageResult.success) {

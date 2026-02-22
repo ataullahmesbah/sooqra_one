@@ -1,4 +1,3 @@
-// File: components/Banner.tsx - FIXED URL PARSING
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
@@ -27,18 +26,6 @@ export default function Banner() {
   const [loading, setLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [fade, setFade] = useState(true);
-  const [windowWidth, setWindowWidth] = useState(0);
-
-  // Track window width ---- 
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -58,7 +45,7 @@ export default function Banner() {
     fetchBanners();
   }, []);
 
-  // Auto-slide
+  // Auto-slide (একই রাখা)
   useEffect(() => {
     if (banners.length <= 1 || isPaused) return;
 
@@ -77,113 +64,6 @@ export default function Banner() {
 
     return () => clearTimeout(timer);
   }, [banners, currentIndex, isPaused]);
-
-  // 🔥 FIXED: Get Responsive Image URL for ALL Devices
-  const getResponsiveImageUrl = (originalUrl: string): string => {
-    if (!originalUrl) return '';
-
-    // If not Cloudinary URL, return as is
-    if (!originalUrl.includes('cloudinary.com')) {
-      return originalUrl;
-    }
-
-    // Extract public ID from URL - FIXED METHOD
-    const getPublicId = (url: string): string | null => {
-      try {
-        // Cloudinary URL format: https://res.cloudinary.com/cloudname/image/upload/v1234567890/folder/filename.jpg
-        const urlObj = new URL(url);
-        const pathParts = urlObj.pathname.split('/');
-
-        // Find 'upload' index
-        const uploadIndex = pathParts.indexOf('upload');
-        if (uploadIndex === -1) return null;
-
-        // Get everything after upload (skip version if exists)
-        const afterUpload = pathParts.slice(uploadIndex + 1);
-
-        // Remove version (v1234567890) if present
-        const versionIndex = afterUpload.findIndex(part => part.startsWith('v'));
-        const finalParts = versionIndex !== -1
-          ? afterUpload.slice(versionIndex + 1)
-          : afterUpload;
-
-        // Join and remove file extension
-        const fullPath = finalParts.join('/');
-        return fullPath.split('.')[0];
-      } catch (error) {
-        console.error('Error parsing Cloudinary URL:', error);
-        return null;
-      }
-    };
-
-    const publicId = getPublicId(originalUrl);
-
-    // If can't parse public ID, return original URL
-    if (!publicId) {
-      console.warn('Could not parse public ID from URL:', originalUrl);
-      return originalUrl;
-    }
-
-    // 🔥 CRITICAL FIX: Different sizes for different devices
-    let width, height;
-
-    // Mobile First Approach
-    if (windowWidth < 375) { // Very small mobile
-      width = 375;
-      height = 200;
-    } else if (windowWidth < 640) { // Mobile
-      width = 640;
-      height = 250;
-    } else if (windowWidth < 768) { // Small tablet
-      width = 768;
-      height = 300;
-    } else if (windowWidth < 1024) { // Tablet
-      width = 1024;
-      height = 350;
-    } else if (windowWidth < 1280) { // Small laptop
-      width = 1280;
-      height = 400;
-    } else if (windowWidth < 1440) { // Laptop
-      width = 1440;
-      height = 450;
-    } else if (windowWidth < 1536) { // Desktop
-      width = 1536;
-      height = 480;
-    } else if (windowWidth < 1920) { // Large desktop
-      width = 1920;
-      height = 550;
-    } else { // 4K and above
-      width = 1920;
-      height = 600;
-    }
-
-    // Extract cloud name from URL - FIXED
-    let cloudName = '';
-    try {
-      const urlObj = new URL(originalUrl);
-      // URL format: https://res.cloudinary.com/cloudname/image/upload/...
-      const hostnameParts = urlObj.hostname.split('.');
-      if (hostnameParts[0] === 'res') {
-        cloudName = hostnameParts[1]; // res.cloudinary.com -> cloudinary
-      }
-    } catch (error) {
-      console.error('Error extracting cloud name:', error);
-      // Default fallback
-      cloudName = 'demo'; // Replace with your actual cloud name
-    }
-
-    // Construct Cloudinary URL with transformations
-    const transformation = `c_fill,w_${width},h_${height},q_auto,f_webp`;
-
-    // Return optimized URL
-    return `https://res.cloudinary.com/${cloudName}/image/upload/${transformation}/${publicId}`;
-  };
-
-  // ALTERNATIVE SIMPLER SOLUTION: Use Next.js Image with sizes prop
-  const getSimpleResponsiveUrl = (originalUrl: string): string => {
-    // Just return original URL, Next.js will handle optimization
-    return originalUrl;
-  };
 
   const nextSlide = useCallback(() => {
     setFade(false);
@@ -215,9 +95,16 @@ export default function Banner() {
     }
   };
 
-  // Get button classes
+  // UPDATED: বাটন সাইজ মোবাইল + ট্যাবলেটে আরও ছোট
   const getButtonClasses = (type: string) => {
-    const baseClasses = "px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-lg font-semibold text-sm md:text-base transition-all duration-300 hover:scale-105 inline-flex items-center justify-center shadow-lg";
+    const baseClasses =
+      "min-w-[90px] xs:min-w-[100px] sm:min-w-[110px] " +     // মোবাইলে খুব ছোট min-width
+      "px-3.5 xs:px-4 sm:px-5 md:px-6 " +                     // মোবাইলে px-3.5 (ছোট)
+      "py-1.5 xs:py-2 sm:py-2.5 md:py-3 " +                   // height মোবাইলে py-1.5 (আরও ছোট)
+      "text-xs xs:text-xs sm:text-sm md:text-base " +         // text মোবাইলে text-xs
+      "rounded-md sm:rounded-lg font-medium " +
+      "transition-all duration-300 hover:scale-105 active:scale-95 " +
+      "inline-flex items-center justify-center shadow-md sm:shadow-lg";
 
     switch (type) {
       case 'gray':
@@ -225,74 +112,35 @@ export default function Banner() {
       case 'primary':
         return `${baseClasses} bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:from-blue-700 hover:to-blue-900 hover:shadow-xl`;
       case 'outline':
-        return `${baseClasses} bg-white/10 border-2 border-white/40 text-white hover:bg-white/20 hover:border-white/60 backdrop-blur-sm`;
+        return `${baseClasses} bg-white/10 border-2 border-white/40 text-white hover:bg-white/20 hover:border-white/60 backdrop-blur-sm hover:shadow-xl`;
       default:
-        return `${baseClasses} bg-gradient-to-r from-gray-800 to-gray-900 text-white border border-gray-700/30 hover:from-gray-900 hover:to-gray-950 hover:shadow-xl`;
+        return baseClasses;
     }
   };
 
-  // Get position classes
   const getPositionClasses = (position = 'center-bottom') => {
-    const padding = windowWidth < 768 ? '6' : '10';
-
     switch (position) {
-      case 'left-top':
+      case 'center-bottom':
         return {
-          container: `justify-start items-start pt-${padding} pl-${padding}`,
-          content: 'text-left items-start',
-          buttons: 'justify-start'
-        };
-      case 'left-center':
-        return {
-          container: `justify-start items-center pl-${padding}`,
-          content: 'text-left',
-          buttons: 'justify-start'
+          container: 'justify-center items-end pb-10 xs:pb-12 sm:pb-14 md:pb-16 lg:pb-20 xl:pb-24',
+          content: 'text-center',
+          buttons: 'justify-center'
         };
       case 'left-bottom':
         return {
-          container: `justify-start items-end pb-${padding} pl-${padding}`,
+          container: 'justify-start items-end pb-10 xs:pb-12 sm:pb-14 md:pb-16 pl-4 sm:pl-8 md:pl-12',
           content: 'text-left',
           buttons: 'justify-start'
         };
-      case 'center-top':
-        return {
-          container: `justify-center items-start pt-${padding}`,
-          content: 'text-center',
-          buttons: 'justify-center'
-        };
-      case 'center-center':
-        return {
-          container: 'justify-center items-center',
-          content: 'text-center',
-          buttons: 'justify-center'
-        };
-      case 'center-bottom':
-        return {
-          container: `justify-center items-end pb-${padding}`,
-          content: 'text-center',
-          buttons: 'justify-center'
-        };
-      case 'right-top':
-        return {
-          container: `justify-end items-start pt-${padding} pr-${padding}`,
-          content: 'text-right',
-          buttons: 'justify-end'
-        };
-      case 'right-center':
-        return {
-          container: `justify-end items-center pr-${padding}`,
-          content: 'text-right',
-          buttons: 'justify-end'
-        };
       case 'right-bottom':
         return {
-          container: `justify-end items-end pb-${padding} pr-${padding}`,
+          container: 'justify-end items-end pb-10 xs:pb-12 sm:pb-14 md:pb-16 pr-4 sm:pr-8 md:pr-12',
           content: 'text-right',
           buttons: 'justify-end'
         };
       default:
         return {
-          container: `justify-center items-end pb-${padding}`,
+          container: 'justify-center items-end pb-10 xs:pb-12 sm:pb-14 md:pb-16 lg:pb-20 xl:pb-24',
           content: 'text-center',
           buttons: 'justify-center'
         };
@@ -301,7 +149,7 @@ export default function Banner() {
 
   if (loading) {
     return (
-      <div className="w-full h-[250px] sm:h-[300px] md:h-[350px] lg:h-[450px] xl:h-[550px] bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse"></div>
+      <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse" />
     );
   }
 
@@ -312,82 +160,46 @@ export default function Banner() {
   const currentBanner = banners[currentIndex];
   const position = getPositionClasses(currentBanner.buttonPosition);
 
-  // 🔥 SIMPLER APPROACH: Use original URL with Next.js optimization
-  const imageUrl = currentBanner.image; // Use original URL
-
-  console.log('Banner Debug:', {
-    windowWidth,
-    originalUrl: currentBanner.image,
-    hasTitle: !!currentBanner.title,
-    hasButtons: currentBanner.buttons?.length || 0
-  });
-
-  // Responsive height calculation
-  const getBannerHeight = () => {
-    if (windowWidth < 375) return '180px';   // Very small mobile
-    if (windowWidth < 640) return '220px';   // Mobile
-    if (windowWidth < 768) return '260px';   // Small tablet
-    if (windowWidth < 1024) return '320px';  // Tablet
-    if (windowWidth < 1280) return '380px';  // Small laptop
-    if (windowWidth < 1440) return '450px';  // Laptop
-    if (windowWidth < 1536) return '500px';  // Desktop
-    return '550px';                          // Large desktop
-  };
+  const imageUrl = currentBanner.image;
 
   return (
     <div
-      className="relative w-full overflow-hidden"
-      style={{ height: getBannerHeight() }}
+      className="relative w-full overflow-hidden aspect-[16/5] md:aspect-[3/1] lg:aspect-[16/5]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Banner Image - SIMPLIFIED VERSION */}
-      <div className={`relative w-full h-full transition-opacity duration-500 ${fade ? 'opacity-100' : 'opacity-95'}`}>
+      {/* Image */}
+      <div className={`absolute inset-0 transition-opacity duration-500 ${fade ? 'opacity-100' : 'opacity-0'}`}>
         <Image
           src={imageUrl}
           alt={currentBanner.title || 'Banner Image'}
           fill
-          className="object-cover"
+          className="object-cover object-center"
           priority
-          sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, (max-width: 1280px) 100vw, (max-width: 1440px) 100vw, (max-width: 1536px) 100vw, 1920px"
-          quality={windowWidth < 768 ? 75 : 90}
+          sizes="100vw"
+          quality={75}
         />
-
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/15 via-black/5 to-black/15"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-black/10 to-black/20 pointer-events-none" />
       </div>
 
-      {/* Content Container */}
-      <div className={`absolute inset-0 flex ${position.container}`}>
-        <div className={`max-w-4xl w-full transition-all duration-500 transform ${fade ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'} flex flex-col ${position.content === 'text-center' ? 'items-center' : position.content === 'text-right' ? 'items-end' : 'items-start'}`}>
-
-          {/* Title */}
+      {/* Content */}
+      <div className={`absolute inset-0 flex ${position.container} px-4 xs:px-6 sm:px-8 lg:px-16`}>
+        <div className={`max-w-7xl w-full mx-auto transition-all duration-700 transform ${fade ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'} flex flex-col ${position.content}`}>
           {currentBanner.title && (
-            <h1 className={`font-bold text-white mb-2 sm:mb-3 md:mb-4 leading-tight drop-shadow-lg ${position.content}
-              ${windowWidth < 640 ? 'text-xl sm:text-2xl' :
-                windowWidth < 768 ? 'text-2xl' :
-                  windowWidth < 1024 ? 'text-3xl' :
-                    windowWidth < 1280 ? 'text-4xl' :
-                      'text-5xl'}`}>
+            <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-3 sm:mb-4 md:mb-6 drop-shadow-2xl leading-tight">
               {currentBanner.title}
             </h1>
           )}
 
-          {/* Subtitle */}
           {currentBanner.subtitle && (
-            <p className={`text-white mb-3 sm:mb-4 md:mb-6 lg:mb-8 leading-relaxed max-w-2xl drop-shadow-md ${position.content}
-              ${windowWidth < 640 ? 'text-sm' :
-                windowWidth < 768 ? 'text-base' :
-                  windowWidth < 1024 ? 'text-lg' :
-                    windowWidth < 1280 ? 'text-xl' :
-                      'text-2xl'}`}>
+            <p className="text-base xs:text-lg sm:text-xl md:text-2xl text-white mb-5 sm:mb-6 md:mb-8 max-w-3xl drop-shadow-lg">
               {currentBanner.subtitle}
             </p>
           )}
 
-          {/* Buttons */}
+          {/* Buttons - চূড়ান্ত ছোট সংস্করণ */}
           {currentBanner.buttons && currentBanner.buttons.length > 0 && (
-            <div className={`flex flex-wrap gap-2 sm:gap-3 md:gap-4 w-full ${position.buttons}`}>
+            <div className={`flex flex-wrap gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 w-full ${position.buttons}`}>
               {currentBanner.buttons.map((button, index) => (
                 <Link
                   key={index}
@@ -395,7 +207,7 @@ export default function Banner() {
                   className={getButtonClasses(button.type)}
                 >
                   {button.text}
-                  <ChevronRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <ChevronRight className="ml-1 xs:ml-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Link>
               ))}
             </div>
@@ -403,38 +215,37 @@ export default function Banner() {
         </div>
       </div>
 
-      {/* Navigation Controls */}
+      {/* Navigation */}
       {banners.length > 1 && (
         <>
           <button
             onClick={prevSlide}
-            className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-1.5 sm:p-2.5 rounded-full transition-all duration-300"
+            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 sm:p-3 rounded-full transition"
             aria-label="Previous banner"
           >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
 
           <button
             onClick={nextSlide}
-            className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-1.5 sm:p-2.5 rounded-full transition-all duration-300"
+            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 sm:p-3 rounded-full transition"
             aria-label="Next banner"
           >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
 
-          {/* Slide Indicators */}
-          <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1 sm:space-x-2">
+          <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 sm:space-x-3">
             {banners.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
                 className={`rounded-full transition-all duration-300 ${index === currentIndex
-                  ? 'bg-white h-1.5 sm:h-2 w-4 sm:w-8'
-                  : 'bg-white/50 hover:bg-white/80 h-1.5 sm:h-2 w-1.5 sm:w-2'
+                    ? 'bg-white w-6 sm:w-8 h-2 sm:h-3'
+                    : 'bg-white/50 hover:bg-white/80 w-2 sm:w-3 h-2 sm:h-3'
                   }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
