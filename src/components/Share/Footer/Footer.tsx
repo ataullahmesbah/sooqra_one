@@ -140,8 +140,8 @@ const Footer = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-400">Email Us</p>
-                                        <a href="mailto:sooqraone@info.com" className="text-white hover:text-gray-300 transition-colors duration-300 text-sm font-medium">
-                                            sooqraone@info.com
+                                        <a href="mailto:contact@sooqraone.com" className="text-white hover:text-gray-300 transition-colors duration-300 text-sm font-medium">
+                                            contact@sooqraone.com
                                         </a>
                                     </div>
                                 </div>
@@ -218,16 +218,15 @@ const Footer = () => {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        <Link href="/sitemap" className="text-gray-400 hover:text-white text-xs sm:text-sm transition-colors duration-300">
+                    <div className="flex flex-col space-y-2 items-center">
+                        {/* XML for Search Engines */}
+                        <Link
+                            href="/sitemap.xml"
+                            className="text-gray-400 hover:text-white text-xs sm:text-sm transition-colors duration-300"
+                        >
                             Sitemap
                         </Link>
-                        <Link href="/disclaimer" className="text-gray-400 hover:text-white text-xs sm:text-sm transition-colors duration-300">
-                            Disclaimer
-                        </Link>
-                        <Link href="/accessibility" className="text-gray-400 hover:text-white text-xs sm:text-sm transition-colors duration-300">
-                            Accessibility
-                        </Link>
+
                     </div>
                 </div>
 

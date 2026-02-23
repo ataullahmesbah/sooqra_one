@@ -1,9 +1,10 @@
+import OrderSummaryPage from "@/src/components/Dashboard/OrderSummaryPage/page";
 
 
 const page = () => {
     return (
         <div>
-            Admin Pages
+            <OrderSummaryPage />
         </div>
     );
 };

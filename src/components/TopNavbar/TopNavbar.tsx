@@ -297,14 +297,17 @@ export default function TopNavbar() {
 
                         {/* Logo and Brand Name  */}
                         <Link href="/" className="flex items-center mr-6 hover:opacity-90 transition-opacity">
-                            <div className="w-40 h-10 md:w-48 md:h-12 lg:w-56 lg:h-14 relative">
+                            <div className="w-40 h-10 md:w-48 md:h-12 lg:w-56 lg:h-14 relative bg-no-repeat">
                                 <Image
                                     src="/sooqraone.png"
                                     alt="Sooqra One"
-                                    width={250}    // Original SVG width
-                                    height={100}   // Original SVG height
-                                    className="object-contain w-full h-full"
+                                    width={250}
+                                    height={100}
+                                    className="object-contain w-full h-full select-none pointer-events-none"
                                     priority
+                                    draggable={false}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    onDragStart={(e) => e.preventDefault()}
                                 />
                             </div>
                         </Link>

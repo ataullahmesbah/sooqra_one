@@ -12,7 +12,7 @@ const schemaData = {
         "url": "https://sooqraone.com",
         "contactPoint": {
             "@type": "ContactPoint",
-            "email": "support@sooqraone.com",
+            "email": "contact@sooqraone.com",
             "contactType": "Customer Support"
         }
     },
@@ -157,8 +157,8 @@ const ReturnPolicy = () => {
                             <ul className="space-y-4 text-gray-300">
                                 <li className="flex items-start">
                                     <span className="font-medium text-gray-200 min-w-20">Email:</span>
-                                    <a href="mailto:support@sooqraone.com" className="text-cyan-400 hover:underline ml-2" aria-label="Email customer support">
-                                        support@sooqraone.com
+                                    <a href="mailto:contact@sooqraone.com" className="text-cyan-400 hover:underline ml-2" aria-label="Email customer support">
+                                        contact@sooqraone.com
                                     </a>
                                 </li>
                                 <li className="flex items-start">

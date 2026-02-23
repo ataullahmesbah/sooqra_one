@@ -53,7 +53,7 @@ export default function CustomerCarePage() {
         "description": "24/7 customer care support for Sooqra One e-commerce platform",
         "url": "https://sooqraone.com/customer-care",
         "telephone": "+8801571083401",
-        "email": "support@sooqraone.com",
+        "email": "contact@sooqraone.com",
         "availableLanguage": ["Bengali", "English"],
         "hoursAvailable": {
             "@type": "OpeningHoursSpecification",
@@ -172,10 +172,10 @@ export default function CustomerCarePage() {
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-2">Email Support</h3>
                             <a
-                                href="mailto:support@sooqraone.com"
+                                href="mailto:contact@sooqraone.com"
                                 className="text-xl font-bold text-gray-900 hover:text-green-600 transition-colors block mb-3"
                             >
-                                support@sooqraone.com
+                                contact@sooqraone.com
                             </a>
                             <p className="text-gray-600 text-sm">Response within 2-4 hours</p>
                         </div>

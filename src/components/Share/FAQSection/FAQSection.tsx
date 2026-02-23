@@ -70,7 +70,7 @@ export default function FAQSection() {
             a: `পণ্য অর্ডার করার ১ ঘন্টার মধ্যে আমাদের হেল্পলাইনে কল করে অর্ডার বাতিল করতে পারবেন:
         <br>• হেল্পলাইন: <a href="tel:+8801571083401" class="text-gray-600 hover:underline font-medium">+880 1571-083401</a>
         <br>• হোয়াটসঅ্যাপ: <a href="https://wa.me/8801571083401" class="text-gray-600 hover:underline font-medium">WhatsApp</a>
-        <br>• ইমেইল: <a href="mailto:support@sooqraone.com" class="text-gray-600 hover:underline font-medium">support@sooqraone.com</a>
+        <br>• ইমেইল: <a href="mailto:contact@sooqraone.com" class="text-gray-600 hover:underline font-medium">contact@sooqraone.com</a>
         <br><em>১ ঘন্টার পর অর্ডার প্রসেসিং শুরু হয়ে যায়, তাই দ্রুত যোগাযোগ করুন</em>`,
         },
         {
@@ -314,7 +314,7 @@ export default function FAQSection() {
                                 <h4 className="text-lg font-semibold text-gray-800 mb-2">Email Support</h4>
                                 <p className="text-gray-600 text-sm mb-3">24/7 email support</p>
                                 <a
-                                    href="mailto:support@sooqraone.com"
+                                    href="mailto:contact@sooqraone.com"
                                     className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
                                 >
                                     Email Us

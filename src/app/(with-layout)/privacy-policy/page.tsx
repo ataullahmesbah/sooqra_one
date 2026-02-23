@@ -12,7 +12,7 @@ const schemaData = {
         "url": "https://sooqraone.com",
         "contactPoint": {
             "@type": "ContactPoint",
-            "email": "support@sooqraone.com",
+            "email": "contact@sooqraone.com",
             "contactType": "Customer Support"
         }
     },
@@ -108,8 +108,8 @@ const PrivacyPolicy = () => {
                             <h2 className="text-2xl font-semibold text-white mb-4">4. Your Rights</h2>
                             <p className="text-gray-200 mb-4">
                                 You can contact us at{' '}
-                                <a href="mailto:support@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
-                                    support@sooqraone.com
+                                <a href="mailto:contact@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
+                                    contact@sooqraone.com
                                 </a>{' '}
                                 to:
                             </p>
@@ -155,8 +155,8 @@ const PrivacyPolicy = () => {
                     <footer className="pt-8 border-t border-gray-700 mt-12">
                         <p className="text-sm italic text-gray-400 text-center">
                             For any privacy-related concerns, please reach out to us at{' '}
-                            <a href="mailto:support@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
-                                support@sooqraone.com
+                            <a href="mailto:contact@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
+                                contact@sooqraone.com
                             </a>{' '}
                             or through our{' '}
                             <a href="/contact" className="text-blue-400 hover:underline" aria-label="Contact page">

@@ -12,7 +12,7 @@ const schemaData = {
         "url": "https://sooqraone.com",
         "contactPoint": {
             "@type": "ContactPoint",
-            "email": "support@sooqraone.com",
+            "email": "contact@sooqraone.com",
             "contactType": "Customer Support"
         }
     },
@@ -70,11 +70,11 @@ const TermsOfService = () => {
                     <p className="text-lg text-gray-200 leading-relaxed">
                         Welcome to <strong>SoorqaOne</strong>. By accessing or using our website, you agree to comply with these Terms of Service. The terms <strong>&quot;we&quot;</strong>, <strong>&quot;our&quot;</strong>, or <strong>&quot;us&quot;</strong> refer to <strong>SoorqaOne</strong>. If you have questions, contact us via{' '}
                         <a
-                            href="mailto:support@sooqraone.com"
+                            href="mailto:contact@sooqraone.com"
                             className="text-blue-400 hover:underline"
                             aria-label="Email customer support"
                         >
-                            support@sooqraone.com
+                            contact@sooqraone.com
                         </a>{' '}
                         or{' '}
                         <a
@@ -87,6 +87,7 @@ const TermsOfService = () => {
                             Facebook
                         </a>.
                     </p>
+
 
                     {/* Terms Sections */}
                     <div className="space-y-10">
@@ -183,14 +184,14 @@ const TermsOfService = () => {
                             <ul className="space-y-3 text-gray-300">
                                 <li>
                                     <span className="font-medium text-gray-200">Email:</span>{' '}
-                                    <a href="mailto:support@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
-                                        support@sooqraone.com
+                                    <a href="mailto:contact@sooqraone.com" className="text-blue-400 hover:underline" aria-label="Email customer support">
+                                        contact@sooqraone.com
                                     </a>
                                 </li>
                                 <li>
                                     <span className="font-medium text-gray-200">Facebook:</span>{' '}
                                     <a href="https://facebook.com/sooqraone" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" aria-label="Contact via Facebook">
-                                        SoorqaOne Support
+                                        Soorqa One Support
                                     </a>
                                 </li>
                             </ul>

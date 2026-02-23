@@ -247,7 +247,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ onSuccess }) => {
                             value={formData.email}
                             onChange={handleChange}
                             className={`mt-1 block w-full px-4 py-3 bg-gray-50 border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                            placeholder="sooqra@one.com"
+                            placeholder="contact@sooqraone.com"
                         />
                         {errors.email && (
                             <p className="mt-2 text-sm text-red-600 flex items-center gap-1">

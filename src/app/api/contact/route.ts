@@ -6,70 +6,71 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_123456789');
 
 // Function to escape HTML special characters
 function escapeHtml(unsafe: string): string {
-    return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const { firstName, lastName, email, phone, message, subject = 'General Inquiry' } = body;
+  try {
+    const body = await request.json();
+    const { firstName, lastName, email, phone, message, subject = 'General Inquiry' } = body;
 
-        // Validate required fields
-        const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'message'];
-        const missingFields = requiredFields.filter(field => !body[field]);
+    // Validate required fields
+    const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'message'];
+    const missingFields = requiredFields.filter(field => !body[field]);
 
-        if (missingFields.length > 0) {
-            return NextResponse.json(
-                {
-                    error: 'Missing required fields',
-                    missingFields
-                },
-                { status: 400 }
-            );
-        }
+    if (missingFields.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Missing required fields',
+          missingFields
+        },
+        { status: 400 }
+      );
+    }
 
-        // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return NextResponse.json(
-                { error: 'Invalid email address' },
-                { status: 400 }
-            );
-        }
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email address' },
+        { status: 400 }
+      );
+    }
 
-        // Escape user inputs to prevent HTML injection
-        const safeFirstName = escapeHtml(firstName);
-        const safeLastName = escapeHtml(lastName);
-        const safeEmail = escapeHtml(email);
-        const safePhone = escapeHtml(phone);
-        const safeMessage = escapeHtml(message);
-        const safeSubject = escapeHtml(subject);
+    // Escape user inputs to prevent HTML injection
+    const safeFirstName = escapeHtml(firstName);
+    const safeLastName = escapeHtml(lastName);
+    const safeEmail = escapeHtml(email);
+    const safePhone = escapeHtml(phone);
+    const safeMessage = escapeHtml(message);
+    const safeSubject = escapeHtml(subject);
 
-        // Format current date
-        const currentDate = new Date().toLocaleString('en-BD', {
-            timeZone: 'Asia/Dhaka',
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    // Format current date
+    const currentDate = new Date().toLocaleString('en-BD', {
+      timeZone: 'Asia/Dhaka',
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
 
-        // Send email to Sooqra One support
-        const { data, error } = await resend.emails.send({
-            from: 'Team Contact <onboarding@resend.dev>',
-            to: ['ataullah.mesbah486@gmail.com'],
-            // from: 'Sooqra One Support <support@sooqraone.com>',
-            // to: ['support@sooqraone.com'], // Your Sooqra One support email
-            replyTo: safeEmail,
-            subject: `[${safeSubject}] New Contact Form Submission - ${safeFirstName} ${safeLastName}`,
-            html: `
+    // Send email to Sooqra One support
+    const { data, error } = await resend.emails.send({
+      from: 'Team Contact <onboarding@resend.dev>',
+      to: ['ataullah.mesbah486@gmail.com'],
+      // to: ['sooqraone@gmail.com'],
+      // from: 'Sooqra One Support <contact@sooqraone.com>',
+      // to: ['contact@sooqraone.com'], // Your Sooqra One support email
+      replyTo: safeEmail,
+      subject: `[${safeSubject}] New Contact Form Submission - ${safeFirstName} ${safeLastName}`,
+      html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -198,7 +199,7 @@ export async function POST(request: Request) {
         </body>
         </html>
       `,
-            text: `
+      text: `
 New Contact Form Submission - Sooqra One
 
 Subject: ${safeSubject}
@@ -212,19 +213,19 @@ ${safeMessage}
 
 Please respond to the customer within the next 24 hours.
       `
-        });
+    });
 
-        if (error) {
-            console.error('Resend error:', error);
-            throw new Error(`Failed to send email: ${error.message}`);
-        }
+    if (error) {
+      console.error('Resend error:', error);
+      throw new Error(`Failed to send email: ${error.message}`);
+    }
 
-        // Also send auto-reply to customer
-        await resend.emails.send({
-            from: 'Sooqra One Support <noreply@sooqraone.com>',
-            to: [safeEmail],
-            subject: 'Thank You for Contacting Sooqra One!',
-            html: `
+    // Also send auto-reply to customer
+    await resend.emails.send({
+      from: 'Sooqra One Support <noreply@sooqraone.com>',
+      to: [safeEmail],
+      subject: 'Thank You for Contacting Sooqra One!',
+      html: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -257,22 +258,22 @@ Please respond to the customer within the next 24 hours.
         </body>
         </html>
       `
-        });
+    });
 
-        return NextResponse.json({
-            success: true,
-            message: 'Email sent successfully',
-            data: data
-        });
+    return NextResponse.json({
+      success: true,
+      message: 'Email sent successfully',
+      data: data
+    });
 
-    } catch (error) {
-        console.error('Contact form error:', error);
-        return NextResponse.json(
-            {
-                error: 'Failed to process contact form',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
-        );
-    }
+  } catch (error) {
+    console.error('Contact form error:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to process contact form',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
 }

@@ -378,14 +378,17 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                                 {!isNavbarVisible && (
                                     <Link href="/" className="flex items-center mr-6 hover:opacity-90 transition-opacity">
                                         <div className="w-40 h-10 md:w-48 md:h-12 lg:w-56 lg:h-14 relative flex items-center">
-                                            {/* পুরো Logo + Text একসাথে */}
+                                            {/* Loog and Text */}
                                             <Image
                                                 src="/sooqraone.png"  // তোমার 250×100 SVG
                                                 alt="Sooqra One"
                                                 width={200}    // Original: 250px → 80% scale
                                                 height={80}    // Original: 100px → 80% scale
-                                                className="object-contain w-full h-full"
+                                                className="object-contain w-full h-full select-none pointer-events-none"
                                                 priority
+                                                draggable={false}
+                                                onContextMenu={(e) => e.preventDefault()}
+                                                onDragStart={(e) => e.preventDefault()}
                                             />
                                         </div>
                                     </Link>
@@ -549,8 +552,11 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                                     alt="SOOQRA ONE"
                                     width={250}
                                     height={58}
-                                    className="h-14 w-auto md:h-16 lg:hidden"  /* Mobile: 56px, Tablet: 64px */
+                                    className="h-14 w-auto md:h-16 lg:hidden select-none pointer-events-none"  /* Mobile: 56px, Tablet: 64px */
                                     priority
+                                    draggable={false}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    onDragStart={(e) => e.preventDefault()}
                                 />
                             </Link>
 

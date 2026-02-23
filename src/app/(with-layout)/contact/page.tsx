@@ -89,7 +89,7 @@ export default function ContactPage() {
                                             >
                                                 +880 1571-083401
                                             </a>
-                                            <p className="text-sm text-gray-500 mt-1">10 AM - 8 PM (Daily)</p>
+                                            <p className="text-sm text-gray-500 mt-1">10 AM - 8 PM (Sat–Thu)</p>
                                         </div>
                                     </div>
 
@@ -101,10 +101,10 @@ export default function ContactPage() {
                                             <h3 className="font-semibold text-gray-900">Email Support</h3>
                                             <p className="text-gray-600 mt-1">Email us for detailed inquiries</p>
                                             <a
-                                                href="mailto:support@sooqraone.com"
+                                                href="mailto:contact@sooqraone.com"
                                                 className="text-lg font-bold text-gray-900 hover:text-green-600 transition-colors block mt-2"
                                             >
-                                                support@sooqraone.com
+                                                contact@sooqraone.com
                                             </a>
                                             <p className="text-sm text-gray-500 mt-1">Response within 2-4 hours</p>
                                         </div>
@@ -301,7 +301,7 @@ export default function ContactPage() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between py-3 border-b border-gray-200">
                                         <span className="font-medium text-gray-900">Monday - Thursday</span>
-                                        <span className="font-bold text-gray-900">9:00 AM - 8:00 PM</span>
+                                        <span className="font-bold text-gray-900">10:00 AM - 8:00 PM</span>
                                     </div>
                                     <div className="flex items-center justify-between py-3 border-b border-gray-200">
                                         <span className="font-medium text-gray-900">Sunday</span>
