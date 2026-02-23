@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
         const { orderId, status, paymentDetails }: UpdateStatusRequestBody = await request.json();
 
-        console.log('📦 Updating order:', orderId, 'to status:', status);
+        // console.log('📦 Updating order:', orderId, 'to status:', status);
 
         const updatedOrder = await Order.findOneAndUpdate(
             { orderId: orderId },
@@ -29,11 +29,11 @@ export async function POST(request: Request) {
         );
 
         if (!updatedOrder) {
-            console.log('❌ Order not found:', orderId);
+            // console.log('❌ Order not found:', orderId);
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-        console.log('✅ Order updated successfully:', updatedOrder.orderId);
+        // console.log('✅ Order updated successfully:', updatedOrder.orderId);
         return NextResponse.json({
             success: true,
             message: 'Order status updated',

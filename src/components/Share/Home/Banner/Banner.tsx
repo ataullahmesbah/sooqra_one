@@ -33,7 +33,7 @@ export default function Banner() {
         const response = await fetch('/api/banners');
         const result = await response.json();
         if (result.success && result.data.length > 0) {
-          console.log('Banners loaded:', result.data.length);
+          // console.log('Banners loaded:', result.data.length);
           setBanners(result.data);
         }
       } catch (error) {

@@ -174,13 +174,39 @@ export default function AccountPage() {
     };
 
     const handlePasswordChange = async () => {
+        // Validation
         if (passwordForm.newPassword !== passwordForm.confirmPassword) {
             setError('New passwords do not match');
             return;
         }
 
-        if (passwordForm.newPassword.length < 6) {
-            setError('Password must be at least 6 characters');
+        // Check minimum length
+        if (passwordForm.newPassword.length < 8) {
+            setError('Password must be at least 8 characters long');
+            return;
+        }
+
+        // Check uppercase
+        if (!/[A-Z]/.test(passwordForm.newPassword)) {
+            setError('Password must contain at least one uppercase letter');
+            return;
+        }
+
+        // Check lowercase
+        if (!/[a-z]/.test(passwordForm.newPassword)) {
+            setError('Password must contain at least one lowercase letter');
+            return;
+        }
+
+        // Check number
+        if (!/[0-9]/.test(passwordForm.newPassword)) {
+            setError('Password must contain at least one number');
+            return;
+        }
+
+        // Check special character
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(passwordForm.newPassword)) {
+            setError('Password must contain at least one special character (@, #, $, etc.)');
             return;
         }
 
@@ -494,6 +520,7 @@ export default function AccountPage() {
                                 )}
 
                                 {/* Change Password Section */}
+
                                 {activeSection === 'password' && (
                                     <div className="p-6">
                                         <h2 className="text-xl font-bold text-gray-900 mb-6">Change Password</h2>
@@ -512,6 +539,7 @@ export default function AccountPage() {
                                                 />
                                             </div>
 
+                                            {/* New Password Field with Validation */}
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                                     New Password
@@ -521,10 +549,35 @@ export default function AccountPage() {
                                                     value={passwordForm.newPassword}
                                                     onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800"
-                                                    placeholder="At least 6 characters"
+                                                    placeholder="Enter new password"
                                                 />
+
+                                                {/* Password Requirements Checklist */}
+                                                {passwordForm.newPassword && (
+                                                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                                        <p className="text-xs font-medium text-gray-700 mb-2">Password must contain:</p>
+                                                        <ul className="space-y-1 text-xs">
+                                                            <li className={passwordForm.newPassword.length >= 8 ? 'text-green-600' : 'text-gray-400'}>
+                                                                ✓ At least 8 characters
+                                                            </li>
+                                                            <li className={/[A-Z]/.test(passwordForm.newPassword) ? 'text-green-600' : 'text-gray-400'}>
+                                                                ✓ One uppercase letter (A-Z)
+                                                            </li>
+                                                            <li className={/[a-z]/.test(passwordForm.newPassword) ? 'text-green-600' : 'text-gray-400'}>
+                                                                ✓ One lowercase letter (a-z)
+                                                            </li>
+                                                            <li className={/[0-9]/.test(passwordForm.newPassword) ? 'text-green-600' : 'text-gray-400'}>
+                                                                ✓ One number (0-9)
+                                                            </li>
+                                                            <li className={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(passwordForm.newPassword) ? 'text-green-600' : 'text-gray-400'}>
+                                                                ✓ One special character (@, #, $, etc.)
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                )}
                                             </div>
 
+                                            {/* Confirm Password Field */}
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                                     Confirm New Password
@@ -533,9 +586,17 @@ export default function AccountPage() {
                                                     type="password"
                                                     value={passwordForm.confirmPassword}
                                                     onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800"
+                                                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-800 ${passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword
+                                                        ? 'border-red-500 bg-red-50'
+                                                        : passwordForm.confirmPassword && passwordForm.newPassword === passwordForm.confirmPassword
+                                                            ? 'border-green-500 bg-green-50'
+                                                            : 'border-gray-300'
+                                                        }`}
                                                     placeholder="Confirm new password"
                                                 />
+                                                {passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+                                                    <p className="mt-1 text-xs text-red-600">Passwords do not match</p>
+                                                )}
                                             </div>
 
                                             <div className="pt-4">
@@ -548,18 +609,26 @@ export default function AccountPage() {
                                                 </button>
                                             </div>
 
-                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                                <h4 className="font-medium text-yellow-800 mb-2">Password Requirements</h4>
-                                                <ul className="text-sm text-yellow-700 space-y-1">
-                                                    <li>• At least 6 characters long</li>
-                                                    <li>• Should include letters and numbers</li>
-                                                    <li>• Avoid using common passwords</li>
+                                            {/* Password Requirements Summary */}
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                <h4 className="font-medium text-blue-800 mb-2">🔒 Strong Password Tips</h4>
+                                                <ul className="text-sm text-blue-700 space-y-1">
+                                                    <li>• Use at least 8 characters</li>
+                                                    <li>• Mix uppercase and lowercase letters</li>
+                                                    <li>• Include numbers and special characters</li>
+                                                    <li>• Avoid common words or patterns</li>
+                                                    <li>• Don&apos;t reuse passwords from other sites</li>
                                                 </ul>
                                             </div>
                                         </div>
                                     </div>
                                 )}
+
+
                             </div>
+
+
+
                         </div>
                     </div>
                 </div>

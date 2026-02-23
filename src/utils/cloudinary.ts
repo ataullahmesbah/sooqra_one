@@ -107,7 +107,7 @@ const createResponsiveVariants = async (publicId: string): Promise<void> => {
                 ]
             });
             // Just generate the URL, Cloudinary will create on-demand
-            console.log(`Generated variant ${variant.name}: ${url}`);
+            // console.log(`Generated variant ${variant.name}: ${url}`);
         }
     } catch (error) {
         console.error('Error creating responsive variants:', error);

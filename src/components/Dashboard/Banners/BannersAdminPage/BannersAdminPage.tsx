@@ -90,7 +90,7 @@ export default function BannersAdminPage() {
       setIsSubmitting(true);
       setError('');
 
-      console.log('🔄 Updating banner with ID:', id);
+
 
       const response = await fetch(`/api/admin/banners/${id}`, {
         method: 'PUT',
@@ -99,7 +99,7 @@ export default function BannersAdminPage() {
 
       const result = await response.json();
 
-      console.log('📦 Update response:', result);
+
 
       if (result.success) {
         await fetchBanners();

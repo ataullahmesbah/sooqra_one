@@ -66,7 +66,7 @@ export async function PUT(
         // Await the params Promise
         const { id } = await params;
 
-        console.log('Update request for ID:', id);
+
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json(
@@ -168,10 +168,7 @@ export async function PUT(
             }
         }
 
-        console.log('Updating banner with data:', {
-            id,
-            updateData: { ...updateData, image: updateData.image ? '[UPDATED]' : '[UNCHANGED]' }
-        });
+
 
         // Update banner
         const updatedBanner = await Banner.findByIdAndUpdate(
@@ -217,7 +214,7 @@ export async function DELETE(
         // Await the params Promise
         const { id } = await params;
 
-        console.log('Delete request for ID:', id);
+
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json(

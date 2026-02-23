@@ -27,7 +27,7 @@ export default function ShippingCharges() {
         try {
             setError('');
             const response = await axios.get<ShippingChargeItem[]>('/api/products/shipping-charges');
-            console.log('Shipping Charges Response:', response.data);
+            // console.log('Shipping Charges Response:', response.data);
 
             const chargeMap: ShippingCharges = { 'Dhaka': 0, 'Other-Districts': 0 };
 
@@ -77,7 +77,7 @@ export default function ShippingCharges() {
                 { type: 'Other-Districts', charge: otherDistrictsNum }
             ];
 
-            console.log('Submitting:', payload);
+           
             await axios.post('/api/products/shipping-charges', payload);
             alert('Shipping charges updated successfully');
             fetchCharges();
@@ -98,7 +98,7 @@ export default function ShippingCharges() {
                     { type: 'Dhaka', charge: 80 },
                     { type: 'Other-Districts', charge: 120 }
                 ];
-                console.log('Resetting:', payload);
+            
                 await axios.post('/api/products/shipping-charges', payload);
                 alert('Charges reset to default');
                 fetchCharges();

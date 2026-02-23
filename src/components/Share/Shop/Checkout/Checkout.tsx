@@ -673,18 +673,6 @@ export default function Checkout() {
 
         setOrderData(orderData);
 
-        console.log('Submitting order data:', {
-            orderId: orderData.orderId,
-            productCount: orderData.products.length,
-            paymentMethod: orderData.paymentMethod,
-            total: orderData.total,
-            userId: userId || 'guest'
-        });
-
-        // Debug: Check notes field
-        console.log('Notes in order data:', orderData.customerInfo.notes);
-        console.log('Full customer info:', orderData.customerInfo);
-
         try {
             if (paymentMethod === 'cod' || paymentMethod === 'bkash') {
                 // Add userId to order data
@@ -697,7 +685,6 @@ export default function Checkout() {
 
                 const orderResponse = await axios.post('/api/products/orders', orderDataWithUser);
 
-                console.log('Order API Response:', orderResponse.data);
 
                 if (orderResponse.data &&
                     (orderResponse.data.message === 'Order created' ||

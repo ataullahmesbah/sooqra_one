@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const formattedPhone = formatPhoneForSMS(phone);
-    console.log('Testing SMS to:', formattedPhone);
+   
 
     // Test with custom message or default OTP
     const testMessage = message || `Test SMS from SOOQRA - ${new Date().toLocaleString()}`;

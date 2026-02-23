@@ -235,8 +235,6 @@ export default function OrdersPage() {
     // Order Management Page - handleAction ফাংশন আপডেট
     const handleAction = async (orderId: string, action: 'accept' | 'reject'): Promise<void> => {
         try {
-            console.log(`Attempting ${action} for order: ${orderId}`);
-
             const order = orders.find(o => o.orderId === orderId);
             if (!order) {
                 toast.error('Order not found');
@@ -245,7 +243,6 @@ export default function OrdersPage() {
 
             // Additional validation before accept
             if (action === 'accept') {
-                console.log('Validating before accept...');
 
                 // Check if all products are available
                 for (const product of order.products) {
@@ -253,7 +250,7 @@ export default function OrdersPage() {
                         const productResponse = await axios.get(`/api/products/${product.productId}`);
                         const productData = productResponse.data;
 
-                        console.log(`Product: ${productData.title}, Available: ${productData.quantity}, Required: ${product.quantity}`);
+
 
                         if (productData.availability !== 'InStock') {
                             toast.error(`Product "${productData.title}" is out of stock`);
@@ -294,7 +291,6 @@ export default function OrdersPage() {
                     });
                     return response;
                 } catch (error: any) {
-                    console.log('Regular API failed, trying direct update...');
 
                     // Fallback to direct update
                     const status = action === 'accept' ? 'accepted' : 'rejected';
@@ -307,8 +303,6 @@ export default function OrdersPage() {
             };
 
             const response = await performAction();
-
-            console.log('Action response:', response.data);
 
             if (response.data.success) {
                 // Update local state

@@ -337,13 +337,13 @@ export default function CreateProduct() {
         formData.additionalImages.forEach((img, index) => {
             if (img) {
                 data.append('additionalImages', img);
-                console.log(`Appending additionalImage[${index}]:`, img.name);
+                // console.log(`Appending additionalImage[${index}]:`, img.name);
             }
         });
         formData.additionalAlts.forEach((alt, index) => {
             if (alt) {
                 data.append('additionalAlts', alt);
-                console.log(`Appending additionalAlts[${index}]:`, alt);
+                // console.log(`Appending additionalAlts[${index}]:`, alt);
             }
         });
 

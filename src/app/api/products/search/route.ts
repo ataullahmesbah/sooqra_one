@@ -187,11 +187,11 @@ export async function GET(request: NextRequest) {
         const availability = searchParams.get('availability');
         const brand = searchParams.get('brand');
 
-        console.log('Search query:', query);
+   
 
         // Normalize search terms
         const searchTerms = normalizeSearchQuery(query);
-        console.log('Normalized search terms:', searchTerms);
+     
 
         // If no search terms and no filters, return empty
         if (!query.trim() && !category && !brand && !minPrice && !maxPrice) {
@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
         // Build final query
         const mongoQuery = conditions.length > 0 ? { $and: conditions } : {};
 
-        console.log('MongoDB Query:', JSON.stringify(mongoQuery, null, 2));
+      
 
         // Execute query with pagination
         const skip = (page - 1) * limit;

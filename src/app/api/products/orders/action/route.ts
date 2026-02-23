@@ -23,12 +23,12 @@ export async function POST(request: Request) {
             );
         }
 
-        console.log(`Processing ${action} for order: ${orderId}`);
+
 
         // Find order
         const order = await Order.findOne({ orderId });
         if (!order) {
-            console.log(`Order not found: ${orderId}`);
+            // console.log(`Order not found: ${orderId}`);
             return NextResponse.json(
                 { error: 'Order not found' },
                 { status: 404 }
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         // TEMPORARY: Print current status options (TypeScript compatible)
         const statusPath = (Order.schema as any).path('status');
         if (statusPath && statusPath.enumValues) {
-            console.log('Order schema status enum:', statusPath.enumValues);
+            // console.log('Order schema status enum:', statusPath.enumValues);
         }
 
         // Check current status
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
         if (action === 'accept') {
             // Validate product availability
-            console.log('Validating products for order:', orderId);
+            // console.log('Validating products for order:', orderId);
 
             const validationErrors: string[] = [];
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
                     continue;
                 }
 
-                console.log(`Checking product: ${product.title}, Quantity: ${item.quantity}, Size: ${item.size || 'N/A'}`);
+                // console.log(`Checking product: ${product.title}, Quantity: ${item.quantity}, Size: ${item.size || 'N/A'}`);
 
                 // Check availability
                 if (product.availability !== 'InStock') {
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
             }
 
             if (validationErrors.length > 0) {
-                console.log('Validation errors:', validationErrors);
+                // console.log('Validation errors:', validationErrors);
                 return NextResponse.json(
                     {
                         error: 'Product validation failed',
@@ -106,12 +106,12 @@ export async function POST(request: Request) {
             }
 
             // Update product quantities
-            console.log('Updating product quantities...');
+            // console.log('Updating product quantities...');
             for (const item of order.products) {
                 const product = await Product.findById(item.productId);
                 if (!product) continue;
 
-                console.log(`Processing product: ${product.title}, Qty: ${item.quantity}, Size: ${item.size || 'N/A'}`);
+                // console.log(`Processing product: ${product.title}, Qty: ${item.quantity}, Size: ${item.size || 'N/A'}`);
 
                 if (item.size && product.sizeRequirement === 'Mandatory') {
                     const sizeIndex = product.sizes.findIndex((s: any) => s.name === item.size);
@@ -119,17 +119,17 @@ export async function POST(request: Request) {
                         product.sizes[sizeIndex].quantity -= item.quantity;
                         product.quantity -= item.quantity;
                         await product.save();
-                        console.log(`Updated size ${item.size} quantity to ${product.sizes[sizeIndex].quantity}`);
+                        // console.log(`Updated size ${item.size} quantity to ${product.sizes[sizeIndex].quantity}`);
                     }
                 } else {
                     product.quantity -= item.quantity;
                     await product.save();
-                    console.log(`Updated general quantity to ${product.quantity}`);
+                    // console.log(`Updated general quantity to ${product.quantity}`);
                 }
             }
 
             // Update order status - WORKAROUND VERSION
-            console.log(`Updating order ${orderId} status to ${action === 'accept' ? 'accepted' : 'rejected'}`);
+            // console.log(`Updating order ${orderId} status to ${action === 'accept' ? 'accepted' : 'rejected'}`);
 
             const newStatus = action === 'accept' ? 'accepted' : 'rejected';
 
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
                 );
             }
 
-            console.log(`Order ${action}ed successfully`);
+            // console.log(`Order ${action}ed successfully`);
             return NextResponse.json(
                 {
                     success: true,
@@ -185,7 +185,7 @@ export async function POST(request: Request) {
                 );
             }
 
-            console.log('Order rejected successfully');
+            // console.log('Order rejected successfully');
             return NextResponse.json(
                 {
                     success: true,

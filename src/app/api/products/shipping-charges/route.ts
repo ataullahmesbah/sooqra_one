@@ -19,16 +19,16 @@ export async function GET(): Promise<NextResponse> {
     try {
         await dbConnect();
         const charges: ShippingChargeDocument[] = await ShippingCharge.find({}).lean() as ShippingChargeDocument[];
-        console.log('Fetched Shipping Charges:', charges);
+      
 
         if (charges.length === 0) {
-            // ✅ নতুন default charges
+         
             await ShippingCharge.insertMany([
-                { type: 'Dhaka', charge: 80 }, // ✅ ঢাকার জন্য
-                { type: 'Other-Districts', charge: 120 } // ✅ অন্যান্য জেলার জন্য
+                { type: 'Dhaka', charge: 80 }, //  Dhaka
+                { type: 'Other-Districts', charge: 120 } //  Others District
             ]);
             const defaultCharges: ShippingChargeDocument[] = await ShippingCharge.find({}).lean() as ShippingChargeDocument[];
-            console.log('Initialized Default Shipping Charges:', defaultCharges);
+         
             return NextResponse.json(defaultCharges, { status: 200 });
         }
 

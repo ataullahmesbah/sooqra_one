@@ -41,8 +41,8 @@ export async function POST(request: Request) {
         });
 
         // For development, log the token instead of sending email
-        console.log('Password reset token for development:', token);
-        console.log(`Reset URL: ${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`);
+        // console.log('Password reset token for development:', token);
+        // console.log(`Reset URL: ${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`);
 
         // Uncomment when email is configured
         // await sendEmail({

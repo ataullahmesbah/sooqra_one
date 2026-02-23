@@ -94,7 +94,7 @@ export default function OrderSuccess() {
                 } else if (Array.isArray(response.data) && response.data.length === 0) {
                     // Order not found yet, retry after delay
                     if (retryCount < 5) {
-                        console.log(`Order not found, retrying... (${retryCount + 1}/5)`);
+                        // console.log(`Order not found, retrying... (${retryCount + 1}/5)`);
                         setTimeout(() => {
                             setRetryCount(prev => prev + 1);
                         }, 2000);
@@ -109,7 +109,7 @@ export default function OrderSuccess() {
 
                 if (retryCount < 3) {
                     // Retry on error
-                    console.log(`Retrying after error... (${retryCount + 1}/3)`);
+                    // console.log(`Retrying after error... (${retryCount + 1}/3)`);
                     setTimeout(() => {
                         setRetryCount(prev => prev + 1);
                     }, 3000);

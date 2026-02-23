@@ -85,8 +85,6 @@ export default function MyOrders() {
             setLoading(true);
             const response = await axios.get('/api/users/orders');
 
-            // API থেকে data format check করুন
-            console.log('Orders API response:', response.data);
 
             if (Array.isArray(response.data)) {
                 setOrders(response.data);

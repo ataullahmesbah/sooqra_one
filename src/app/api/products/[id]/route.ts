@@ -113,7 +113,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
 
 
         for (const [key, value] of formData.entries()) {
-            console.log(`${key}:`, typeof value, value);
+            // console.log(`${key}:`, typeof value, value);
         }
 
 
@@ -246,7 +246,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         }
 
         if (Object.keys(errors).length > 0) {
-            console.log('Validation errors:', errors);
+            // console.log('Validation errors:', errors);
             return Response.json({
                 error: 'Validation failed',
                 details: errors

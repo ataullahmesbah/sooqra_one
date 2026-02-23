@@ -1,3 +1,5 @@
+// src/lib/auth.ts
+
 import { randomBytes } from 'crypto';
 
 export function generateToken(): string {
@@ -5,11 +7,31 @@ export function generateToken(): string {
 }
 
 export function validatePassword(password: string): { isValid: boolean; message?: string } {
-    if (password.length < 6) {
-        return { isValid: false, message: 'Password must be at least 6 characters long' };
+    // Minimum length 8
+    if (password.length < 8) {
+        return { isValid: false, message: 'Password must be at least 8 characters long' };
     }
 
-    // Add more password validation rules as needed
+    // Check for uppercase letter
+    if (!/[A-Z]/.test(password)) {
+        return { isValid: false, message: 'Password must contain at least one uppercase letter' };
+    }
+
+    // Check for lowercase letter
+    if (!/[a-z]/.test(password)) {
+        return { isValid: false, message: 'Password must contain at least one lowercase letter' };
+    }
+
+    // Check for number
+    if (!/[0-9]/.test(password)) {
+        return { isValid: false, message: 'Password must contain at least one number' };
+    }
+
+    // Check for special character
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+        return { isValid: false, message: 'Password must contain at least one special character (@, #, $, etc.)' };
+    }
+
     return { isValid: true };
 }
 
