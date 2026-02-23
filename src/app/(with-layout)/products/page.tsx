@@ -8,9 +8,10 @@ import ProductsSchema from '@/src/components/SEO/ProductsSchema';
 import ProductsPageLoading from '@/src/components/products/ProductsPageLoading/ProductsPageLoading';
 
 
+
 // Site configuration
 const SITE_CONFIG = {
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'NEXTAUTH_URL',
+  url: process.env.NEXTAUTH_URL || 'NEXT_PUBLIC_API_URL',
   name: 'Sooqra One',
   logo: 'https://sooqraone.com/logo.png',
   twitterHandle: '@sooqraone',

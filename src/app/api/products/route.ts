@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '0');
     const categoryId = searchParams.get('categoryId');
 
-    // ক্যাটেগরিগুলো ফেচ করার জন্য
+   
     if (type === 'categories') {
         try {
             const categories = await Category.find({}).lean();
