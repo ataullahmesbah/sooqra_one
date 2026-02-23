@@ -133,8 +133,8 @@ const ModeratorDashboardLayout = ({ children }: ModeratorDashboardLayoutProps) =
             label: 'Product Management',
             icon: <MdInventory size={20} />,
             children: [
-                { label: 'All Products', link: '/moderator-dashboard/shop/all-products' },
-                { label: 'Order Management', link: '/moderator-dashboard/shop/order-status' },
+                { label: 'All Products', link: '/moderator-dashboard/product/all-products' },
+                { label: 'Order Management', link: '/moderator-dashboard/product/order-status' },
                 { label: 'Add Product', link: '/moderator-dashboard/shop/create-products' },
             ],
         },
