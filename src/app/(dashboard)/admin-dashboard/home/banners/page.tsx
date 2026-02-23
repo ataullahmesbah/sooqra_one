@@ -4,6 +4,7 @@ import BannersAdminPage from "@/src/components/Dashboard/Banners/BannersAdminPag
 const page = () => {
     return (
         <div>
+            {/* Home Banners Page */}
             <BannersAdminPage />
         </div>
     );
