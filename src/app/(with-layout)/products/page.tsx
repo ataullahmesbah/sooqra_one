@@ -11,7 +11,8 @@ import ProductsPageLoading from '@/src/components/products/ProductsPageLoading/P
 
 // Site configuration
 const SITE_CONFIG = {
-  url: process.env.NEXTAUTH_URL || 'NEXT_PUBLIC_API_URL',
+  url: process.env.NEXTAUTH_URL || 'https://sooqraone.com',
+  // url: process.env.NEXT_PUBLIC_API_URL || 'https://sooqraone.com',
   name: 'Sooqra One',
   logo: 'https://sooqraone.com/logo.png',
   twitterHandle: '@sooqraone',

@@ -8,7 +8,7 @@ import Product from '@/src/models/Products';
 import dbConnect from '@/src/lib/dbConnect';
 import SubCategory from '@/src/models/SubCategory';
 
-// Interface definitions
+// Interface definitions //
 interface Price {
     currency: string;
     amount: number;
