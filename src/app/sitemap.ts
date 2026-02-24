@@ -9,7 +9,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     try {
         await dbConnect();
 
-        // 🔹 Fetch Products - শুধু active products যেগুলোর slug আছে
+        // 🔹 Fetch Products - 
         const products = await Product.find({
             availability: { $in: ['InStock', 'PreOrder'] }
         })
@@ -68,7 +68,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             { url: "/checkout", priority: 0.8, changeFrequency: "weekly" },
             { url: "/shop", priority: 0.7, changeFrequency: "weekly" },
             { url: "/track/orders", priority: 0.7, changeFrequency: "weekly" },
-            { url: "/blogs", priority: 0.8, changeFrequency: "weekly" },
+            { url: "/blog", priority: 0.8, changeFrequency: "weekly" },
         ];
 
         // 🔹 Static Sitemap

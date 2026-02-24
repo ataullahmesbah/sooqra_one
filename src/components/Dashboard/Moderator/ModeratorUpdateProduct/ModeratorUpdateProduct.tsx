@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 
-// Interface definitions
+// Interface definitions (unchanged)
 interface Category {
     _id: string;
     name: string;
@@ -78,7 +78,7 @@ interface FormData {
     isGlobal: boolean;
     targetCountry: string;
     targetCity: string;
-    owner?: string; // ✅ Owner field যোগ করলাম
+    owner?: string;
 }
 
 interface ImagePreviews {
@@ -147,19 +147,21 @@ export default function ModeratorUpdateProduct() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isOwner, setIsOwner] = useState(false); // ✅ Check if moderator owns this product
+    const [isOwner, setIsOwner] = useState(false);
+    const [isDataFetched, setIsDataFetched] = useState(false); // ✅ Track if data is fetched
     const mainImageInputRef = useRef<HTMLInputElement>(null);
     const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
     if (!productId) {
         console.error('No product ID found in params');
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-900">
-                <div className="text-white text-lg">Product ID not found. Please check the URL.</div>
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <div className="text-gray-700 text-lg">Product ID not found. Please check the URL.</div>
             </div>
         );
     }
 
+    // ✅ Fetch subcategories when category changes
     useEffect(() => {
         if (formData.category && formData.category !== 'new') {
             const fetchSubCategories = async () => {
@@ -180,11 +182,11 @@ export default function ModeratorUpdateProduct() {
         }
     }, [formData.category]);
 
-    // Fetch product and categories
+    // ✅ Fetch product data only once
     useEffect(() => {
-        const fetchData = async () => {
-            if (!productId) return;
+        if (!productId || isDataFetched) return;
 
+        const fetchData = async () => {
             setIsLoading(true);
             try {
                 // Product fetch
@@ -197,10 +199,9 @@ export default function ModeratorUpdateProduct() {
 
                 const product = await productRes.json();
 
-                // ✅ Check if moderator owns this product
+                // Check if moderator owns this product
                 if (session?.user?.role === 'moderator') {
                     if (product.owner !== session.user.name) {
-                        // Moderator doesn't own this product - redirect
                         router.push('/moderator-dashboard/product/all-products?error=unauthorized');
                         return;
                     }
@@ -273,7 +274,7 @@ export default function ModeratorUpdateProduct() {
                 setCategories(categoriesData);
                 setErrors({});
 
-                // Product load হওয়ার পর যদি category থাকে, তাহলে subcategories fetch করো
+                // Fetch subcategories for the product's category
                 if (product.category?._id) {
                     const subCatRes = await fetch(`/api/products?type=subcategories&categoryId=${product.category._id}`);
                     if (subCatRes.ok) {
@@ -281,6 +282,8 @@ export default function ModeratorUpdateProduct() {
                         setSubCategories(subCatData);
                     }
                 }
+
+                setIsDataFetched(true); // ✅ Mark as fetched
 
             } catch (err: any) {
                 console.error('Error in fetchData:', err);
@@ -293,7 +296,7 @@ export default function ModeratorUpdateProduct() {
         if (session) {
             fetchData();
         }
-    }, [productId, session, router]);
+    }, [productId, session, router, isDataFetched]); // ✅ Added isDataFetched dependency
 
     // Image cleanup
     useEffect(() => {
@@ -307,7 +310,7 @@ export default function ModeratorUpdateProduct() {
         };
     }, [imagePreviews]);
 
-    // Validation function
+    // Validation function (unchanged)
     const validateForm = (): Errors => {
         const newErrors: Errors = {};
 
@@ -373,7 +376,6 @@ export default function ModeratorUpdateProduct() {
             newErrors.metaDescription = 'Meta Description is required (max 160 chars)';
         }
 
-        // Size validation
         if (formData.sizeRequirement === 'Mandatory') {
             if (formData.sizes.length === 0) {
                 newErrors.sizes = 'At least one size with quantity is required';
@@ -402,11 +404,10 @@ export default function ModeratorUpdateProduct() {
         return newErrors;
     };
 
-    // Handle submit
+    // Handle submit (unchanged)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // ✅ Double-check ownership before submit
+
         if (session?.user?.role === 'moderator' && !isOwner) {
             setErrors({ general: 'You can only edit products you created' });
             return;
@@ -447,7 +448,6 @@ export default function ModeratorUpdateProduct() {
             data.append('sizeRequirement', formData.sizeRequirement);
             data.append('isGlobal', formData.isGlobal.toString());
 
-            // Subcategory 
             if (formData.subCategory && formData.subCategory.trim() && formData.subCategory !== 'new') {
                 data.append('subCategory', formData.subCategory);
             } else if (formData.subCategory === 'new' && formData.newSubCategory) {
@@ -457,7 +457,6 @@ export default function ModeratorUpdateProduct() {
                 data.append('subCategory', '');
             }
 
-            // Optional fields
             if (formData.usdPrice) data.append('usdPrice', formData.usdPrice);
             if (formData.eurPrice) data.append('eurPrice', formData.eurPrice);
             if (formData.usdExchangeRate) data.append('usdExchangeRate', formData.usdExchangeRate);
@@ -469,34 +468,28 @@ export default function ModeratorUpdateProduct() {
             if (formData.targetCity) data.append('targetCity', formData.targetCity);
             if (formData.keywords) data.append('keywords', formData.keywords);
 
-            // Main image handling
             if (formData.mainImage) {
                 data.append('mainImage', formData.mainImage);
             }
             data.append('existingMainImage', formData.existingMainImage || '');
 
-            // Additional images
             formData.additionalImages.forEach((img, index) => {
                 if (img) {
                     data.append('additionalImages', img);
                 }
             });
 
-            // Additional ALT texts
             formData.additionalAlts.forEach((alt, index) => {
                 data.append('additionalAlts', alt || '');
             });
 
-            // Existing additional images
             if (formData.existingAdditionalImages.length > 0) {
                 data.append('existingAdditionalImages', JSON.stringify(formData.existingAdditionalImages));
             }
 
-            // Arrays
             data.append('descriptions', formData.descriptions.filter(desc => desc.trim()).join('|||'));
             data.append('bulletPoints', formData.bulletPoints);
 
-            // JSON data
             if (formData.faqs.length > 0) {
                 data.append('faqs', JSON.stringify(formData.faqs));
             }
@@ -538,7 +531,7 @@ export default function ModeratorUpdateProduct() {
         }
     };
 
-    // Helper functions (unchanged from original)
+    // Helper functions (unchanged)
     const handleDescriptionChange = (index: number, value: string) => {
         const newDescriptions = [...formData.descriptions];
         newDescriptions[index] = value;
@@ -689,10 +682,10 @@ export default function ModeratorUpdateProduct() {
     // Loading states
     if (status === 'loading' || isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-orange-50">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <div className="text-orange-800 text-lg">Loading...</div>
+                    <div className="w-12 h-12 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <div className="text-gray-700 text-lg">Loading...</div>
                 </div>
             </div>
         );
@@ -701,9 +694,9 @@ export default function ModeratorUpdateProduct() {
     // Check authentication and role
     if (!session || session.user.role !== 'moderator') {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-orange-50">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
-                    <div className="text-orange-800 text-lg">Unauthorized access</div>
+                    <div className="text-gray-700 text-lg">Unauthorized access</div>
                 </div>
             </div>
         );
@@ -712,7 +705,7 @@ export default function ModeratorUpdateProduct() {
     // Check if moderator owns this product
     if (!isOwner && formData.owner) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-orange-50">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center max-w-md p-8 bg-white rounded-xl shadow-lg">
                     <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -721,7 +714,7 @@ export default function ModeratorUpdateProduct() {
                     <p className="text-gray-600 mb-6">You can only edit products that you have created.</p>
                     <button
                         onClick={() => router.push('/moderator-dashboard/product/all-products')}
-                        className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
+                        className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
                     >
                         Back to Products
                     </button>
@@ -730,11 +723,11 @@ export default function ModeratorUpdateProduct() {
         );
     }
 
-    // Render the form (same as original but with orange theme)
+    // Render the form with updated styling
     return (
-        <div className="min-h-screen bg-orange-50 p-4 md:p-6 lg:p-8">
+        <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
             <div className="max-w-5xl mx-auto">
-                <h1 className="text-3xl md:text-4xl font-bold text-center mb-10 text-orange-800">
+                <h1 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-800">
                     Update Product
                 </h1>
 
@@ -744,20 +737,20 @@ export default function ModeratorUpdateProduct() {
                     </div>
                 )}
 
-                <div className="mb-8 p-6 bg-white rounded-xl border border-orange-200 shadow-lg">
+                <div className="mb-8 p-6 bg-white rounded-xl border border-gray-200 shadow-lg">
                     <div className="flex items-center mb-4">
-                        <div className="bg-orange-100 p-2 rounded-lg mr-3">
-                            <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="bg-gray-100 p-2 rounded-lg mr-3">
+                            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                             </svg>
                         </div>
-                        <h2 className="text-xl font-bold text-orange-800">Product Owner</h2>
+                        <h2 className="text-xl font-bold text-gray-800">Product Owner</h2>
                     </div>
                     <div className="pl-1">
                         <p className="text-sm text-gray-500 mb-1">Editing as</p>
                         <p className="text-lg font-semibold text-gray-800 flex items-center">
                             {session?.user?.name || 'Not available'}
-                            <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                            <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
                                 Moderator
                             </span>
                         </p>
@@ -770,52 +763,29 @@ export default function ModeratorUpdateProduct() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="space-y-6">
+                    <div className="space-y-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Basic Information</h3>
+
                         <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Product Title*</label>
+                            <label className="block text-gray-700 mb-2 text-sm font-medium">Product Title*</label>
                             <input
                                 type="text"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.title ? 'border-red-500' : 'border-gray-700'}`}
+                                className={`w-full p-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.title ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                                 placeholder="Enter product title"
                             />
                             {errors.title && <p className="mt-1 text-sm text-red-500">{errors.title}</p>}
                         </div>
 
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Brand*</label>
-                            <input
-                                type="text"
-                                value={formData.brand}
-                                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.brand ? 'border-red-500' : 'border-gray-700'}`}
-                                placeholder="Enter brand name"
-                            />
-                            {errors.brand && <p className="mt-1 text-sm text-red-500">{errors.brand}</p>}
-                        </div>
-
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Availability</label>
-                            <select
-                                value={formData.availability}
-                                onChange={(e) => setFormData({ ...formData, availability: e.target.value as 'InStock' | 'OutOfStock' | 'PreOrder' })}
-                                className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            >
-                                <option value="InStock">In Stock</option>
-                                <option value="OutOfStock">Out of Stock</option>
-                                <option value="PreOrder">Pre-Order</option>
-                            </select>
-                        </div>
-
-                        <div className="flex gap-4 items-center">
+                        <div className='flex gap-4 items-center'>
                             <div className="flex-1">
-                                <label className="block text-gray-300 mb-2 text-sm font-medium">Quantity*</label>
+                                <label className="block text-gray-700 mb-2 text-sm font-medium">Quantity*</label>
                                 <input
                                     type="number"
                                     value={formData.quantity}
                                     onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                                    className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.quantity ? 'border-red-500' : 'border-gray-700'}`}
+                                    className={`w-full p-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.quantity ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                                     placeholder="Enter quantity"
                                     min="0"
                                     step="1"
@@ -824,20 +794,45 @@ export default function ModeratorUpdateProduct() {
                             </div>
 
                             <div className="flex-1">
-                                <label className="block text-gray-300 mb-2 text-sm font-medium">Product Code*</label>
+                                <label className="block text-gray-700 mb-2 text-sm font-medium">Product Code*</label>
                                 <input
                                     type="text"
                                     value={formData.product_code}
                                     onChange={(e) => setFormData({ ...formData, product_code: e.target.value })}
-                                    className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.product_code ? 'border-red-500' : 'border-gray-700'}`}
-                                    placeholder="Enter product code (e.g. ATM12345)"
+                                    className={`w-full p-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.product_code ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
+                                    placeholder="Enter product code"
                                 />
                                 {errors.product_code && <p className="mt-1 text-sm text-red-500">{errors.product_code}</p>}
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Category*</label>
+                            <label className="block text-gray-700 mb-2 text-sm font-medium">Brand*</label>
+                            <input
+                                type="text"
+                                value={formData.brand}
+                                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                                className={`w-full p-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.brand ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
+                                placeholder="Enter brand name"
+                            />
+                            {errors.brand && <p className="mt-1 text-sm text-red-500">{errors.brand}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-700 mb-2 text-sm font-medium">Availability</label>
+                            <select
+                                value={formData.availability}
+                                onChange={(e) => setFormData({ ...formData, availability: e.target.value as 'InStock' | 'OutOfStock' | 'PreOrder' })}
+                                className="w-full p-3 bg-gray-100 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                            >
+                                <option value="InStock">In Stock</option>
+                                <option value="OutOfStock">Out of Stock</option>
+                                <option value="PreOrder">Pre-Order</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-700 mb-2 text-sm font-medium">Category*</label>
                             <select
                                 value={formData.category}
                                 onChange={(e) =>
@@ -847,15 +842,11 @@ export default function ModeratorUpdateProduct() {
                                         newCategory: e.target.value === 'new' ? formData.newCategory : '',
                                     })
                                 }
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.category ? 'border-red-500' : 'border-gray-700'}`}
+                                className={`w-full p-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.category ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                             >
-                                <option value="" disabled>
-                                    Select a category
-                                </option>
+                                <option value="" disabled>Select a category</option>
                                 {categories.map((cat) => (
-                                    <option key={cat._id} value={cat._id}>
-                                        {cat.name}
-                                    </option>
+                                    <option key={cat._id} value={cat._id}>{cat.name}</option>
                                 ))}
                                 <option value="new">Add New Category</option>
                             </select>
@@ -866,7 +857,7 @@ export default function ModeratorUpdateProduct() {
                                         type="text"
                                         value={formData.newCategory}
                                         onChange={(e) => setFormData({ ...formData, newCategory: e.target.value })}
-                                        className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.newCategory ? 'border-red-500' : 'border-gray-700'}`}
+                                        className={`w-full p-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.newCategory ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                                         placeholder="Enter new category name"
                                     />
                                     {errors.newCategory && <p className="mt-1 text-sm text-red-500">{errors.newCategory}</p>}
@@ -875,34 +866,30 @@ export default function ModeratorUpdateProduct() {
                         </div>
 
                         <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Subcategory</label>
+                            <label className="block text-gray-700 mb-2 text-sm font-medium">Subcategory</label>
                             <select
                                 value={formData.subCategory || ''}
                                 onChange={(e) => setFormData({
                                     ...formData,
                                     subCategory: e.target.value,
-                                    newSubCategory: e.target.value === 'new' ? formData.newSubCategory : '' // ✅ reset করো
+                                    newSubCategory: e.target.value === 'new' ? formData.newSubCategory : ''
                                 })}
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border ${errors.subCategory ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                                className={`w-full p-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.subCategory ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                             >
                                 <option value="">Select Subcategory</option>
                                 {subCategories.map((sub) => (
                                     <option key={sub._id} value={sub._id}>{sub.name}</option>
                                 ))}
-                                <option value="new">➕ Add New Subcategory</option> {/* ✅ এই লাইন যোগ করো */}
+                                <option value="new">➕ Add New Subcategory</option>
                             </select>
 
-                            {/* ✅ New subcategory input field */}
                             {formData.subCategory === 'new' && (
                                 <div className="mt-2">
                                     <input
                                         type="text"
                                         value={formData.newSubCategory || ''}
-                                        onChange={(e) => setFormData({
-                                            ...formData,
-                                            newSubCategory: e.target.value
-                                        })}
-                                        className={`w-full p-3 bg-gray-800 text-white rounded-lg border ${errors.newSubCategory ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                                        onChange={(e) => setFormData({ ...formData, newSubCategory: e.target.value })}
+                                        className={`w-full p-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.newSubCategory ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                                         placeholder="Enter new subcategory name"
                                     />
                                     {errors.newSubCategory && <p className="mt-1 text-sm text-red-500">{errors.newSubCategory}</p>}
@@ -913,17 +900,20 @@ export default function ModeratorUpdateProduct() {
                                 <p className="mt-1 text-sm text-red-500">Subcategory is required</p>
                             )}
                         </div>
+                    </div>
 
+                    <div className="space-y-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Pricing</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-gray-300 mb-2 text-sm font-medium">BDT Price*</label>
+                                <label className="block text-gray-700 mb-2 text-sm font-medium">BDT Price*</label>
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">৳</span>
                                     <input
                                         type="number"
                                         value={formData.bdtPrice}
                                         onChange={(e) => setFormData({ ...formData, bdtPrice: e.target.value })}
-                                        className={`w-full pl-8 pr-4 py-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.bdtPrice ? 'border-red-500' : 'border-gray-700'}`}
+                                        className={`w-full pl-8 pr-4 py-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.bdtPrice ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                                         placeholder="0.00"
                                         step="0.01"
                                         min="0"
@@ -931,384 +921,361 @@ export default function ModeratorUpdateProduct() {
                                 </div>
                                 {errors.bdtPrice && <p className="mt-1 text-sm text-red-500">{errors.bdtPrice}</p>}
                             </div>
+
                             <div>
-                                <label className="block text-gray-300 mb-2 text-sm font-medium">USD Price</label>
+                                <label className="block text-gray-700 mb-2 text-sm font-medium">USD Price</label>
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">$</span>
                                     <input
                                         type="number"
                                         value={formData.usdPrice}
                                         onChange={(e) => setFormData({ ...formData, usdPrice: e.target.value })}
-                                        className={`w-full pl-8 pr-4 py-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.usdPrice ? 'border-red-500' : 'border-gray-700'}`}
+                                        className={`w-full pl-8 pr-4 py-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.usdPrice ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                                         placeholder="0.00"
                                         step="0.01"
                                         min="0"
                                     />
                                 </div>
                                 {errors.usdPrice && <p className="mt-1 text-sm text-red-500">{errors.usdPrice}</p>}
-                                {formData.usdPrice && (
-                                    <div className="mt-2">
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">Exchange Rate (1 USD = ? BDT)</label>
-                                        <input
-                                            type="number"
-                                            value={formData.usdExchangeRate}
-                                            onChange={(e) => setFormData({ ...formData, usdExchangeRate: e.target.value })}
-                                            className={`w-full px-3 py-2 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.usdExchangeRate ? 'border-red-500' : 'border-gray-700'}`}
-                                            placeholder="0.00"
-                                            step="0.01"
-                                            min="0"
-                                        />
-                                        {errors.usdExchangeRate && <p className="mt-1 text-sm text-red-500">{errors.usdExchangeRate}</p>}
-                                    </div>
-                                )}
                             </div>
+
                             <div>
-                                <label className="block text-gray-300 mb-2 text-sm font-medium">EUR Price</label>
+                                <label className="block text-gray-700 mb-2 text-sm font-medium">EUR Price</label>
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">€</span>
                                     <input
                                         type="number"
                                         value={formData.eurPrice}
                                         onChange={(e) => setFormData({ ...formData, eurPrice: e.target.value })}
-                                        className={`w-full pl-8 pr-4 py-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.eurPrice ? 'border-red-500' : 'border-gray-700'}`}
+                                        className={`w-full pl-8 pr-4 py-3 bg-gray-100 text-gray-800 rounded-lg border ${errors.eurPrice ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-gray-400`}
                                         placeholder="0.00"
                                         step="0.01"
                                         min="0"
                                     />
                                 </div>
                                 {errors.eurPrice && <p className="mt-1 text-sm text-red-500">{errors.eurPrice}</p>}
-                                {formData.eurPrice && (
-                                    <div className="mt-2">
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">Exchange Rate (1 EUR = ? BDT)</label>
-                                        <input
-                                            type="number"
-                                            value={formData.eurExchangeRate}
-                                            onChange={(e) => setFormData({ ...formData, eurExchangeRate: e.target.value })}
-                                            className={`w-full px-3 py-2 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.eurExchangeRate ? 'border-red-500' : 'border-gray-700'}`}
-                                            placeholder="0.00"
-                                            step="0.01"
-                                            min="0"
-                                        />
-                                        {errors.eurExchangeRate && <p className="mt-1 text-sm text-red-500">{errors.eurExchangeRate}</p>}
-                                    </div>
-                                )}
                             </div>
                         </div>
+                    </div>
 
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Primary Description*</label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                rows={4}
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.description ? 'border-red-500' : 'border-gray-700'}`}
-                                placeholder="Describe your product"
-                            />
-                            {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
-                        </div>
 
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Short Description (max 160 chars)</label>
-                            <textarea
-                                value={formData.shortDescription}
-                                onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                                rows={2}
-                                maxLength={160}
-                                className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                placeholder="Short summary for snippets"
-                            />
-                        </div>
 
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Additional Descriptions</label>
-                            {formData.descriptions.map((desc, index) => (
-                                <div key={index} className="flex items-center mb-2">
-                                    <textarea
-                                        value={desc}
-                                        onChange={(e) => handleDescriptionChange(index, e.target.value)}
-                                        rows={2}
-                                        className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        placeholder={`Additional description ${index + 1}`}
-                                    />
-                                    {formData.descriptions.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => removeDescription(index)}
-                                            className="ml-2 text-red-500 hover:text-red-700"
-                                        >
-                                            Remove
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={addDescription}
-                                className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-                            >
-                                + Add More Description
-                            </button>
-                        </div>
 
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Bullet Points (comma-separated)</label>
-                            <textarea
-                                value={formData.bulletPoints}
-                                onChange={(e) => setFormData({ ...formData, bulletPoints: e.target.value })}
-                                rows={3}
-                                className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                placeholder="Feature 1, Feature 2, Feature 3"
-                            />
-                            <div className="mt-2">
-                                <p className="text-xs text-gray-500">Preview:</p>
-                                <div className="mt-1 p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
-                                    {formData.bulletPoints.split(',').filter(Boolean).map((point, i) => (
-                                        <div key={i} className="flex items-start mb-1">
-                                            <span className="mr-2">•</span>
-                                            <span>{point.trim()}</span>
-                                        </div>
-                                    ))}
-                                    {!formData.bulletPoints && <p className="text-gray-500">No bullet points added</p>}
-                                </div>
-                            </div>
-                        </div>
 
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Keywords (comma-separated)</label>
-                            <input
-                                type="text"
-                                value={formData.keywords}
-                                onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-                                className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                placeholder="keyword1, keyword2, keyword3"
-                            />
-                        </div>
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Primary Description*</label>
+                        <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            rows={4}
+                            className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.description ? 'border-red-500' : 'border-gray-700'}`}
+                            placeholder="Describe your product"
+                        />
+                        {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
+                    </div>
 
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Meta Title* (max 60 chars)</label>
-                            <input
-                                type="text"
-                                value={formData.metaTitle}
-                                onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
-                                maxLength={60}
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.metaTitle ? 'border-red-500' : 'border-gray-700'}`}
-                                placeholder="Enter meta title"
-                            />
-                            {errors.metaTitle && <p className="mt-1 text-sm text-red-500">{errors.metaTitle}</p>}
-                        </div>
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Short Description (max 160 chars)</label>
+                        <textarea
+                            value={formData.shortDescription}
+                            onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                            rows={2}
+                            maxLength={160}
+                            className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="Short summary for snippets"
+                        />
+                    </div>
 
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Meta Description* (max 160 chars)</label>
-                            <textarea
-                                value={formData.metaDescription}
-                                onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
-                                rows={3}
-                                maxLength={160}
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.metaDescription ? 'border-red-500' : 'border-gray-700'}`}
-                                placeholder="Enter meta description"
-                            />
-                            {errors.metaDescription && <p className="mt-1 text-sm text-red-500">{errors.metaDescription}</p>}
-                        </div>
-
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">FAQs</label>
-                            {formData.faqs.map((faq, index) => (
-                                <div key={index} className="mb-4 border p-4 rounded-lg">
-                                    <input
-                                        type="text"
-                                        value={faq.question}
-                                        onChange={(e) => handleFaqChange(index, 'question', e.target.value)}
-                                        className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
-                                        placeholder="Question"
-                                    />
-                                    <textarea
-                                        value={faq.answer}
-                                        onChange={(e) => handleFaqChange(index, 'answer', e.target.value)}
-                                        rows={2}
-                                        className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        placeholder="Answer"
-                                    />
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Additional Descriptions</label>
+                        {formData.descriptions.map((desc, index) => (
+                            <div key={index} className="flex items-center mb-2">
+                                <textarea
+                                    value={desc}
+                                    onChange={(e) => handleDescriptionChange(index, e.target.value)}
+                                    rows={2}
+                                    className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder={`Additional description ${index + 1}`}
+                                />
+                                {formData.descriptions.length > 1 && (
                                     <button
                                         type="button"
-                                        onClick={() => removeFaq(index)}
-                                        className="mt-2 text-red-500 hover:text-red-700 text-sm"
-                                    >
-                                        Remove FAQ
-                                    </button>
-                                </div>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={addFaq}
-                                className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-                            >
-                                + Add FAQ
-                            </button>
-                        </div>
-
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Specifications</label>
-                            {formData.specifications.map((spec, index) => (
-                                <div key={index} className="flex items-center mb-2">
-                                    <input
-                                        type="text"
-                                        value={spec.name}
-                                        onChange={(e) => handleSpecChange(index, 'name', e.target.value)}
-                                        className="w-1/2 px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 mr-2"
-                                        placeholder="Spec Name (e.g. Weight)"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={spec.value}
-                                        onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
-                                        className="w-1/2 px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        placeholder="Value (e.g. 200g)"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeSpec(index)}
+                                        onClick={() => removeDescription(index)}
                                         className="ml-2 text-red-500 hover:text-red-700"
                                     >
                                         Remove
                                     </button>
-                                </div>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={addSpec}
-                                className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-                            >
-                                + Add Specification
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Size Requirement*</label>
-                            <select
-                                value={formData.sizeRequirement}
-                                onChange={(e) => setFormData({ ...formData, sizeRequirement: e.target.value as 'Optional' | 'Mandatory' })}
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.sizeRequirement ? 'border-red-500' : 'border-gray-700'}`}
-                            >
-                                <option value="Optional">Optional</option>
-                                <option value="Mandatory">Mandatory</option>
-                            </select>
-                            {errors.sizeRequirement && <p className="mt-1 text-sm text-red-500">{errors.sizeRequirement}</p>}
-
-                            {formData.sizeRequirement === 'Mandatory' && (
-                                <div>
-                                    <label className="block text-gray-300 mb-2 text-sm font-medium">Sizes* (Total quantity must match sum of size quantities)</label>
-                                    {formData.sizes.map((size, index) => (
-                                        <div key={index} className="flex items-center mb-2 gap-4">
-                                            <input
-                                                type="text"
-                                                value={size.name}
-                                                onChange={(e) => handleSizeChange(index, 'name', e.target.value)}
-                                                className={`w-1/2 p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors[`sizeName${index}`] ? 'border-red-500' : 'border-gray-700'}`}
-                                                placeholder={`Size ${index + 1} (e.g., S, M, 40)`}
-                                            />
-                                            <input
-                                                type="number"
-                                                value={size.quantity}
-                                                onChange={(e) => handleSizeChange(index, 'quantity', e.target.value)}
-                                                className={`w-1/2 p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors[`sizeQuantity${index}`] ? 'border-red-500' : 'border-gray-700'}`}
-                                                placeholder="Quantity"
-                                                min="0"
-                                            />
-                                            {formData.sizes.length > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeSize(index)}
-                                                    className="ml-2 text-red-500 hover:text-red-700"
-                                                >
-                                                    Remove
-                                                </button>
-                                            )}
-                                            {(errors[`sizeName${index}`] || errors[`sizeQuantity${index}`]) && (
-                                                <p className="mt-1 text-sm text-red-500">
-                                                    {errors[`sizeName${index}`] || errors[`sizeQuantity${index}`]}
-                                                </p>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={addSize}
-                                        className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-                                    >
-                                        + Add Size
-                                    </button>
-                                    {errors.sizes && <p className="mt-1 text-sm text-red-500">{errors.sizes}</p>}
-                                </div>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="block text-gray-300 mb-2 text-sm font-medium">Global Product</label>
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={formData.isGlobal}
-                                    onChange={(e) => setFormData({ ...formData, isGlobal: e.target.checked })}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                />
-                                <span className="ml-2 text-sm text-gray-300">Enable global targeting</span>
+                                )}
                             </div>
-                        </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={addDescription}
+                            className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                        >
+                            + Add More Description
+                        </button>
+                    </div>
 
-                        {!formData.isGlobal && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-gray-300 mb-2 text-sm font-medium">Target Country*</label>
-                                    <input
-                                        type="text"
-                                        value={formData.targetCountry}
-                                        onChange={(e) => setFormData({ ...formData, targetCountry: e.target.value })}
-                                        className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.targetCountry ? 'border-red-500' : 'border-gray-700'}`}
-                                        placeholder="Enter target country"
-                                    />
-                                    {errors.targetCountry && <p className="mt-1 text-sm text-red-500">{errors.targetCountry}</p>}
-                                </div>
-                                <div>
-                                    <label className="block text-gray-300 mb-2 text-sm font-medium">Target City*</label>
-                                    <input
-                                        type="text"
-                                        value={formData.targetCity}
-                                        onChange={(e) => setFormData({ ...formData, targetCity: e.target.value })}
-                                        className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.targetCity ? 'border-red-500' : 'border-gray-700'}`}
-                                        placeholder="Enter target city"
-                                    />
-                                    {errors.targetCity && <p className="mt-1 text-sm text-red-500">{errors.targetCity}</p>}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-gray-300 mb-2 text-sm font-medium">Initial Rating Value (1-5)</label>
-                                <input
-                                    type="number"
-                                    value={formData.aggregateRating.ratingValue}
-                                    onChange={(e) => setFormData({ ...formData, aggregateRating: { ...formData.aggregateRating, ratingValue: e.target.value } })}
-                                    className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    placeholder="e.g. 4.5"
-                                    min="1"
-                                    max="5"
-                                    step="0.1"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-gray-300 mb-2 text-sm font-medium">Initial Review Count</label>
-                                <input
-                                    type="number"
-                                    value={formData.aggregateRating.reviewCount}
-                                    onChange={(e) => setFormData({ ...formData, aggregateRating: { ...formData.aggregateRating, reviewCount: e.target.value } })}
-                                    className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    placeholder="e.g. 0"
-                                    min="0"
-                                />
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Bullet Points (comma-separated)</label>
+                        <textarea
+                            value={formData.bulletPoints}
+                            onChange={(e) => setFormData({ ...formData, bulletPoints: e.target.value })}
+                            rows={3}
+                            className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="Feature 1, Feature 2, Feature 3"
+                        />
+                        <div className="mt-2">
+                            <p className="text-xs text-gray-500">Preview:</p>
+                            <div className="mt-1 p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
+                                {formData.bulletPoints.split(',').filter(Boolean).map((point, i) => (
+                                    <div key={i} className="flex items-start mb-1">
+                                        <span className="mr-2">•</span>
+                                        <span>{point.trim()}</span>
+                                    </div>
+                                ))}
+                                {!formData.bulletPoints && <p className="text-gray-500">No bullet points added</p>}
                             </div>
                         </div>
                     </div>
+
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Keywords (comma-separated)</label>
+                        <input
+                            type="text"
+                            value={formData.keywords}
+                            onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
+                            className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="keyword1, keyword2, keyword3"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Meta Title* (max 60 chars)</label>
+                        <input
+                            type="text"
+                            value={formData.metaTitle}
+                            onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
+                            maxLength={60}
+                            className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.metaTitle ? 'border-red-500' : 'border-gray-700'}`}
+                            placeholder="Enter meta title"
+                        />
+                        {errors.metaTitle && <p className="mt-1 text-sm text-red-500">{errors.metaTitle}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Meta Description* (max 160 chars)</label>
+                        <textarea
+                            value={formData.metaDescription}
+                            onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
+                            rows={3}
+                            maxLength={160}
+                            className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.metaDescription ? 'border-red-500' : 'border-gray-700'}`}
+                            placeholder="Enter meta description"
+                        />
+                        {errors.metaDescription && <p className="mt-1 text-sm text-red-500">{errors.metaDescription}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">FAQs</label>
+                        {formData.faqs.map((faq, index) => (
+                            <div key={index} className="mb-4 border p-4 rounded-lg">
+                                <input
+                                    type="text"
+                                    value={faq.question}
+                                    onChange={(e) => handleFaqChange(index, 'question', e.target.value)}
+                                    className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
+                                    placeholder="Question"
+                                />
+                                <textarea
+                                    value={faq.answer}
+                                    onChange={(e) => handleFaqChange(index, 'answer', e.target.value)}
+                                    rows={2}
+                                    className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder="Answer"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => removeFaq(index)}
+                                    className="mt-2 text-red-500 hover:text-red-700 text-sm"
+                                >
+                                    Remove FAQ
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={addFaq}
+                            className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                        >
+                            + Add FAQ
+                        </button>
+                    </div>
+
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Specifications</label>
+                        {formData.specifications.map((spec, index) => (
+                            <div key={index} className="flex items-center mb-2">
+                                <input
+                                    type="text"
+                                    value={spec.name}
+                                    onChange={(e) => handleSpecChange(index, 'name', e.target.value)}
+                                    className="w-1/2 px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 mr-2"
+                                    placeholder="Spec Name (e.g. Weight)"
+                                />
+                                <input
+                                    type="text"
+                                    value={spec.value}
+                                    onChange={(e) => handleSpecChange(index, 'value', e.target.value)}
+                                    className="w-1/2 px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder="Value (e.g. 200g)"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => removeSpec(index)}
+                                    className="ml-2 text-red-500 hover:text-red-700"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={addSpec}
+                            className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                        >
+                            + Add Specification
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Size Requirement*</label>
+                        <select
+                            value={formData.sizeRequirement}
+                            onChange={(e) => setFormData({ ...formData, sizeRequirement: e.target.value as 'Optional' | 'Mandatory' })}
+                            className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.sizeRequirement ? 'border-red-500' : 'border-gray-700'}`}
+                        >
+                            <option value="Optional">Optional</option>
+                            <option value="Mandatory">Mandatory</option>
+                        </select>
+                        {errors.sizeRequirement && <p className="mt-1 text-sm text-red-500">{errors.sizeRequirement}</p>}
+
+                        {formData.sizeRequirement === 'Mandatory' && (
+                            <div>
+                                <label className="block text-gray-300 mb-2 text-sm font-medium">Sizes* (Total quantity must match sum of size quantities)</label>
+                                {formData.sizes.map((size, index) => (
+                                    <div key={index} className="flex items-center mb-2 gap-4">
+                                        <input
+                                            type="text"
+                                            value={size.name}
+                                            onChange={(e) => handleSizeChange(index, 'name', e.target.value)}
+                                            className={`w-1/2 p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors[`sizeName${index}`] ? 'border-red-500' : 'border-gray-700'}`}
+                                            placeholder={`Size ${index + 1} (e.g., S, M, 40)`}
+                                        />
+                                        <input
+                                            type="number"
+                                            value={size.quantity}
+                                            onChange={(e) => handleSizeChange(index, 'quantity', e.target.value)}
+                                            className={`w-1/2 p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors[`sizeQuantity${index}`] ? 'border-red-500' : 'border-gray-700'}`}
+                                            placeholder="Quantity"
+                                            min="0"
+                                        />
+                                        {formData.sizes.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeSize(index)}
+                                                className="ml-2 text-red-500 hover:text-red-700"
+                                            >
+                                                Remove
+                                            </button>
+                                        )}
+                                        {(errors[`sizeName${index}`] || errors[`sizeQuantity${index}`]) && (
+                                            <p className="mt-1 text-sm text-red-500">
+                                                {errors[`sizeName${index}`] || errors[`sizeQuantity${index}`]}
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={addSize}
+                                    className="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                                >
+                                    + Add Size
+                                </button>
+                                {errors.sizes && <p className="mt-1 text-sm text-red-500">{errors.sizes}</p>}
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-gray-300 mb-2 text-sm font-medium">Global Product</label>
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                checked={formData.isGlobal}
+                                onChange={(e) => setFormData({ ...formData, isGlobal: e.target.checked })}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-gray-300">Enable global targeting</span>
+                        </div>
+                    </div>
+
+                    {!formData.isGlobal && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-gray-300 mb-2 text-sm font-medium">Target Country*</label>
+                                <input
+                                    type="text"
+                                    value={formData.targetCountry}
+                                    onChange={(e) => setFormData({ ...formData, targetCountry: e.target.value })}
+                                    className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.targetCountry ? 'border-red-500' : 'border-gray-700'}`}
+                                    placeholder="Enter target country"
+                                />
+                                {errors.targetCountry && <p className="mt-1 text-sm text-red-500">{errors.targetCountry}</p>}
+                            </div>
+                            <div>
+                                <label className="block text-gray-300 mb-2 text-sm font-medium">Target City*</label>
+                                <input
+                                    type="text"
+                                    value={formData.targetCity}
+                                    onChange={(e) => setFormData({ ...formData, targetCity: e.target.value })}
+                                    className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.targetCity ? 'border-red-500' : 'border-gray-700'}`}
+                                    placeholder="Enter target city"
+                                />
+                                {errors.targetCity && <p className="mt-1 text-sm text-red-500">{errors.targetCity}</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-gray-300 mb-2 text-sm font-medium">Initial Rating Value (1-5)</label>
+                            <input
+                                type="number"
+                                value={formData.aggregateRating.ratingValue}
+                                onChange={(e) => setFormData({ ...formData, aggregateRating: { ...formData.aggregateRating, ratingValue: e.target.value } })}
+                                className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                placeholder="e.g. 4.5"
+                                min="1"
+                                max="5"
+                                step="0.1"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-gray-300 mb-2 text-sm font-medium">Initial Review Count</label>
+                            <input
+                                type="number"
+                                value={formData.aggregateRating.reviewCount}
+                                onChange={(e) => setFormData({ ...formData, aggregateRating: { ...formData.aggregateRating, reviewCount: e.target.value } })}
+                                className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                placeholder="e.g. 0"
+                                min="0"
+                            />
+                        </div>
+                    </div>
+
 
                     {/* Product Type */}
                     <div className="space-y-4">
@@ -1489,20 +1456,16 @@ export default function ModeratorUpdateProduct() {
                         </div>
                     </div>
 
+
                     <div className="pt-6">
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className={`w-full py-3 px-6 bg-orange-600 rounded-lg font-medium text-white hover:bg-orange-700 transition-all duration-300 flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`w-full py-3 px-6 bg-gray-600 rounded-lg font-medium text-white hover:bg-gray-700 transition-all duration-300 flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             {isSubmitting ? (
                                 <span className="flex items-center justify-center">
-                                    <svg
-                                        className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                    >
+                                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                     </svg>
@@ -1518,5 +1481,3 @@ export default function ModeratorUpdateProduct() {
         </div>
     );
 }
-
-               

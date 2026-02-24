@@ -124,8 +124,8 @@ export default function AccountPage() {
             ];
         } else if (session.user.role === 'moderator') {
             return [
-                { name: 'Moderator Dashboard', href: '/moderator', icon: <FaTachometerAlt /> },
-                { name: 'Manage Content', href: '/moderator/shop/order-status', icon: <FaEdit /> }
+                { name: 'Moderator Dashboard', href: '/moderator-dashboard', icon: <FaTachometerAlt /> },
+                { name: 'Manage Content', href: '/moderator-dashboard/product/order-status', icon: <FaEdit /> }
             ];
         }
 

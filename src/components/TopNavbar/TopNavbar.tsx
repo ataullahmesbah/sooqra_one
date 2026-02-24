@@ -269,7 +269,7 @@ export default function TopNavbar() {
         } else if (session.user.role === 'moderator') {
             links.push(
                 { name: 'Moderator Panel', href: '/moderator-dashboard', icon: <FaTachometerAlt /> },
-                { name: 'Manage Products', href: '/moderator-dashboard/products/all-products', icon: <FaBox /> }
+                { name: 'Manage Products', href: '/moderator-dashboard/product/all-products', icon: <FaBox /> }
             );
         }
         return links;

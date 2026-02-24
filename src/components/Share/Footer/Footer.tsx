@@ -154,7 +154,7 @@ const Footer = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-400">Business Hours</p>
-                                        <p className="text-white text-sm">10:00 AM - 10:00 PM</p>
+                                        <p className="text-white text-sm">10:00 AM - 08:00 PM</p>
                                     </div>
                                 </div>
                             </div>
