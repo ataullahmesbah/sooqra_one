@@ -1,21 +1,21 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IFeature {
-    icon: string;
-    text: string;
+    icon?: string;
+    text?: string;
 }
 
 export interface IShopBanner extends Document {
-    title: string;
-    subtitle: string;
-    highlights: string[];
-    cta: string;
-    bg: string;
-    textColor: string;
-    badgeColor: string;
-    features: IFeature[];
+    title?: string;
+    subtitle?: string;
+    highlights?: string[];
+    cta?: string;
+    bg?: string;
+    textColor?: string;
+    badgeColor?: string;
+    features?: IFeature[];
     image: string;
-    link: string;
+    link?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -23,62 +23,47 @@ export interface IShopBanner extends Document {
 const FeatureSchema = new Schema<IFeature>({
     icon: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
+        default: ''
     },
     text: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
+        default: ''
     },
-});
+}, { _id: false });
+
+// src/models/ShopBanner.ts  (এই ফাইলটা replace করো)
 
 const ShopBannerSchema = new Schema<IShopBanner>({
     title: {
         type: String,
-        required: true,
-        trim: true,
+        required: false,
+        trim: true
+
     },
     subtitle: {
         type: String,
-        required: true,
-        trim: true,
+        required: false,
+        trim: true
     },
     highlights: {
         type: [String],
-        required: true,
-        validate: {
-            validator: (arr: string[]) => arr.length > 0,
-            message: 'At least one highlight is required',
-        },
+        required: false
     },
     cta: {
         type: String,
-        required: true,
-        trim: true,
+        required: false,
+        trim: true
     },
-    bg: {
-        type: String,
-        required: true,
-        trim: true,
-    },
-    textColor: {
-        type: String,
-        required: true,
-        trim: true,
-    },
-    badgeColor: {
-        type: String,
-        required: true,
-        trim: true,
-    },
+    bg: { type: String, required: false, default: '...' },
+    textColor: { type: String, required: false, default: 'text-white' },
+    badgeColor: { type: String, required: false, default: 'from-purple-600 to-indigo-600' },
     features: {
         type: [FeatureSchema],
-        required: true,
-        validate: {
-            validator: (arr: IFeature[]) => arr.length > 0,
-            message: 'At least one feature is required',
-        },
+        required: false
     },
     image: {
         type: String,
@@ -87,12 +72,10 @@ const ShopBannerSchema = new Schema<IShopBanner>({
     },
     link: {
         type: String,
-        required: true,
-        trim: true,
+        required: false,
+        default: '/shop'
     },
-}, {
-    timestamps: true,
-});
+}, { timestamps: true });
 
 const ShopBanner: Model<IShopBanner> = mongoose.models.ShopBanner || mongoose.model<IShopBanner>('ShopBanner', ShopBannerSchema);
 

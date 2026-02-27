@@ -61,71 +61,76 @@ export async function GET(): Promise<NextResponse<ApiResponse<IShopBanner[]>>> {
   }
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<IShopBanner>>> {
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     await dbConnect();
     const formData = await request.formData();
 
-    // Validate required fields
-    const requiredFields: BannerFormField[] = [
-      'title', 'subtitle', 'highlights', 'cta', 'bg',
-      'textColor', 'badgeColor', 'features', 'link'
-    ];
+    const bannerData: Partial<IShopBanner> = {};
 
-    const formDataObj: Partial<BannerFormData> = {};
+    // Helper: শুধু meaningful (non-empty) value add করো
+    const addIfMeaningful = (key: keyof IShopBanner, value: any) => {
+      if (value == null) return; // null/undefined skip
 
-    for (const field of requiredFields) {
-      const value = formData.get(field);
-      if (!value) {
-        return NextResponse.json(
-          { success: false, error: `Missing required field: ${field}` },
-          { status: 400 }
-        );
-      }
-
-      if (field === 'highlights' || field === 'features') {
-        try {
-          if (field === 'highlights') {
-            formDataObj.highlights = JSON.parse(value as string);
-          } else if (field === 'features') {
-            formDataObj.features = JSON.parse(value as string);
-          }
-        } catch {
-          return NextResponse.json(
-            { success: false, error: `Invalid JSON format for ${field}` },
-            { status: 400 }
-          );
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.length > 0) {
+          bannerData[key] = trimmed;
         }
-      } else {
-        // Type-safe assignment for string fields
-        const stringField = field as StringFields;
-        formDataObj[stringField] = value as string;
+        // খালি string ('') → skip
+      } else if (Array.isArray(value)) {
+        if (value.length > 0) {
+          // array-এর ক্ষেত্রে valid item চেক (highlights/features-এর জন্য)
+          if (key === 'highlights') {
+            const valid = value.filter((item: string) => typeof item === 'string' && item.trim().length > 0);
+            if (valid.length > 0) bannerData.highlights = valid.map(s => s.trim());
+          } else if (key === 'features') {
+            const valid = value.filter((f: any) =>
+              (f?.icon?.trim?.()?.length > 0) || (f?.text?.trim?.()?.length > 0)
+            );
+            if (valid.length > 0) bannerData.features = valid;
+          } else {
+            bannerData[key] = value;
+          }
+        }
+        // empty array [] → skip
+      }
+      // অন্য টাইপ skip বা handle করো যদি দরকার
+    };
+
+    // সব string field চেক
+    addIfMeaningful('title', formData.get('title'));
+    addIfMeaningful('subtitle', formData.get('subtitle'));
+    addIfMeaningful('cta', formData.get('cta'));
+    addIfMeaningful('link', formData.get('link'));
+    addIfMeaningful('bg', formData.get('bg'));
+    addIfMeaningful('textColor', formData.get('textColor'));
+    addIfMeaningful('badgeColor', formData.get('badgeColor'));
+
+    // Highlights (frontend থেকে JSON string আসে)
+    const highlightsStr = formData.get('highlights');
+    if (typeof highlightsStr === 'string' && highlightsStr.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(highlightsStr);
+        addIfMeaningful('highlights', parsed);
+      } catch (e) {
+        console.warn('Invalid highlights JSON:', e);
       }
     }
 
-    // Handle Cloudinary options
-    const cloudinaryOptions: any = {};
-
-    const folder = formData.get('folder') as string;
-    const width = formData.get('width') as string;
-    const height = formData.get('height') as string;
-    const crop = formData.get('crop') as string;
-    const format = formData.get('format') as string;
-    const quality = formData.get('quality') as string;
-
-    if (folder) cloudinaryOptions.folder = folder;
-    if (width && !isNaN(parseInt(width))) cloudinaryOptions.width = parseInt(width);
-    if (height && !isNaN(parseInt(height))) cloudinaryOptions.height = parseInt(height);
-    if (crop) cloudinaryOptions.crop = crop;
-    if (format) cloudinaryOptions.format = format;
-    if (quality) cloudinaryOptions.quality = quality;
-
-    // Default folder if not provided
-    if (!cloudinaryOptions.folder) {
-      cloudinaryOptions.folder = 'shop_banners';
+    // Features
+    const featuresStr = formData.get('features');
+    if (typeof featuresStr === 'string' && featuresStr.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(featuresStr);
+        addIfMeaningful('features', parsed);
+      } catch (e) {
+        console.warn('Invalid features JSON:', e);
+      }
     }
 
-    // Handle image upload
+    // Image – required
     const imageFile = formData.get('image') as File | null;
     if (!imageFile || imageFile.size === 0) {
       return NextResponse.json(
@@ -134,51 +139,40 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       );
     }
 
-    // Upload to Cloudinary with dynamic options
+    // Cloudinary upload
     const arrayBuffer = await imageFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const uploadResult = await uploadToCloudinary(buffer, cloudinaryOptions);
+    const uploadResult = await uploadToCloudinary(buffer, {
+      folder: 'shop_banners',
+      // অন্য options যোগ করতে পারো
+    });
 
     if (!uploadResult.success || !uploadResult.secure_url) {
       return NextResponse.json(
-        { success: false, error: uploadResult.error || 'Image upload failed' },
+        { success: false, error: 'Image upload failed' },
         { status: 500 }
       );
     }
 
-    // Type-safe banner data creation
-    const bannerData: Omit<BannerFormData, 'image' | 'id' | 'folder' | 'width' | 'height' | 'crop' | 'format' | 'quality'> = {
-      title: formDataObj.title!,
-      subtitle: formDataObj.subtitle!,
-      highlights: formDataObj.highlights!,
-      cta: formDataObj.cta!,
-      bg: formDataObj.bg!,
-      textColor: formDataObj.textColor!,
-      badgeColor: formDataObj.badgeColor!,
-      features: formDataObj.features!,
-      link: formDataObj.link!,
-    };
+    bannerData.image = uploadResult.secure_url;
 
-    const banner = await ShopBanner.create({
-      ...bannerData,
-      image: uploadResult.secure_url
-    });
+    // Create document – এখন শুধু যা দিয়েছে তাই থাকবে
+    const banner = await ShopBanner.create(bannerData);
 
     return NextResponse.json({
       success: true,
       data: banner,
       message: 'Banner created successfully'
-    }, {
-      status: 201
-    });
+    }, { status: 201 });
 
   } catch (error) {
     console.error('POST error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to create banner';
-
     return NextResponse.json(
-      { success: false, error: errorMessage },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create banner'
+      },
       { status: 500 }
     );
   }
@@ -206,35 +200,47 @@ export async function PUT(request: NextRequest): Promise<NextResponse<ApiRespons
       );
     }
 
-    // Prepare update data
-    const updateData: Partial<BannerFormData> = {};
+    // Prepare update data - only include fields that are provided
+    const updateData: any = {};
 
-    const fields: BannerFormField[] = [
-      'title', 'subtitle', 'highlights', 'cta', 'bg',
-      'textColor', 'badgeColor', 'features', 'link'
-    ];
+    // String fields - only add if they exist and are not empty
+    const title = formData.get('title');
+    if (title !== null && title !== '') updateData.title = title;
 
-    for (const field of fields) {
-      const value = formData.get(field);
-      if (value !== null && value !== undefined && value !== '') {
-        if (field === 'highlights' || field === 'features') {
-          try {
-            if (field === 'highlights') {
-              updateData.highlights = JSON.parse(value as string);
-            } else if (field === 'features') {
-              updateData.features = JSON.parse(value as string);
-            }
-          } catch {
-            return NextResponse.json(
-              { success: false, error: `Invalid JSON format for ${field}` },
-              { status: 400 }
-            );
-          }
-        } else {
-          // Type-safe assignment for string fields
-          const stringField = field as StringFields;
-          updateData[stringField] = value as string;
-        }
+    const subtitle = formData.get('subtitle');
+    if (subtitle !== null && subtitle !== '') updateData.subtitle = subtitle;
+
+    const cta = formData.get('cta');
+    if (cta !== null && cta !== '') updateData.cta = cta;
+
+    const link = formData.get('link');
+    if (link !== null && link !== '') updateData.link = link;
+
+    const bg = formData.get('bg');
+    if (bg !== null && bg !== '') updateData.bg = bg;
+
+    const textColor = formData.get('textColor');
+    if (textColor !== null && textColor !== '') updateData.textColor = textColor;
+
+    const badgeColor = formData.get('badgeColor');
+    if (badgeColor !== null && badgeColor !== '') updateData.badgeColor = badgeColor;
+
+    // JSON fields
+    const highlights = formData.get('highlights');
+    if (highlights && highlights !== '') {
+      try {
+        updateData.highlights = JSON.parse(highlights as string);
+      } catch (error) {
+        console.error('Error parsing highlights:', error);
+      }
+    }
+
+    const features = formData.get('features');
+    if (features && features !== '') {
+      try {
+        updateData.features = JSON.parse(features as string);
+      } catch (error) {
+        console.error('Error parsing features:', error);
       }
     }
 
@@ -278,22 +284,21 @@ export async function PUT(request: NextRequest): Promise<NextResponse<ApiRespons
       }
 
       updateData.image = uploadResult.secure_url;
-
-      (updateData as any).image = uploadResult.secure_url;
     }
 
-    // Remove undefined values before update
-    const cleanUpdateData: Record<string, any> = {};
-    Object.entries(updateData).forEach(([key, value]) => {
-      if (value !== undefined) {
-        cleanUpdateData[key] = value;
-      }
-    });
+    // Only update if there's something to update
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: existingBanner,
+        message: 'No fields to update'
+      });
+    }
 
     // Update banner
     const banner = await ShopBanner.findByIdAndUpdate(
       id,
-      cleanUpdateData,
+      { $set: updateData },
       { new: true, runValidators: true }
     );
 

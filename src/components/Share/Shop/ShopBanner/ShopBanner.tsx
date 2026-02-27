@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-import Image from 'next/image';
 
 // Types
 interface BannerFeature {
@@ -10,16 +9,16 @@ interface BannerFeature {
 
 interface ShopBanner {
     _id: string;
-    title: string;
-    subtitle: string;
-    highlights: string[];
-    cta: string;
-    bg: string;
-    textColor: string;
-    badgeColor: string;
-    features: BannerFeature[];
+    title?: string;
+    subtitle?: string;
+    highlights?: string[];
+    cta?: string;
+    bg?: string;
+    textColor?: string;
+    badgeColor?: string;
+    features?: BannerFeature[];
     image: string;
-    link: string;
+    link?: string;
 }
 
 interface BannerFormData {
@@ -37,12 +36,12 @@ interface BannerFormData {
 
 interface ApiResponse<T = any> {
     success: boolean;
-    data: T extends any[] ? T : T | null;
+    data?: T;
     error?: string;
     message?: string;
 }
 
-const ShopBanner = () => {
+const ShopBannerPage = () => {
     const [banners, setBanners] = useState<ShopBanner[]>([]);
     const [formData, setFormData] = useState<BannerFormData>({
         title: '',
@@ -138,20 +137,11 @@ const ShopBanner = () => {
     };
 
     const isFormValid = (): boolean => {
-        return Boolean(
-            formData.title?.trim() &&
-            formData.subtitle?.trim() &&
-            formData.highlights.length > 0 &&
-            formData.highlights.every((h: string) => h.trim()) &&
-            formData.cta?.trim() &&
-            formData.bg?.trim() &&
-            formData.textColor?.trim() &&
-            formData.badgeColor?.trim() &&
-            formData.features.length > 0 &&
-            formData.features.every((f: BannerFeature) => f.icon?.trim() && f.text?.trim()) &&
-            formData.link?.trim() &&
-            (editingId ? true : formData.image)
-        );
+        // Only require image for new banners
+        if (!editingId && !formData.image) {
+            return false;
+        }
+        return true; // All other fields are optional
     };
 
     const handleSubmit = async (e: FormEvent) => {
@@ -160,23 +150,47 @@ const ShopBanner = () => {
         setSuccess(null);
         setUploading(true);
 
-        if (!isFormValid()) {
-            setError('Please fill all required fields, including the image for new banners');
+        // Only validate image for new banners
+        if (!editingId && !formData.image) {
+            setError('Image is required for new banners');
             setUploading(false);
             return;
         }
 
         const formDataToSend = new FormData();
-        formDataToSend.append('title', formData.title);
-        formDataToSend.append('subtitle', formData.subtitle);
-        formDataToSend.append('highlights', JSON.stringify(formData.highlights));
-        formDataToSend.append('cta', formData.cta);
-        formDataToSend.append('bg', formData.bg);
-        formDataToSend.append('textColor', formData.textColor);
-        formDataToSend.append('badgeColor', formData.badgeColor);
-        formDataToSend.append('features', JSON.stringify(formData.features));
-        formDataToSend.append('link', formData.link);
 
+        // Only append fields that have values (optional fields)
+        if (formData.title?.trim()) formDataToSend.append('title', formData.title);
+        if (formData.subtitle?.trim()) formDataToSend.append('subtitle', formData.subtitle);
+        if (formData.cta?.trim()) formDataToSend.append('cta', formData.cta);
+        if (formData.link?.trim()) formDataToSend.append('link', formData.link);
+        if (formData.bg?.trim()) formDataToSend.append('bg', formData.bg);
+        if (formData.textColor?.trim()) formDataToSend.append('textColor', formData.textColor);
+        if (formData.badgeColor?.trim()) formDataToSend.append('badgeColor', formData.badgeColor);
+
+        // Handle highlights (only if they have values)
+        const validHighlights = formData.highlights.filter(h => h.trim() !== '');
+        if (validHighlights.length > 0) {
+            formDataToSend.append('highlights', JSON.stringify(validHighlights));
+        }
+
+        // features
+        const validFeatures = formData.features.filter(f =>
+            (f.icon || '').trim() !== '' || (f.text || '').trim() !== ''
+        );
+        if (validFeatures.length > 0) {
+            formDataToSend.append('features', JSON.stringify(validFeatures));
+        }
+
+        // string fields – শুধু non-empty append
+        ['title', 'subtitle', 'cta', 'link', 'bg', 'textColor', 'badgeColor'].forEach(key => {
+            const val = formData[key as keyof typeof formData];
+            if (typeof val === 'string' && val.trim() !== '') {
+                formDataToSend.append(key, val.trim());
+            }
+        });
+
+        // Always append image if present
         if (formData.image) {
             formDataToSend.append('image', formData.image);
         }
@@ -203,25 +217,25 @@ const ShopBanner = () => {
             await fetchBanners();
             resetForm();
             setSuccess(editingId ? 'Banner updated successfully!' : 'Banner added successfully!');
-            setUploading(false);
         } catch (err) {
             setError(`Save failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
             setUploading(false);
         }
     };
 
     const handleEdit = (banner: ShopBanner) => {
         setFormData({
-            title: banner.title,
-            subtitle: banner.subtitle,
-            highlights: banner.highlights || [''],
-            cta: banner.cta,
-            bg: banner.bg,
-            textColor: banner.textColor,
-            badgeColor: banner.badgeColor,
-            features: banner.features || [{ icon: '', text: '' }],
+            title: banner.title || '',
+            subtitle: banner.subtitle || '',
+            highlights: banner.highlights?.length ? banner.highlights : [''],
+            cta: banner.cta || '',
+            bg: banner.bg || 'bg-gradient-to-br from-gray-900 via-purple-900/70 to-gray-900',
+            textColor: banner.textColor || 'text-white',
+            badgeColor: banner.badgeColor || 'from-purple-600 to-indigo-600',
+            features: banner.features?.length ? banner.features : [{ icon: '', text: '' }],
             image: null,
-            link: banner.link,
+            link: banner.link || '',
         });
         setImagePreview(banner.image);
         setEditingId(banner._id);
@@ -284,7 +298,7 @@ const ShopBanner = () => {
                     <div className="p-6">
                         {(error || success) && (
                             <div className={`mb-6 p-4 rounded-lg border-l-4 ${error ? 'bg-red-900/50 border-red-500 text-red-200' :
-                                    'bg-green-900/50 border-green-500 text-green-200'
+                                'bg-green-900/50 border-green-500 text-green-200'
                                 }`}>
                                 <p>{error || success}</p>
                             </div>
@@ -295,7 +309,7 @@ const ShopBanner = () => {
                                 {/* Left Column */}
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Title *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Title (Optional)</label>
                                         <input
                                             type="text"
                                             name="title"
@@ -303,11 +317,10 @@ const ShopBanner = () => {
                                             onChange={(e) => handleInputChange(e)}
                                             placeholder="e.g., Elite Member Exclusive"
                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                            required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Subtitle *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Subtitle (Optional)</label>
                                         <input
                                             type="text"
                                             name="subtitle"
@@ -315,11 +328,10 @@ const ShopBanner = () => {
                                             onChange={(e) => handleInputChange(e)}
                                             placeholder="e.g., Enjoy special privileges with Team Mesbah membership"
                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                            required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Highlights *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Highlights (Optional)</label>
                                         <div className="space-y-2">
                                             {formData.highlights.map((highlight, index) => (
                                                 <div key={index} className="flex items-center gap-2">
@@ -329,7 +341,6 @@ const ShopBanner = () => {
                                                         onChange={(e) => handleInputChange(e, index, 'highlight')}
                                                         placeholder={`Highlight ${index + 1}`}
                                                         className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                                        required
                                                     />
                                                     {formData.highlights.length > 1 && (
                                                         <button
@@ -352,7 +363,7 @@ const ShopBanner = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">CTA Button Text *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">CTA Button Text (Optional)</label>
                                         <input
                                             type="text"
                                             name="cta"
@@ -360,11 +371,10 @@ const ShopBanner = () => {
                                             onChange={(e) => handleInputChange(e)}
                                             placeholder="e.g., Join Now"
                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                            required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Link *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Link (Optional)</label>
                                         <input
                                             type="text"
                                             name="link"
@@ -372,7 +382,6 @@ const ShopBanner = () => {
                                             onChange={(e) => handleInputChange(e)}
                                             placeholder="e.g., /membership"
                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                            required
                                         />
                                     </div>
                                 </div>
@@ -380,7 +389,7 @@ const ShopBanner = () => {
                                 {/* Right Column */}
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Background Gradient *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Background Gradient (Optional)</label>
                                         <input
                                             type="text"
                                             name="bg"
@@ -388,11 +397,10 @@ const ShopBanner = () => {
                                             onChange={(e) => handleInputChange(e)}
                                             placeholder="e.g., bg-gradient-to-br from-gray-900 via-purple-900/70 to-gray-900"
                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                            required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Text Color *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Text Color (Optional)</label>
                                         <input
                                             type="text"
                                             name="textColor"
@@ -400,11 +408,10 @@ const ShopBanner = () => {
                                             onChange={(e) => handleInputChange(e)}
                                             placeholder="e.g., text-white"
                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                            required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Badge Gradient *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Badge Gradient (Optional)</label>
                                         <input
                                             type="text"
                                             name="badgeColor"
@@ -412,11 +419,10 @@ const ShopBanner = () => {
                                             onChange={(e) => handleInputChange(e)}
                                             placeholder="e.g., from-purple-600 to-indigo-600"
                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                            required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Features *</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Features (Optional)</label>
                                         <div className="space-y-2">
                                             {formData.features.map((feature, index) => (
                                                 <div key={index} className="flex items-center gap-2">
@@ -427,7 +433,6 @@ const ShopBanner = () => {
                                                         onChange={(e) => handleInputChange(e, index, 'feature')}
                                                         placeholder="Icon (e.g., 🚚)"
                                                         className="w-1/4 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                                        required
                                                     />
                                                     <input
                                                         type="text"
@@ -436,7 +441,6 @@ const ShopBanner = () => {
                                                         onChange={(e) => handleInputChange(e, index, 'feature')}
                                                         placeholder="Text (e.g., Free Delivery)"
                                                         className="w-3/4 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                                        required
                                                     />
                                                     {formData.features.length > 1 && (
                                                         <button
@@ -508,8 +512,8 @@ const ShopBanner = () => {
                                     type="submit"
                                     disabled={uploading || !isFormValid()}
                                     className={`px-6 py-2 rounded-lg text-white font-medium flex items-center gap-2 ${uploading || !isFormValid()
-                                            ? 'bg-gray-600 cursor-not-allowed'
-                                            : 'bg-purple-600 hover:bg-purple-700'
+                                        ? 'bg-gray-600 cursor-not-allowed'
+                                        : 'bg-purple-600 hover:bg-purple-700'
                                         }`}
                                 >
                                     {uploading && (
@@ -564,13 +568,13 @@ const ShopBanner = () => {
                                         <div className="flex-shrink-0 w-32 h-24 rounded-lg overflow-hidden border border-gray-600">
                                             <img
                                                 src={banner.image}
-                                                alt={banner.title}
+                                                alt={banner.title || 'Banner'}
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-lg font-medium text-gray-100 truncate">{banner.title}</h3>
-                                            <p className="mt-1 text-sm text-gray-400 truncate">{banner.subtitle}</p>
+                                            <h3 className="text-lg font-medium text-gray-100 truncate">{banner.title || 'Untitled'}</h3>
+                                            <p className="mt-1 text-sm text-gray-400 truncate">{banner.subtitle || 'No subtitle'}</p>
                                             <div className="mt-2 flex flex-wrap gap-1">
                                                 {banner.highlights?.map((highlight, i) => (
                                                     <span
@@ -607,4 +611,4 @@ const ShopBanner = () => {
     );
 };
 
-export default ShopBanner;
+export default ShopBannerPage;
