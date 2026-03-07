@@ -30,10 +30,18 @@ export default function Banner() {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const response = await fetch('/api/banners');
+        const response = await fetch('/api/banners', {
+          next: { revalidate: 600 },
+          cache: 'force-cache',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Banner fetch failed: ${response.status}`);
+        }
+
         const result = await response.json();
-        if (result.success && result.data.length > 0) {
-          // console.log('Banners loaded:', result.data.length);
+
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           setBanners(result.data);
         }
       } catch (error) {
@@ -42,6 +50,7 @@ export default function Banner() {
         setLoading(false);
       }
     };
+
     fetchBanners();
   }, []);
 
