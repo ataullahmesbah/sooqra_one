@@ -12,8 +12,7 @@ export default function robots(): MetadataRoute.Robots {
                 '/admin-dashboard/',  // অ্যাডমিন এলাকা
                 '/moderator-dashboard/',  // অ্যাডমিন এলাকা
                 '/user-dashboard/',  // অ্যাডমিন এলাকা
-                '/account/',  // অ্যাডমিন এলাকা
-                '/api/',              // API রুট
+                '/account/',             // API রুট
                 '/checkout/',         // চেকআউট পেজ
                 '/cart/',             // কার্ট পেজ (যাতে ডুপ্লিকেট কন্টেন্ট এড়ানো যায়)
                 '/track/orders/',     // অর্ডার ট্র্যাকিং
