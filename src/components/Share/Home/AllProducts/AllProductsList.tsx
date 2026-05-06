@@ -1,65 +1,33 @@
+// src/components/products/AllProductsList/AllProductsList.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import ProductCard from '@/src/components/products/ProductCard/ProductCard';
-import { Product } from '@/src/types/index';
 import Link from 'next/link';
+import { useCachedProducts } from '@/src/hooks/useCachedProducts';
 
 interface AllProductsListProps {
   limit?: number;
 }
 
 const AllProductsList: React.FC<AllProductsListProps> = ({
-  limit = 35 // Default to 35 as requested
+  limit = 35
 }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        // Direct data fetch from your existing lib/data.ts
-        const { getProducts } = await import('@/src/lib/data');
-        const fetchedProducts = await getProducts();
-
-        // Sort products - latest first (by createdAt)
-        const sortedProducts = [...fetchedProducts].sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA; // Latest first
-        });
-
-        setAllProducts(sortedProducts);
-
-        // Take limited number of products (max 35)
-        const limitedProducts = sortedProducts.slice(0, limit);
-        setProducts(limitedProducts);
-      } catch (err) {
-        console.error('Error fetching products:', err);
-        setError('Failed to load products');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [limit]);
+  const { products, allProducts, loading, error, lastUpdated } = useCachedProducts(limit);
 
   const hasMoreProducts = allProducts.length > limit;
 
-  if (loading) {
+  // Show minimal loading indicator (optional - can be removed if you want no loading at all)
+  if (loading && products.length === 0) {
     return (
-      <div className="flex flex-col justify-center items-center py-20">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900"></div>
-        <p className="mt-4 text-gray-600">Loading products...</p>
+      <div className="flex flex-col justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <p className="mt-3 text-sm text-gray-500">Loading products...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (error && products.length === 0) {
     return (
       <div className="text-center py-10">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
@@ -77,7 +45,7 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
     );
   }
 
-  if (products.length === 0) {
+  if (products.length === 0 && !loading) {
     return (
       <div className="text-center py-10">
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 max-w-md mx-auto">
@@ -92,13 +60,14 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
   return (
     <div className="py-6 sm:py-8">
       <div className="container mx-auto px-2 sm:px-4">
-        {/* Header - Simplified without product count */}
+        {/* Header with last updated info */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8">
           <div>
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Popular Products</h2>
+
           </div>
 
-          {/* View All Button - Only show if more than 35 products */}
+          {/* View All Button - Only show if more than limit products */}
           {hasMoreProducts && (
             <div className="mt-4 md:mt-0">
               <Link
@@ -114,7 +83,7 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
           )}
         </div>
 
-        {/* Products Grid - Responsive: 2(mobile), 3(tablet), 4(laptop), 5(desktop+) */}
+        {/* Products Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
           {products.map((product) => (
             <ProductCard
@@ -125,7 +94,14 @@ const AllProductsList: React.FC<AllProductsListProps> = ({
           ))}
         </div>
 
-        {/* View All Button - Bottom (for mobile users) */}
+        {/* Silent background refresh indicator (optional) */}
+        {loading && products.length > 0 && (
+          <div className="fixed bottom-4 right-4 bg-gray-800 text-white text-xs px-3 py-1 rounded-full shadow-lg z-50">
+            Updating...
+          </div>
+        )}
+
+        {/* View All Button - Bottom */}
         {hasMoreProducts && (
           <div className="mt-8 sm:mt-10 flex justify-center">
             <Link
