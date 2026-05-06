@@ -1,4 +1,4 @@
-// src/components/WhatsAppButton.tsx
+// src/components/WhatsAppButton/WhatsAppButton.tsx
 'use client';
 
 import { FaWhatsapp } from 'react-icons/fa';
