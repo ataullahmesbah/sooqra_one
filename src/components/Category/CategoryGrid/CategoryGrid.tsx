@@ -48,20 +48,34 @@ const CategoryGrid = () => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        // Fetch more than 6 (e.g., 12) to have backup if some have 0 products
-        const response = await fetch('/api/categories?limit=12&withCount=true&withLatestProduct=true');
 
-        if (!response.ok) throw new Error('Failed to fetch categories');
+        const response = await fetch(
+          '/api/categories?limit=12&withCount=true&withLatestProduct=true',
+          {
+            next: { revalidate: 600 },
+            cache: 'force-cache'
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch categories: ${response.status}`);
+        }
 
         const data = await response.json();
-        setAllCategories(data);
 
-        // Filter and limit to 6 categories with products
-        const filtered = filterAndLimitCategories(data, 6);
+
+        const categoriesArray = Array.isArray(data)
+          ? data
+          : data.categories || data.data || [];
+
+        setAllCategories(categoriesArray);
+
+        // Filter + limit to top 6 with products
+        const filtered = filterAndLimitCategories(categoriesArray, 6);
         setFilteredCategories(filtered);
 
-        // Check if there are more categories available (for stats)
-        const categoriesWithProducts = data.filter((cat: Category) =>
+        // Has more check
+        const categoriesWithProducts = categoriesArray.filter((cat: Category) =>
           cat.productCount && cat.productCount > 0
         );
         setHasMoreCategories(categoriesWithProducts.length > 6);
@@ -91,10 +105,10 @@ const CategoryGrid = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 md:mb-12">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Shop By Categories
+              Shop By Collection
             </h2>
             <p className="text-gray-600">
-              বিশুদ্ধ, প্রাকৃতিক ও স্বাস্থ্যকর খাবারের সেরা সংগ্রহ
+              আমাদের সেরা কালেকশনটি আপনার জন্যই তৈরি করা হয়েছে, যাতে আপনি পান সেরাটা
             </p>
           </div>
 
