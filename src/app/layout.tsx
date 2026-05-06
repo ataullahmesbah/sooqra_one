@@ -2,6 +2,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "../providers/providers";
+import WhatsAppButton from "../components/WhatsAppButton/WhatsAppButton";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -44,11 +45,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body 
+      <body
         className={`${inter.className} antialiased`}
         suppressHydrationWarning={true}
       >
         <Providers>{children}</Providers>
+        <WhatsAppButton />
       </body>
     </html>
   );
