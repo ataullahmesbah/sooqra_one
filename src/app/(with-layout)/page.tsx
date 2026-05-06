@@ -1,4 +1,5 @@
 import CategoryGrid from "@/src/components/Category/CategoryGrid/CategoryGrid";
+import PromotionalBanner from "@/src/components/common/PromotionalBanner";
 import ShopAds from "@/src/components/Dashboard/Shop/ShopAds/ShopAds";
 import EmailSubscription from "@/src/components/EmailSubscription/EmailSubscription";
 import ProductCard from "@/src/components/products/ProductCard/ProductCard";
@@ -12,6 +13,7 @@ const page = () => {
     return (
         <>
 
+<PromotionalBanner showCloseButton={true} />
             {/* ShopAds  */}
             <ShopAds />
 

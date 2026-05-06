@@ -119,6 +119,13 @@ const AdminDashboardLayout = ({ children }: AdminDashboardLayoutProps) => {
 
             ],
         },
+        {
+            label: 'BANNER MARQUEE',
+            children: [
+                { label: 'Banner Marquee', link: '/admin-dashboard/banner_marquee' },
+
+            ],
+        },
     ];
 
     // Loading state
