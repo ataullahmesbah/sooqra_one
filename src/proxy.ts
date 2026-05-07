@@ -1,5 +1,4 @@
-// src/proxy.ts
-
+// src/middleware.ts (অথবা proxy.ts)
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -9,17 +8,15 @@ function setupFacebookCookies(request: NextRequest, response: NextResponse) {
   const url = request.nextUrl;
   const fbclid = url.searchParams.get('fbclid');
 
-  // Capture fbclid from URL and store in cookie
   if (fbclid) {
     response.cookies.set('_fbc', `fb.1.${Date.now()}.${fbclid}`, {
-      maxAge: 60 * 60 * 24 * 90, // 90 days
+      maxAge: 60 * 60 * 24 * 90,
       path: '/',
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     });
   }
 
-  // Create fbp cookie if not exists
   if (!request.cookies.get('_fbp')) {
     const randomId = Math.random().toString(36).substring(2, 15);
     response.cookies.set('_fbp', `fb.1.${Date.now()}.${randomId}`, {
@@ -34,15 +31,43 @@ function setupFacebookCookies(request: NextRequest, response: NextResponse) {
 }
 
 export default withAuth(
-  function proxy(req) {
+  function middleware(req) {
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
-
-    // Get initial response
     let response = NextResponse.next();
 
-    // Setup Facebook cookies (always do this first)
+    // Setup Facebook cookies (every route)
     response = setupFacebookCookies(req, response);
+
+    // ============ PUBLIC ROUTES (No login required) ============
+    const publicRoutes = [
+      '/',
+      '/products',
+      '/shop',
+      '/categories',
+      '/deals',
+      '/about',
+      '/contact',
+      '/auth/signin',
+      '/auth/signup',
+      '/cart',           // ✅ Cart page - no login required
+      '/checkout',       // ✅ Checkout page - no login required
+      '/api/products',
+      '/api/auth',
+    ];
+
+    // Check if current path is public
+    const isPublicRoute = publicRoutes.some(route => {
+      if (route === '/') return pathname === '/';
+      return pathname === route || pathname.startsWith(route + '/');
+    });
+
+    // ✅ Allow public routes without authentication
+    if (isPublicRoute) {
+      return response;
+    }
+
+    // ============ PROTECTED ROUTES (Require Login) ============
 
     // Prevent signed-in users from accessing auth pages
     if (token && (pathname.startsWith('/auth/signin') || pathname.startsWith('/auth/signup'))) {
@@ -57,64 +82,77 @@ export default withAuth(
     // Protect admin routes
     if (pathname.startsWith('/admin-dashboard')) {
       if (token?.role !== 'admin') {
-        return NextResponse.redirect(new URL('/unauthorized', req.url));
+        return NextResponse.redirect(new URL('/', req.url));
       }
+      return response;
     }
 
     // Protect moderator routes
     if (pathname.startsWith('/moderator-dashboard')) {
       if (token?.role !== 'moderator') {
-        return NextResponse.redirect(new URL('/unauthorized', req.url));
+        return NextResponse.redirect(new URL('/', req.url));
       }
+      return response;
     }
 
     // Protect user routes
     if (pathname.startsWith('/user-dashboard')) {
       if (token?.role !== 'user') {
-        return NextResponse.redirect(new URL('/unauthorized', req.url));
+        return NextResponse.redirect(new URL('/', req.url));
       }
+      return response;
     }
 
-    // Protect account routes
+    // Protect account routes - require authentication
     if (pathname.startsWith('/account')) {
       if (!token) {
         return NextResponse.redirect(new URL('/auth/signin', req.url));
       }
+      return response;
     }
 
-    // ✅ Return the response with Facebook cookies
+    // For any other route, allow access
     return response;
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        // Public routes
+        const pathname = req.nextUrl.pathname;
+
+        // Public routes - always allow
         const publicRoutes = [
           '/',
+          '/products',
           '/shop',
-          '/shop/search',
           '/categories',
           '/deals',
           '/about',
           '/contact',
           '/auth/signin',
           '/auth/signup',
-          '/api/auth',
-          '/api/products',
-          '/api/products/search',
+          '/cart',
+          '/checkout',
         ];
 
         const isPublicRoute = publicRoutes.some(route =>
-          req.nextUrl.pathname === route ||
-          req.nextUrl.pathname.startsWith(route + '/')
+          pathname === route || pathname.startsWith(route + '/')
         );
 
+        // Allow public routes without token
         if (isPublicRoute) {
           return true;
         }
 
-        // For protected routes, require authentication
-        return !!token;
+        // Protected routes require token
+        const protectedRoutes = ['/account', '/user-dashboard', '/admin-dashboard', '/moderator-dashboard'];
+        const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+
+        if (isProtectedRoute) {
+          return !!token;
+        }
+
+        // Default: allow access
+        return true;
       },
     },
   }
@@ -122,14 +160,7 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    // Auth protected routes
-    '/admin-dashboard/:path*',
-    '/moderator-dashboard/:path*',
-    '/user-dashboard/:path*',
-    '/account/:path*',
-    '/auth/signin',
-    '/auth/signup',
-    // Facebook Pixel - all routes except static files
+    // Matcher for all routes except static files
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
