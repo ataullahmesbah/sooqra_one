@@ -1,4 +1,4 @@
-// src/components/Share/Shop/ProductDetailsClient/ProductDetailsClient.tsx
+// src/components/Share/Shop/ProductDetailsClient/ProductDetailsClient.ts
 'use client';
 
 import Image from 'next/image';
@@ -123,6 +123,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
     const [selectedSize, setSelectedSize] = useState<ProductSize | null>(null);
     const [showSizeError, setShowSizeError] = useState<boolean>(false);
     const [isClient, setIsClient] = useState(false);
+    // fb tracking
     const { trackViewContent, trackAddToCart } = useFacebookEvents();
 
     useEffect(() => {
