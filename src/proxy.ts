@@ -1,12 +1,48 @@
-//src/middleware.ts
+// src/proxy.ts
 
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+// ============ Facebook Pixel Middleware Functions ============
+function setupFacebookCookies(request: NextRequest, response: NextResponse) {
+  const url = request.nextUrl;
+  const fbclid = url.searchParams.get('fbclid');
+
+  // Capture fbclid from URL and store in cookie
+  if (fbclid) {
+    response.cookies.set('_fbc', `fb.1.${Date.now()}.${fbclid}`, {
+      maxAge: 60 * 60 * 24 * 90, // 90 days
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+  }
+
+  // Create fbp cookie if not exists
+  if (!request.cookies.get('_fbp')) {
+    const randomId = Math.random().toString(36).substring(2, 15);
+    response.cookies.set('_fbp', `fb.1.${Date.now()}.${randomId}`, {
+      maxAge: 60 * 60 * 24 * 90,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+  }
+
+  return response;
+}
 
 export default withAuth(
   function proxy(req) {
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
+
+    // Get initial response
+    let response = NextResponse.next();
+
+    // Setup Facebook cookies (always do this first)
+    response = setupFacebookCookies(req, response);
 
     // Prevent signed-in users from accessing auth pages
     if (token && (pathname.startsWith('/auth/signin') || pathname.startsWith('/auth/signup'))) {
@@ -25,7 +61,7 @@ export default withAuth(
       }
     }
 
-    // Protect moderator routes (only moderator, not admin)
+    // Protect moderator routes
     if (pathname.startsWith('/moderator-dashboard')) {
       if (token?.role !== 'moderator') {
         return NextResponse.redirect(new URL('/unauthorized', req.url));
@@ -46,7 +82,8 @@ export default withAuth(
       }
     }
 
-    return NextResponse.next();
+    // ✅ Return the response with Facebook cookies
+    return response;
   },
   {
     callbacks: {
@@ -85,11 +122,14 @@ export default withAuth(
 
 export const config = {
   matcher: [
+    // Auth protected routes
     '/admin-dashboard/:path*',
     '/moderator-dashboard/:path*',
     '/user-dashboard/:path*',
     '/account/:path*',
     '/auth/signin',
     '/auth/signup',
+    // Facebook Pixel - all routes except static files
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

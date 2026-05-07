@@ -1,3 +1,5 @@
+// order-success.tsx
+
 import OrderSuccess from '@/src/components/Share/Shop/OrderSuccess/OrderSuccess';
 import { Suspense } from 'react';
 

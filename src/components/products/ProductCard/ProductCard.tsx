@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Product } from '@/src/types/index';
 import axios from 'axios';
 import CartSlider from '../../Share/Shop/CartSlider/CartSlider';
+import { useFacebookEvents } from '@/src/hooks/useFacebookEvents';
 
 interface ProductCardProps {
     product: Product;
@@ -58,6 +60,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
     const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
     const [modalSelectedSize, setModalSelectedSize] = useState<string | null>(null);
     const [modalShowSizeError, setModalShowSizeError] = useState(false);
+    const { trackViewContent, trackAddToCart } = useFacebookEvents();
+
+
+    useEffect(() => {
+        if (product && mainPrice) {
+            trackViewContent(product, mainPrice.amount);
+        }
+    }, [product]);
 
     // Initialize client-side
     useEffect(() => {
@@ -192,6 +202,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                 showCustomToast(`Added ${quantity} units of ${product.title} to cart`, 'success');
             }
             localStorage.setItem('cart', JSON.stringify(cart));
+            if (typeof window !== 'undefined' && window.fbq) {
+                const priceInBDT = mainPrice?.amount || 0;
+                trackAddToCart(product, quantity, priceInBDT);
+            }
             window.dispatchEvent(new Event('cartUpdated'));
 
             // Show success feedback

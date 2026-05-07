@@ -1,4 +1,4 @@
-'use client';
+
 'use client';
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,6 +7,8 @@ import Image from 'next/image';
 import axios from 'axios';
 import 'react-phone-input-2/lib/style.css';
 import CheckoutPayment from '../CheckoutPayment/CheckoutPayment';
+import { useFacebookEvents } from '@/src/hooks/useFacebookEvents';
+
 
 
 // Interface Definitions
@@ -146,6 +148,7 @@ export default function Checkout() {
     const [transactionId, setTransactionId] = useState<string>('');
     const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
     const [orderData, setOrderData] = useState<OrderData | null>(null);
+    const { trackPurchase } = useFacebookEvents();
 
     // Add this useEffect to get user info if logged in
     useEffect(() => {
@@ -560,6 +563,36 @@ export default function Checkout() {
         return 'ORDER_' + Math.random().toString(36).substr(2, 9).toUpperCase();
     };
 
+    const trackOrderSuccess = async (orderData: OrderData) => {
+        try {
+            // Prepare purchase data for Facebook
+            const purchaseData = {
+                content_ids: orderData.products.map(p => p.productId),
+                content_type: 'product',
+                currency: 'BDT',
+                value: orderData.total,
+                num_items: orderData.products.reduce((sum, p) => sum + p.quantity, 0),
+                contents: orderData.products.map(p => ({
+                    id: p.productId,
+                    quantity: p.quantity,
+                    item_price: p.price,
+                })),
+            };
+
+            const userData = {
+                email: orderData.customerInfo.email,
+                phone: orderData.customerInfo.phone,
+            };
+
+            // Track via Facebook Events hook
+            trackPurchase(orderData, userData);
+
+        } catch (error) {
+            console.error('Error tracking purchase event:', error);
+        }
+    };
+
+
     const handleCheckout = async (e: FormEvent): Promise<void> => {
         e.preventDefault();
         setError('');
@@ -690,6 +723,8 @@ export default function Checkout() {
                     (orderResponse.data.message === 'Order created' ||
                         orderResponse.data.message === 'Order created successfully' ||
                         orderResponse.data.success)) {
+
+                    await trackOrderSuccess(orderData);
 
                     // Record coupon usage if applied
                     if (appliedCoupon) {

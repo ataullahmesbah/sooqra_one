@@ -9,6 +9,9 @@ import axios from 'axios';
 import { CiDeliveryTruck } from "react-icons/ci";
 import { useState, useEffect, useRef } from 'react';
 import { TbCategoryFilled } from "react-icons/tb";
+import { useFacebookEvents } from '@/src/hooks/useFacebookEvents';
+
+
 
 // Define proper interfaces
 interface ProductPrice {
@@ -120,6 +123,14 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
     const [selectedSize, setSelectedSize] = useState<ProductSize | null>(null);
     const [showSizeError, setShowSizeError] = useState<boolean>(false);
     const [isClient, setIsClient] = useState(false);
+    const { trackViewContent, trackAddToCart } = useFacebookEvents();
+
+    useEffect(() => {
+        if (product) {
+            const priceObj = product.prices.find(p => p.currency === 'BDT') || product.prices[0];
+            trackViewContent(product, priceObj.amount);
+        }
+    }, [product]);
 
 
     useEffect(() => {
@@ -256,6 +267,8 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
         }
         : null;
 
+    // ProductDetailsClient.tsx - handleAddToCart ফাংশনটি replace করুন
+
     const handleAddToCart = async () => {
         if (product.productType === 'Own' && product.sizeRequirement === 'Mandatory' && product.sizes && product.sizes.length > 0 && !selectedSize) {
             setShowSizeError(true);
@@ -280,6 +293,12 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                 showCustomToast(validation.message, 'error');
                 return;
             }
+
+
+            const priceObj = product.prices.find((p) => p.currency === 'BDT') || product.prices[0];
+            const priceInBDT = priceObj.currency === 'BDT'
+                ? priceObj.amount
+                : priceObj.amount * (conversionRates[priceObj.currency] || 1);
 
             const cart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
             const existingItem = cart.find((item) =>
@@ -306,10 +325,6 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                 });
                 showCustomToast(`Cart updated with ${newQuantity} units of ${product.title}`, 'success');
             } else {
-                const priceObj = product.prices.find((p) => p.currency === 'BDT') || product.prices[0];
-                const priceInBDT = priceObj.currency === 'BDT'
-                    ? priceObj.amount
-                    : priceObj.amount * (conversionRates[priceObj.currency] || 1);
                 cart.push({
                     _id: product._id,
                     title: product.title,
@@ -325,6 +340,9 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
             localStorage.setItem('cart', JSON.stringify(cart));
             window.dispatchEvent(new Event('cartUpdated'));
             setIsCartOpen(true);
+
+
+            trackAddToCart(product, quantity, priceInBDT);
         } catch (error: any) {
             console.error('Error validating product stock:', error);
             showCustomToast(error.response?.data?.message || 'Error checking product availability', 'error');
@@ -604,12 +622,12 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
 
                                 <div className="flex gap-2 items-center mt-2">
 
-                                <span className=''>
-                                    <TbCategoryFilled />
-                                </span>
-                                <span className="inline-block py-1 font-semibold bg-gray-100 text-gray-700 rounded-full text-sm">
-                                    {product.category.name}
-                                </span>
+                                    <span className=''>
+                                        <TbCategoryFilled />
+                                    </span>
+                                    <span className="inline-block py-1 font-semibold bg-gray-100 text-gray-700 rounded-full text-sm">
+                                        {product.category.name}
+                                    </span>
                                 </div>
                             )}
                             {product.brand && (
