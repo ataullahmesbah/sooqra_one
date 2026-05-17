@@ -1,80 +1,91 @@
 "use client";
-import { useState, useCallback, useRef } from "react";
-import { 
-  FaSearch, 
-  FaDownload, 
-  FaShoppingBag, 
-  FaUser, 
-  FaMapMarkerAlt, 
-  FaCreditCard, 
-  FaCalendarAlt, 
-  FaCheckCircle, 
-  FaTimesCircle, 
-  FaClock 
+import { useState, useCallback, useRef, useEffect } from "react";
+import {
+    FaSearch,
+    FaDownload,
+    FaShoppingBag,
+    FaUser,
+    FaMapMarkerAlt,
+    FaCreditCard,
+    FaCalendarAlt,
+    FaCheckCircle,
+    FaTimesCircle,
+    FaClock,
 } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Image from "next/image";
 
 // Type definitions
 interface Product {
-  title: string;
-  price: number;
-  quantity: number;
-  size?: string;
+    title: string;
+    price: number;
+    quantity: number;
+    size?: string;
 }
 
 interface CustomerInfo {
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  city?: string;
-  district?: string;
-  thana?: string;
-  postcode?: string;
-  country?: string;
-  bkashNumber?: string;
-  transactionId?: string;
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    city?: string;
+    district?: string;
+    thana?: string;
+    postcode?: string;
+    country?: string;
+    bkashNumber?: string;
+    transactionId?: string;
 }
 
 interface Order {
-  orderId: string;
-  status: string;
-  createdAt: string;
-  total: number;
-  paymentMethod: 'cod' | 'bkash' | 'pay_first' | string;
-  customerInfo: CustomerInfo;
-  products: Product[];
-  discount: number;
-  shippingCharge: number;
+    orderId: string;
+    status: string;
+    createdAt: string;
+    total: number;
+    paymentMethod: 'cod' | 'bkash' | 'pay_first' | string;
+    customerInfo: CustomerInfo;
+    products: Product[];
+    discount: number;
+    shippingCharge: number;
 }
 
 interface StatusInfo {
-  color: string;
-  bg: string;
-  border: string;
-  icon: React.ComponentType<{ className?: string }>;
-  gradient: string;
-  label: string;
+    color: string;
+    bg: string;
+    border: string;
+    icon: React.ComponentType<{ className?: string }>;
+    gradient: string;
+    label: string;
 }
 
 interface PaymentMethodDisplay {
-  text: string;
-  color: string;
-  icon: string;
+    text: string;
+    color: string;
+    icon: string;
 }
 
 const CustomerOrderTrack = () => {
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
+    const [lastOrderId, setLastOrderId] = useState<string>("");
     const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
-    // Debounced search function
+    // ✅ Auto-load last order from localStorage on mount
+    useEffect(() => {
+        const savedOrderId = localStorage.getItem('lastTrackedOrderId');
+        if (savedOrderId) {
+            setSearchQuery(savedOrderId);
+            handleSearch(savedOrderId);
+        }
+    }, []);
+
+    // Search function - only orderId needed
+    // CustomerOrderTrack.tsx - handleSearch ফাংশনটি ঠিক করুন
+
     const handleSearch = useCallback(
-        async (query: string) => {
-            if (!query.trim()) {
+        async (orderId: string) => {
+            if (!orderId.trim()) {
                 toast.error("Please enter an order ID");
                 setOrder(null);
                 return;
@@ -82,25 +93,37 @@ const CustomerOrderTrack = () => {
 
             setLoading(true);
             try {
-                const queryParam = `orderId=${encodeURIComponent(query)}`;
-                const response = await fetch(`/api/products/orders?${queryParam}`);
+                // ✅ শুধু orderId পাঠান, email/phone লাগবে না
+                const response = await fetch(`/api/products/orders?orderId=${encodeURIComponent(orderId)}`);
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || "Failed to fetch order");
+                    // ✅ Check if response is not ok
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || "Failed to fetch order");
                 }
 
-                if (data.length === 0) {
+                if (!data || data.length === 0) {
                     setOrder(null);
-                    toast.error("Order not found!");
+                    toast.error("Order not found! Please check your Order ID.");
                     return;
                 }
 
                 setOrder(data[0]);
+                setLastOrderId(orderId);
+                localStorage.setItem('lastTrackedOrderId', orderId);
                 toast.success("Order found successfully!");
             } catch (error: unknown) {
                 console.error("Error fetching order:", error);
-                toast.error(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+                if (errorMessage.includes('Unauthorized')) {
+                    toast.error("Unable to access order. Please contact support.");
+                } else if (errorMessage.includes('not found')) {
+                    toast.error("Order not found! Please check your Order ID.");
+                } else {
+                    toast.error(`Error: ${errorMessage}`);
+                }
                 setOrder(null);
             } finally {
                 setLoading(false);
@@ -109,7 +132,19 @@ const CustomerOrderTrack = () => {
         []
     );
 
-    // Debounce search input
+    // Handle search button click
+    const handleSearchClick = () => {
+        handleSearch(searchQuery);
+    };
+
+    // Handle enter key press
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSearch(searchQuery);
+        }
+    };
+
+    // Handle input change
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const query = e.target.value;
         setSearchQuery(query);
@@ -119,7 +154,9 @@ const CustomerOrderTrack = () => {
         }
 
         debounceTimeout.current = setTimeout(() => {
-            handleSearch(query);
+            if (query.length > 8) {
+                handleSearch(query);
+            }
         }, 500);
     };
 
@@ -132,7 +169,7 @@ const CustomerOrderTrack = () => {
     // Get status color and icon with monochrome theme
     const getStatusInfo = (status: string | undefined): StatusInfo => {
         const statusLower = status?.toLowerCase();
-        
+
         switch (statusLower) {
             case 'accepted':
                 return {
@@ -165,7 +202,7 @@ const CustomerOrderTrack = () => {
         }
     };
 
-    // Get payment method display - monochrome version
+    // Get payment method display
     const getPaymentMethodDisplay = (method: string): PaymentMethodDisplay => {
         switch (method) {
             case 'cod':
@@ -196,31 +233,18 @@ const CustomerOrderTrack = () => {
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8 sm:mb-12">
-                    {/* Brand Logo */}
-                    <div className="flex justify-center items-center gap-3 mb-4 sm:mb-6">
-                        {/* <div className="relative w-10 h-10 sm:w-12 sm:h-12">
-                            <Image 
-                                src="/sooqra.svg" 
-                                alt="Sooqra" 
-                                fill
-                                className="object-contain"
-                                priority
-                            />
-                        </div> */}
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                            Sooqra<span className="text-gray-600">.one</span>
-                        </h1>
-                    </div>
-
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                        Sooqra<span className="text-gray-600">.one</span>
+                    </h1>
                     <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
-                        Order Tracking
+                        Order Status Tracking
                     </h2>
                     <p className="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto px-4">
                         Track your order status with real-time updates and delivery information
                     </p>
                 </div>
 
-                {/* Search Section */}
+                {/* Search Section - Only Order ID */}
                 <div className="max-w-2xl mx-auto mb-8 sm:mb-12">
                     <div className="relative">
                         <div className="flex flex-col sm:flex-row gap-3">
@@ -229,13 +253,14 @@ const CustomerOrderTrack = () => {
                                     type="text"
                                     value={searchQuery}
                                     onChange={handleInputChange}
+                                    onKeyPress={handleKeyPress}
                                     placeholder="Enter Order ID (e.g., ORDER_ABC123)"
                                     className="w-full px-4 py-3 sm:py-4 pl-12 rounded-lg bg-white border border-gray-300 text-gray-900 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent transition-all placeholder-gray-500 shadow-sm"
                                 />
                                 <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
                             <button
-                                onClick={() => handleSearch(searchQuery)}
+                                onClick={handleSearchClick}
                                 className="px-6 py-3 sm:py-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all duration-300 text-sm sm:text-base font-medium shadow-sm hover:shadow"
                             >
                                 Track Order
@@ -256,13 +281,12 @@ const CustomerOrderTrack = () => {
                     </div>
                 )}
 
-                {/* Order Display */}
+                {/* Order Display - Same as your existing code */}
                 {order && !loading && (
                     <div className="space-y-6 sm:space-y-8">
                         {/* Order Overview Card */}
                         <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
                             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
-                                {/* Left Section - Order Info */}
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                                     <div className="flex items-center gap-3 sm:gap-4">
                                         {StatusIcon && (
@@ -291,7 +315,6 @@ const CustomerOrderTrack = () => {
                                     </div>
                                 </div>
 
-                                {/* Right Section - Amount */}
                                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 lg:gap-6">
                                     <div className="text-center sm:text-right">
                                         <p className="text-gray-600 text-xs sm:text-sm font-medium">Total Amount</p>
@@ -302,7 +325,6 @@ const CustomerOrderTrack = () => {
                                     <button
                                         disabled
                                         className="px-4 py-2.5 sm:px-5 sm:py-3 bg-gray-100 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all text-sm sm:text-base font-medium cursor-not-allowed opacity-70"
-                                        title="Invoice system is currently unavailable"
                                     >
                                         <span className="flex items-center justify-center gap-2">
                                             <FaDownload className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -313,7 +335,7 @@ const CustomerOrderTrack = () => {
                             </div>
                         </div>
 
-                        {/* Main Content Grid */}
+                        {/* Rest of your order display - Keep as is */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                             {/* Left Column - Customer & Payment Info */}
                             <div className="space-y-6 sm:space-y-8">
@@ -414,7 +436,6 @@ const CustomerOrderTrack = () => {
                                         ))}
                                     </div>
 
-                                    {/* Order Summary */}
                                     <div className="border-t border-gray-200 pt-5 sm:pt-6">
                                         <h4 className="text-gray-900 font-semibold text-sm sm:text-base mb-4">Order Summary</h4>
                                         <div className="space-y-3">
@@ -507,13 +528,6 @@ const CustomerOrderTrack = () => {
                         <p className="text-gray-600 max-w-md mx-auto px-4 text-sm sm:text-base">
                             Enter your order ID in the search bar above to view order status, details, and delivery information
                         </p>
-                        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 text-xs sm:text-sm text-gray-500">
-                            <span className="bg-gray-100 px-3 py-1 rounded">Order Status</span>
-                            <span className="hidden sm:block">•</span>
-                            <span className="bg-gray-100 px-3 py-1 rounded">Payment Details</span>
-                            <span className="hidden sm:block">•</span>
-                            <span className="bg-gray-100 px-3 py-1 rounded">Shipping Info</span>
-                        </div>
                     </div>
                 )}
             </div>

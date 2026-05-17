@@ -39,15 +39,33 @@ type Product = {
     affiliateLink?: string;
 };
 
-export const dynamic = 'force-dynamic';
+// ✅ ISR enabled - revalidate every 3600 seconds (1 hour)
+export const revalidate = 3600;
+
+// ✅ Dynamic params for static generation (optional - improves performance)
+export async function generateStaticParams() {
+    try {
+        const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products`, {
+            next: { revalidate: 3600 }
+        });
+        if (!res.ok) return [];
+        const products = await res.json();
+        return products.map((product: Product) => ({
+            slug: product.slug || product._id,
+        }));
+    } catch (error) {
+        console.error('Error generating static params:', error);
+        return [];
+    }
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-    // Await the params promise
     const { slug } = await params;
 
     try {
+        // ✅ Cache enabled - revalidate every hour
         const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products/slug/${slug}`, {
-            cache: 'no-store',
+            next: { revalidate: 3600 }, // 1 hour cache
         });
 
         if (!res.ok) {
@@ -61,26 +79,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
         return {
             title: product.metaTitle || `${product.title} - Sooqra One`,
-            description:
-                product.metaDescription ||
-                product.shortDescription ||
-                product.description.slice(0, 160),
+            description: product.metaDescription || product.shortDescription || product.description?.slice(0, 160),
             keywords: product.keywords?.join(', ') || undefined,
             alternates: {
                 canonical: `${process.env.NEXTAUTH_URL}/products/${slug}`,
             },
             openGraph: {
                 title: product.metaTitle || product.title,
-                description: product.shortDescription || product.description.slice(0, 160),
+                description: product.shortDescription || product.description?.slice(0, 160),
                 url: `${process.env.NEXTAUTH_URL}/products/${slug}`,
-                images: [
-                    {
-                        url: product.mainImage,
-                        width: 1200,
-                        height: 630,
-                        alt: product.mainImageAlt || product.title,
-                    },
-                ],
+                images: [{
+                    url: product.mainImage,
+                    width: 1200,
+                    height: 630,
+                    alt: product.mainImageAlt || product.title,
+                }],
             },
         };
     } catch (error) {
@@ -91,47 +104,55 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
 }
 
-async function getProduct(slugOrId: string): Promise<Product> {
-    const res = await fetch(
-        `${process.env.NEXTAUTH_URL}/api/products/slug/${slugOrId}`,
-        { cache: 'no-store' }
-    );
+// ✅ Cached product fetching function
+async function getProduct(slugOrId: string): Promise<Product | null> {
+    try {
+        const res = await fetch(
+            `${process.env.NEXTAUTH_URL}/api/products/slug/${slugOrId}`,
+            {
+                next: { revalidate: 3600 }, // 1 hour cache
+            }
+        );
 
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Product not found');
+        if (!res.ok) {
+            if (res.status === 404) return null;
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        return res.json();
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        return null;
     }
-
-    return res.json();
 }
 
+// ✅ Cached latest products fetching
 async function getLatestProducts(): Promise<Product[]> {
-    const res = await fetch(
-        `${process.env.NEXTAUTH_URL}/api/products?sort=createdAt&order=desc&limit=5`,
-        { next: { revalidate: 60 } }
-    );
-    if (!res.ok) return [];
-    return res.json();
+    try {
+        const res = await fetch(
+            `${process.env.NEXTAUTH_URL}/api/products?sort=createdAt&order=desc&limit=5`,
+            { next: { revalidate: 3600 } } // 1 hour cache
+        );
+        if (!res.ok) return [];
+        return res.json();
+    } catch (error) {
+        console.error('Error fetching latest products:', error);
+        return [];
+    }
 }
 
 export default async function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
-    // Await the params promise
     const { slug } = await params;
 
-    let product: Product | null = null;
-    let latestProducts: Product[] = [];
+    // Fetch product and latest products in parallel with caching
+    const [product, latestProducts] = await Promise.all([
+        getProduct(slug),
+        getLatestProducts(),
+    ]);
 
-    try {
-        [product, latestProducts] = await Promise.all([
-            getProduct(slug),
-            getLatestProducts(),
-        ]);
-    } catch (error: any) {
-        return (
-            <div className="">
-                < NotFound />
-            </div>
-        );
+    // Show 404 if product not found
+    if (!product) {
+        return <NotFound />;
     }
 
     return (
@@ -145,7 +166,6 @@ function LoadingSkeleton() {
     return (
         <div className="container mx-auto py-12 px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Image Skeleton */}
                 <div className="space-y-4">
                     <div className="bg-gray-200 h-[400px] lg:h-[500px] rounded-xl animate-pulse" />
                     <div className="grid grid-cols-5 gap-3">
@@ -154,14 +174,10 @@ function LoadingSkeleton() {
                         ))}
                     </div>
                 </div>
-
-                {/* Details Skeleton */}
                 <div className="space-y-6">
-                    <div className="h-8 bg-gray-200 rounded-lg w-3/4 animate-pulse mb-4" />
+                    <div className="h-8 bg-gray-200 rounded-lg w-3/4 animate-pulse" />
                     <div className="h-5 bg-gray-200 rounded-lg w-1/2 animate-pulse" />
-
                     <div className="h-12 bg-gray-200 rounded-lg animate-pulse" />
-
                     <div className="space-y-3">
                         <div className="h-4 bg-gray-200 rounded-lg w-32 animate-pulse" />
                         <div className="flex gap-2">
@@ -170,7 +186,6 @@ function LoadingSkeleton() {
                             ))}
                         </div>
                     </div>
-
                     <div className="flex gap-4">
                         <div className="h-12 bg-gray-200 rounded-lg w-32 animate-pulse" />
                         <div className="h-12 bg-gray-200 rounded-lg w-32 animate-pulse" />

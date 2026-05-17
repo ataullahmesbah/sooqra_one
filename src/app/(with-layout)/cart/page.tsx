@@ -806,9 +806,9 @@ export default function CartPage() {
 
                                         <button
                                             onClick={handleContinueWithoutRegistration}
-                                            className="w-full py-2.5 sm:py-3 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900 transition-colors text-sm sm:text-base"
+                                            className="w-full py-2.5 sm:py-3 bg-purple-800 text-white font-medium rounded-lg hover:bg-gray-600 transition-colors text-sm sm:text-base"
                                         >
-                                            Continue Checkout
+                                            সাইন-ইন ছাড়া এগিয়ে যান
                                         </button>
 
                                         {/* Alternative Cancel Button for Mobile */}

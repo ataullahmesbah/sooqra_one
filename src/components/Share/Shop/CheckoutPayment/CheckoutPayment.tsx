@@ -131,8 +131,8 @@ export default function CheckoutPayment({
                                         <div className="space-y-3">
                                             {[
                                                 { step: '01', text: 'Go to your bKash app or Dial *247#' },
-                                                { step: '02', text: 'Choose Payment' },
-                                                { step: '03', text: 'Enter below Merchant Account Number' },
+                                                { step: '02', text: 'Choose Send Money' },
+                                                { step: '03', text: 'Enter below Account Number' },
                                                 { step: '04', text: 'Enter total amount' },
                                                 { step: '06', text: 'Now enter your bKash Account PIN to confirm the transaction' },
                                                 { step: '07', text: 'Copy Transaction ID from payment confirmation message and paste that Transaction ID below' }
@@ -184,7 +184,7 @@ export default function CheckoutPayment({
                                             <div className="space-y-2">
                                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                                                     <span className="text-sm text-gray-700">Account Type:</span>
-                                                    <span className="text-sm font-medium text-gray-800">Merchant</span>
+                                                    <span className="text-sm font-medium text-gray-800">Personal</span>
                                                 </div>
                                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                                                     <span className="text-sm text-gray-700">Account Number:</span>

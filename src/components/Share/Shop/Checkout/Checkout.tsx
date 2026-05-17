@@ -708,7 +708,8 @@ export default function Checkout() {
 
         try {
             if (paymentMethod === 'cod' || paymentMethod === 'bkash') {
-                // Add userId to order data
+
+                // ✅ orderDataWithUser এখানে ডিফাইন করুন (if ব্লকের ভিতরে)
                 const orderDataWithUser = {
                     ...orderData,
                     userId: userId || null,
@@ -718,11 +719,19 @@ export default function Checkout() {
 
                 const orderResponse = await axios.post('/api/products/orders', orderDataWithUser);
 
-
                 if (orderResponse.data &&
                     (orderResponse.data.message === 'Order created' ||
                         orderResponse.data.message === 'Order created successfully' ||
                         orderResponse.data.success)) {
+
+                    // ✅ Guest info save for non-logged in users
+                    if (!session) {
+                        localStorage.setItem('checkoutGuestInfo', JSON.stringify({
+                            email: customerInfo.email,
+                            phone: getStorablePhoneNumber(customerInfo.phone),
+                            name: customerInfo.name,
+                        }));
+                    }
 
                     await trackOrderSuccess(orderData);
 
@@ -761,6 +770,7 @@ export default function Checkout() {
                 }
             }
         } catch (err: any) {
+
             console.error('Order creation error:', err);
 
             let errorMessage = 'Payment processing failed';

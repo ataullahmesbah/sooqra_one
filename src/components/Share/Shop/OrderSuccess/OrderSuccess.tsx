@@ -1,7 +1,8 @@
-// src/app/checkout/OrderSuccess/page.tsx 
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { FaCircleCheck } from "react-icons/fa6";
@@ -45,6 +46,7 @@ interface Order {
 export default function OrderSuccess() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { data: session } = useSession();
     const orderId = searchParams.get('orderId');
     const paymentMethod = searchParams.get('payment');
 
@@ -62,16 +64,13 @@ export default function OrderSuccess() {
                     return;
                 }
 
-        
-
-                const response = await axios.get(`/api/products/orders?orderId=${orderId}`);
-
-               
+                // ✅ শুধু orderId পাঠান - কোন email/phone প্রয়োজন নেই
+                const url = `/api/products/orders?orderId=${encodeURIComponent(orderId)}`;
+                const response = await axios.get(url);
 
                 if (response.data && Array.isArray(response.data) && response.data.length > 0) {
                     const orderData = response.data[0];
 
-                    // Validate order data structure
                     if (!orderData.orderId || !orderData.customerInfo || !orderData.products) {
                         console.error('Invalid order data structure:', orderData);
                         throw new Error('Invalid order data received');
@@ -79,22 +78,18 @@ export default function OrderSuccess() {
 
                     setOrder(orderData);
 
-                    // Show success toast
                     toast.success('Order confirmed! Thank you for your purchase.', {
                         duration: 5000,
                         style: { background: '#1f2937', color: '#fff' },
                     });
 
-                    // Auto-retry if status is not complete (optional)
                     if (orderData.status !== 'completed' && retryCount < 3) {
                         setTimeout(() => {
                             setRetryCount(prev => prev + 1);
                         }, 3000);
                     }
                 } else if (Array.isArray(response.data) && response.data.length === 0) {
-                    // Order not found yet, retry after delay
                     if (retryCount < 5) {
-                        // console.log(`Order not found, retrying... (${retryCount + 1}/5)`);
                         setTimeout(() => {
                             setRetryCount(prev => prev + 1);
                         }, 2000);
@@ -107,16 +102,16 @@ export default function OrderSuccess() {
             } catch (err: any) {
                 console.error('Failed to fetch order:', err);
 
+                const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message;
+
+                // ✅ Retry logic - but remove the public=true approach since it's not needed
                 if (retryCount < 3) {
-                    // Retry on error
-                    // console.log(`Retrying after error... (${retryCount + 1}/3)`);
                     setTimeout(() => {
                         setRetryCount(prev => prev + 1);
                     }, 3000);
                 } else {
                     setError(
-                        err.response?.data?.error ||
-                        err.response?.data?.message ||
+                        errorMessage ||
                         'Failed to fetch order details. Please check your order confirmation email.'
                     );
                 }
@@ -129,6 +124,7 @@ export default function OrderSuccess() {
 
         fetchOrder();
     }, [orderId, retryCount]);
+
 
     const formatOrderDate = (dateString: string): string => {
         if (!dateString) return 'N/A';

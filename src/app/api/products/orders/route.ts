@@ -1,5 +1,8 @@
 // src/app/api/products/orders/route.ts
+
 import { NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import type { NextRequest } from 'next/server';
 import dbConnect from '@/src/lib/dbConnect';
 import Order from '@/src/models/Order';
 import Products from '@/src/models/Products';
@@ -20,7 +23,6 @@ interface CustomerInfo {
     notes?: string;
     bkashNumber?: string;
     transactionId?: string;
-
 }
 
 interface ProductItem {
@@ -47,20 +49,114 @@ interface CreateOrderRequestBody {
     userPhone?: string;
 }
 
-export async function GET(request: Request) {
+// ✅ Helper function to check if user is admin OR moderator
+async function isAdminOrModerator(request: NextRequest): Promise<boolean> {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    return token?.role === 'admin' || token?.role === 'moderator';
+}
+
+// ✅ Helper function to check if user is admin only
+async function isAdmin(request: NextRequest): Promise<boolean> {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    return token?.role === 'admin';
+}
+
+// ✅ Helper function to check if user is authenticated
+async function isAuthenticated(request: NextRequest): Promise<boolean> {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    return !!token;
+}
+
+export async function GET(request: NextRequest) {
     try {
         await dbConnect();
+
         const { searchParams } = new URL(request.url);
         const orderId = searchParams.get('orderId');
-        const status = searchParams.get('status');
+        const email = searchParams.get('email');
+        const phone = searchParams.get('phone');
+
+        // ✅ TRACKING PAGE ACCESS - Allow anyone to view order by orderId only
+        // This is for customer order tracking (no authentication needed)
+        if (orderId && !email && !phone) {
+            const order = await Order.findOne({ orderId }).lean();
+
+            if (!order) {
+                return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+            }
+
+            // ✅ Return order for tracking (limited info, no sensitive data)
+            return NextResponse.json([{
+                _id: order._id,
+                orderId: order.orderId,
+                products: order.products,
+                customerInfo: {
+                    name: order.customerInfo.name,
+                    email: order.customerInfo.email,
+                    phone: order.customerInfo.phone,
+                    address: order.customerInfo.address,
+                    city: order.customerInfo.city,
+                    district: order.customerInfo.district,
+                    thana: order.customerInfo.thana,
+                    postcode: order.customerInfo.postcode,
+                    country: order.customerInfo.country,
+                },
+                paymentMethod: order.paymentMethod,
+                status: order.status,
+                total: order.total,
+                discount: order.discount,
+                shippingCharge: order.shippingCharge,
+                couponCode: order.couponCode,
+                createdAt: order.createdAt,
+            }], { status: 200 });
+        }
+
+        // ✅ ADMIN/MODERATOR/USER ACCESS (requires authentication)
+        const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+        const isAdminUser = token?.role === 'admin';
+        const isModeratorUser = token?.role === 'moderator';
+        const isAdminOrMod = isAdminUser || isModeratorUser;
+        const userId = token?.id || token?.sub;
+
+        if (!token) {
+            return NextResponse.json(
+                { error: 'Authentication required' },
+                { status: 401 }
+            );
+        }
+
+        // Build query for authenticated users
+        const query: any = {};
+
+        // ✅ If admin or moderator - they can see ALL orders
+        if (isAdminOrMod) {
+            // Admin or Moderator can see all orders with filters
+            if (orderId) {
+                query.orderId = orderId;
+            }
+        } else {
+            // Regular users can only see their own orders
+            if (orderId) {
+                query.orderId = orderId;
+                query.$or = [
+                    { userId: userId },
+                    { userEmail: token.email },
+                    { userPhone: token.phone }
+                ];
+            } else {
+                query.$or = [
+                    { userId: userId },
+                    { userEmail: token.email },
+                    { userPhone: token.phone }
+                ];
+            }
+        }
+
+        const statusParam = searchParams.get('status');
         const date = searchParams.get('date');
 
-        const query: any = {};
-        if (orderId) {
-            query.orderId = orderId;
-        }
-        if (status) {
-            query.status = { $in: status.split(',') };
+        if (statusParam) {
+            query.status = { $in: statusParam.split(',') };
         }
         if (date) {
             const startDate = new Date(date);
@@ -70,16 +166,57 @@ export async function GET(request: Request) {
         }
 
         const orders = await Order.find(query).lean();
-        return NextResponse.json(orders, { status: 200 });
+
+        // ✅ Remove sensitive info for non-admin/non-moderator users
+        const sanitizedOrders = orders.map(order => {
+            // Admin and Moderator get FULL access to all data
+            if (isAdminUser || isModeratorUser) {
+                return order;
+            }
+
+            // Regular users get limited data
+            return {
+                _id: order._id,
+                orderId: order.orderId,
+                products: order.products,
+                customerInfo: {
+                    name: order.customerInfo.name,
+                    email: order.customerInfo.email,
+                    phone: order.customerInfo.phone,
+                    address: order.customerInfo.address,
+                    city: order.customerInfo.city,
+                    district: order.customerInfo.district,
+                    thana: order.customerInfo.thana,
+                    postcode: order.customerInfo.postcode,
+                    country: order.customerInfo.country,
+                },
+                paymentMethod: order.paymentMethod,
+                status: order.status,
+                total: order.total,
+                discount: order.discount,
+                shippingCharge: order.shippingCharge,
+                couponCode: order.couponCode,
+                createdAt: order.createdAt,
+            };
+        });
+
+        return NextResponse.json(sanitizedOrders, { status: 200 });
+
     } catch (error: any) {
-        return NextResponse.json({ error: `Failed to fetch orders: ${error.message}` }, { status: 500 });
+        console.error('Error fetching orders:', error);
+        return NextResponse.json(
+            { error: `Failed to fetch orders: ${error.message}` },
+            { status: 500 }
+        );
     }
 }
 
-
-export async function POST(request: Request) {
+// ✅ POST - Anyone can create order (no auth needed for checkout)
+export async function POST(request: NextRequest) {
     try {
         await dbConnect();
+
+        const body: CreateOrderRequestBody = await request.json();
 
         const {
             orderId,
@@ -94,9 +231,9 @@ export async function POST(request: Request) {
             userId = null,
             userEmail,
             userPhone,
-        }: CreateOrderRequestBody = await request.json();
+        } = body;
 
-        // 1. Required fields validation
+        // Required fields validation
         if (!orderId || !products?.length || !customerInfo || !paymentMethod || !status || total == null) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
@@ -105,7 +242,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required customer information' }, { status: 400 });
         }
 
-        // 2. Bkash validation
+        // Bkash validation
         if (paymentMethod === 'bkash') {
             if (!customerInfo.bkashNumber || !customerInfo.transactionId) {
                 return NextResponse.json({ error: 'Bkash number and Transaction ID required' }, { status: 400 });
@@ -115,14 +252,14 @@ export async function POST(request: Request) {
             }
         }
 
-        // 3. COD & Bkash: District + Thana required
+        // COD & Bkash: District + Thana required
         if ((paymentMethod === 'cod' || paymentMethod === 'bkash') && customerInfo.country === 'Bangladesh') {
             if (!customerInfo.district || !customerInfo.thana) {
                 return NextResponse.json({ error: 'District and thana required for delivery' }, { status: 400 });
             }
         }
 
-        // 4. Product validation (only check, don't reduce stock)
+        // Product validation
         for (const item of products) {
             const product = await Products.findById(item.productId);
             if (!product) {
@@ -147,11 +284,10 @@ export async function POST(request: Request) {
             }
         }
 
-        // 5. Coupon validation (product & global)
+        // Coupon validation
         if (couponCode) {
             const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
             if (coupon) {
-                // Product-specific coupon
                 if (!products.some(p => p.productId === coupon.productId?.toString())) {
                     return NextResponse.json({ error: 'Coupon not applicable to cart items' }, { status: 400 });
                 }
@@ -166,7 +302,6 @@ export async function POST(request: Request) {
                     if (used) return NextResponse.json({ error: 'Coupon already used' }, { status: 400 });
                 }
             } else {
-                // Global coupon
                 const globalCoupon = await Config.findOne({
                     key: 'globalCoupon',
                     'value.code': { $regex: `^${couponCode}$`, $options: 'i' }
@@ -188,8 +323,7 @@ export async function POST(request: Request) {
             }
         }
 
-
-        // 6. Create order — STOCK NOT REDUCED HERE
+        // Create order
         const order = await Order.create({
             orderId,
             userId: userId || null,
@@ -208,10 +342,10 @@ export async function POST(request: Request) {
                 email: customerInfo.email,
                 phone: customerInfo.phone,
                 address: customerInfo.address,
-                notes: customerInfo.notes || '', // ✅ notes সঠিকভাবে যোগ করা হয়েছে
+                notes: customerInfo.notes || '',
                 city: customerInfo.city || '',
                 postcode: customerInfo.postcode || '',
-                country: customerInfo.country || 'Bangladesh', // ✅ country যোগ করা হয়েছে
+                country: customerInfo.country || 'Bangladesh',
                 district: customerInfo.district || '',
                 thana: customerInfo.thana || '',
                 bkashNumber: customerInfo.bkashNumber || '',
@@ -225,7 +359,7 @@ export async function POST(request: Request) {
             couponCode,
         });
 
-        // 7. Record coupon usage
+        // Record coupon usage
         if (couponCode) {
             await UsedCoupon.create({
                 couponCode,
