@@ -42,28 +42,14 @@ type Product = {
 // ✅ ISR enabled - revalidate every 3600 seconds (1 hour)
 export const revalidate = 3600;
 
-// ✅ Dynamic params for static generation (optional - improves performance)
-export async function generateStaticParams() {
-    try {
-        const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products`, {
-            next: { revalidate: 3600 }
-        });
-        if (!res.ok) return [];
-        const products = await res.json();
-        return products.map((product: Product) => ({
-            slug: product.slug || product._id,
-        }));
-    } catch (error) {
-        console.error('Error generating static params:', error);
-        return [];
-    }
-}
+// ❌ Remove this line - it disables caching
+// export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
 
     try {
-        // ✅ Cache enabled - revalidate every hour
+        // ✅ Use cache with revalidation
         const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products/slug/${slug}`, {
             next: { revalidate: 3600 }, // 1 hour cache
         });
@@ -97,6 +83,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
             },
         };
     } catch (error) {
+        console.error('Metadata error:', error);
         return {
             title: 'Error | Sooqra One',
             description: 'An error occurred while loading the product.',
@@ -104,9 +91,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
 }
 
-// ✅ Cached product fetching function
 async function getProduct(slugOrId: string): Promise<Product | null> {
     try {
+        // ✅ Remove 'no-store', use revalidate instead
         const res = await fetch(
             `${process.env.NEXTAUTH_URL}/api/products/slug/${slugOrId}`,
             {
@@ -126,9 +113,9 @@ async function getProduct(slugOrId: string): Promise<Product | null> {
     }
 }
 
-// ✅ Cached latest products fetching
 async function getLatestProducts(): Promise<Product[]> {
     try {
+        // ✅ Keep revalidate for latest products
         const res = await fetch(
             `${process.env.NEXTAUTH_URL}/api/products?sort=createdAt&order=desc&limit=5`,
             { next: { revalidate: 3600 } } // 1 hour cache
@@ -144,13 +131,11 @@ async function getLatestProducts(): Promise<Product[]> {
 export default async function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
 
-    // Fetch product and latest products in parallel with caching
     const [product, latestProducts] = await Promise.all([
         getProduct(slug),
         getLatestProducts(),
     ]);
 
-    // Show 404 if product not found
     if (!product) {
         return <NotFound />;
     }
