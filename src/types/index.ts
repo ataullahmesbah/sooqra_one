@@ -75,4 +75,5 @@ export interface Product {
     descriptions?: string[];
     createdAt?: string;
     updatedAt?: string;
+    hasVariants?: boolean;
 }

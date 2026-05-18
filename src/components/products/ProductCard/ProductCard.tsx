@@ -104,18 +104,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
 
 
     useEffect(() => {
-        if (product.hasVariants && product._id) {
-            fetch(`/api/products/variants?productId=${product._id}`)
-                .then(res => res.json())
-                .then(data => {
+        const productId = product._id;
+        const hasVariants = product.hasVariants;
+
+        const fetchVariantsData = async () => {
+            if (hasVariants && productId) {
+                try {
+                    const res = await fetch(`/api/products/variants?productId=${productId}`);
+                    const data = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
                         setVariants(data);
                     }
+                } catch (error) {
+                    console.error('Error fetching variants:', error);
+                } finally {
                     setVariantsLoaded(true);
-                })
-                .catch(() => setVariantsLoaded(true));
-        }
-    }, [product._id, product.hasVariants]);
+                }
+            } else {
+                setVariantsLoaded(true);
+            }
+        };
+
+        fetchVariantsData();
+    }, [product._id]);
 
     // Custom Toast Function
     const showCustomToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
