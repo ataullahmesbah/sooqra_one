@@ -6,7 +6,6 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Interface definitions
 interface CartItem {
     _id: string;
     title: string;
@@ -16,6 +15,9 @@ interface CartItem {
     mainImageAlt?: string;
     currency: string;
     size?: string;
+    variantId?: string;
+    variantName?: string;
+    variantWeight?: string;
 }
 
 interface ConversionRates {
@@ -77,7 +79,7 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
         const uniqueItemsMap = new Map<string, CartItem>();
 
         cartItems.forEach(item => {
-            const key = `${item._id}-${item.size || 'no-size'}`;
+            const key = `${item._id}-${item.variantId || 'no-variant'}-${item.size || 'no-size'}`;
 
             if (uniqueItemsMap.has(key)) {
                 const existingItem = uniqueItemsMap.get(key)!;
@@ -102,9 +104,8 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
     const getSizeKey = (size?: string) => size || 'no-size';
     const getItemSizeKey = (item: CartItem) => item.size || 'no-size';
 
-    const validateQuantityWithBackend = async (productId: string, newQuantity: number, size?: string): Promise<ValidationResponse> => {
+    const validateQuantityWithBackend = async (productId: string, newQuantity: number, size?: string, variantId?: string): Promise<ValidationResponse> => {
         try {
-            // Check maximum limit first
             if (newQuantity > 3) {
                 return {
                     valid: false,
@@ -116,6 +117,7 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
                 productId,
                 quantity: newQuantity,
                 size,
+                variantId,
             });
             return response.data;
         } catch (error: any) {
@@ -127,30 +129,38 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
         }
     };
 
-    const handleQuantityChange = async (productId: string, newQuantity: number, size?: string) => {
+    // CartSlider.tsx - handleQuantityChange
+
+    const handleQuantityChange = async (productId: string, newQuantity: number, size?: string, variantId?: string) => {
         if (newQuantity < 1) return;
 
         setIsLoading(true);
         try {
-            const validation = await validateQuantityWithBackend(productId, newQuantity, size);
+            const validation = await validateQuantityWithBackend(productId, newQuantity, size, variantId);
             if (!validation.valid) {
                 showCustomToast(validation.message, 'error');
                 setIsLoading(false);
                 return;
             }
 
-            const updatedCart = cart.map((item) =>
-                item._id === productId && getItemSizeKey(item) === getSizeKey(size)
+            const updatedCart = cart.map((item) => {
+                if (variantId) {
+                    // ✅ Match by variant ID
+                    return item._id === productId && item.variantId === variantId
+                        ? { ...item, quantity: newQuantity }
+                        : item;
+                }
+                // Match by size
+                return item._id === productId && item.size === size
                     ? { ...item, quantity: newQuantity }
-                    : item
-            );
+                    : item;
+            });
 
             const uniqueCart = removeDuplicateCartItems(updatedCart);
             localStorage.setItem('cart', JSON.stringify(uniqueCart));
             setCart(uniqueCart);
             window.dispatchEvent(new Event('cartUpdated'));
 
-            // Show success toast for quantity change
             if (newQuantity > 1) {
                 showCustomToast(`Quantity updated to ${newQuantity}`, 'success');
             }
@@ -162,19 +172,42 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
         }
     };
 
-    const handleRemoveItem = (productId: string, size?: string) => {
-        const updatedCart = cart.filter((item) =>
-            !(item._id === productId && getItemSizeKey(item) === getSizeKey(size))
-        );
+
+
+
+
+    const handleRemoveItem = (productId: string, size?: string, variantId?: string) => {
+        const updatedCart = cart.filter((item) => {
+            if (variantId) {
+                // Remove by variant ID
+                return !(item._id === productId && item.variantId === variantId);
+            }
+            if (size) {
+                // Remove by size
+                return !(item._id === productId && item.size === size);
+            }
+            // Remove by product ID only
+            return item._id !== productId;
+        });
 
         const uniqueCart = removeDuplicateCartItems(updatedCart);
         localStorage.setItem('cart', JSON.stringify(uniqueCart));
         setCart(uniqueCart);
         window.dispatchEvent(new Event('cartUpdated'));
 
-        const product = cart.find(item => item._id === productId && getItemSizeKey(item) === getSizeKey(size));
+        const product = cart.find(item => {
+            if (variantId) {
+                return item._id === productId && item.variantId === variantId;
+            }
+            if (size) {
+                return item._id === productId && item.size === size;
+            }
+            return item._id === productId;
+        });
+
         if (product) {
-            showCustomToast(`${product.title} removed from cart`, 'success');
+            const displayName = product.variantName ? `${product.title} (${product.variantName})` : product.title;
+            showCustomToast(`${displayName} removed from cart`, 'success');
         }
     };
 
@@ -269,7 +302,7 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
             }
 
             const validationPromises = cleanedCart.map(async (item) => {
-                const validation = await validateQuantityWithBackend(item._id, item.quantity, item.size);
+                const validation = await validateQuantityWithBackend(item._id, item.quantity, item.size, item.variantId);
                 return { ...validation, productId: item._id, size: item.size, title: item.title };
             });
 
@@ -286,7 +319,9 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
                         try {
                             const response = await axios.get<ProductResponse>(`/api/products/${item._id}`);
                             const productData = response.data;
-                            if (item.size) {
+                            if (item.variantId) {
+                                return item; // variant validation already done above
+                            } else if (item.size) {
                                 const sizeData = productData.sizes?.find((s) => s.name === item.size);
                                 if (!sizeData || item.quantity > sizeData.quantity) {
                                     return { ...item, quantity: Math.min(item.quantity, sizeData?.quantity || 0) };
@@ -367,6 +402,7 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
                         </div>
 
                         {/* Cart Items */}
+
                         <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
                             {cart.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -380,85 +416,117 @@ export default function CartSlider({ isOpen, setIsOpen, conversionRates }: CartS
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    {cart.map((item, index) => (
-                                        <motion.div
-                                            key={`${item._id}-${getItemSizeKey(item)}-${index}`}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="flex items-start gap-4 pb-4 border-b border-gray-200 last:border-b-0"
-                                        >
-                                            {/* Product Image */}
-                                            <div className="relative w-20 h-20 flex-shrink-0">
-                                                <Image
-                                                    src={item.mainImage}
-                                                    alt={item.mainImageAlt || item.title}
-                                                    width={80}
-                                                    height={80}
-                                                    className="object-cover rounded-lg shadow-sm"
-                                                    sizes="80px"
-                                                />
-                                                {item.quantity > 1 && (
-                                                    <div className="absolute -top-2 -right-2 bg-gray-800 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                                                        {item.quantity}
-                                                    </div>
-                                                )}
-                                            </div>
+                                    {cart.map((item, index) => {
+                                        // ✅ Unique key তৈরি করুন variantId বা weight অনুযায়ী
+                                        const uniqueKey = `${item._id}-${item.variantId || item.variantWeight || item.size || 'no-size'}`;
 
-                                            {/* Product Details */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex-1">
-                                                        <h3 className="text-sm font-medium text-gray-800 line-clamp-2">{item.title}</h3>
-                                                        {item.size && (
-                                                            <p className="text-xs text-gray-600 mt-1">
-                                                                Size: <span className="font-medium">{item.size}</span>
-                                                            </p>
-                                                        )}
-                                                        <p className="text-sm font-semibold text-gray-800 mt-2">
-                                                            ৳{(item.price * item.quantity).toLocaleString()}
-                                                        </p>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleRemoveItem(item._id, item.size)}
-                                                        className="text-gray-400 hover:text-red-500 transition-colors p-1 ml-2"
-                                                        disabled={isLoading}
-                                                        aria-label="Remove item"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-
-                                                {/* Quantity Controls */}
-                                                <div className="flex items-center gap-3 mt-3">
-                                                    <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                                                        <button
-                                                            onClick={() => handleQuantityChange(item._id, item.quantity - 1, item.size)}
-                                                            disabled={item.quantity <= 1 || isLoading}
-                                                            className="px-3 py-1.5 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                                                            aria-label="Decrease quantity"
-                                                        >
-                                                            −
-                                                        </button>
-                                                        <span className="px-3 py-1.5 bg-white min-w-[2.5rem] text-center font-medium text-sm">
+                                        return (
+                                            <motion.div
+                                                key={uniqueKey}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                                className="flex items-start gap-4 pb-4 border-b border-gray-200 last:border-b-0"
+                                            >
+                                                {/* Product Image */}
+                                                <div className="relative w-20 h-20 flex-shrink-0">
+                                                    <Image
+                                                        src={item.mainImage}
+                                                        alt={item.mainImageAlt || item.title}
+                                                        width={80}
+                                                        height={80}
+                                                        className="object-cover rounded-lg shadow-sm"
+                                                        sizes="80px"
+                                                    />
+                                                    {item.quantity > 1 && (
+                                                        <div className="absolute -top-2 -right-2 bg-gray-800 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                                                             {item.quantity}
-                                                        </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Product Details */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex-1">
+                                                            {/* Product Title, Variant Name */}
+                                                            <h3 className="text-sm font-medium text-gray-800">
+                                                                {item.title}
+                                                                {item.variantName && (
+                                                                    <span className="text-xs font-normal text-gray-500 ml-1">
+                                                                        — {item.variantName}
+                                                                    </span>
+                                                                )}
+                                                            </h3>
+
+                                                            {/* ✅ Variant Details - Weight দেখাবে (যেমন: 11 KG, 22 KG) */}
+                                                            <div className="mt-1 space-y-0.5">
+                                                                {item.variantWeight && (
+                                                                    <p className="text-xs text-gray-600">
+                                                                        Weight: <span className="font-semibold text-gray-800">{item.variantWeight}</span>
+                                                                    </p>
+                                                                )}
+                                                                {item.variantName && !item.variantWeight && (
+                                                                    <p className="text-xs text-gray-600">
+                                                                        Package: <span className="font-medium text-gray-700">{item.variantName}</span>
+                                                                    </p>
+                                                                )}
+                                                                {item.size && (
+                                                                    <p className="text-xs text-gray-600">
+                                                                        Size: <span className="font-medium text-gray-700">{item.size}</span>
+                                                                    </p>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Price */}
+                                                            <p className="text-sm font-semibold text-gray-800 mt-2">
+                                                                ৳{(item.price * item.quantity).toLocaleString()}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">
+                                                                ৳{item.price.toLocaleString()} each
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Remove Button */}
                                                         <button
-                                                            onClick={() => handleQuantityChange(item._id, item.quantity + 1, item.size)}
-                                                            disabled={isLoading || item.quantity >= 3}
-                                                            className="px-3 py-1.5 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                                                            aria-label="Increase quantity"
+                                                            onClick={() => handleRemoveItem(item._id, item.size, item.variantId)}
+                                                            className="text-gray-400 hover:text-red-500 transition-colors p-1 ml-2"
+                                                            disabled={isLoading}
+                                                            aria-label="Remove item"
                                                         >
-                                                            +
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
                                                         </button>
                                                     </div>
-                                                    <span className="text-xs text-gray-500">max 3</span>
+
+                                                    {/* Quantity Controls */}
+                                                    <div className="flex items-center gap-3 mt-3">
+                                                        <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                                                            <button
+                                                                onClick={() => handleQuantityChange(item._id, item.quantity - 1, item.size, item.variantId)}
+                                                                disabled={item.quantity <= 1 || isLoading}
+                                                                className="px-3 py-1.5 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                                            >
+                                                                −
+                                                            </button>
+                                                            <span className="px-3 py-1.5 bg-white min-w-[2.5rem] text-center font-medium text-sm">
+                                                                {item.quantity}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => handleQuantityChange(item._id, item.quantity + 1, item.size, item.variantId)}
+                                                                disabled={isLoading || item.quantity >= 3}
+                                                                className="px-3 py-1.5 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                        <span className="text-xs text-gray-500">max 3</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </motion.div>
-                                    ))}
+                                            </motion.div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

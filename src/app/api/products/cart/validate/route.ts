@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import Product from '@/src/models/Products';
 import mongoose from 'mongoose';
 import dbConnect from '@/src/lib/dbConnect';
+import ProductVariant from '@/src/models/ProductVariant';
 
 
 // Interface definitions
@@ -27,23 +28,19 @@ interface RequestBody {
     productId: string;
     quantity: number;
     size?: string;
+    variantId?: string;
 }
+
+
+
 
 export async function POST(request: Request) {
     await dbConnect();
     try {
-        const { productId, quantity, size }: RequestBody = await request.json();
-
-        // console.log('Cart validate request received:', {
-        //     productId,
-        //     quantity,
-        //     size,
-        //     timestamp: new Date().toISOString()
-        // });
+        const { productId, quantity, size, variantId }: RequestBody = await request.json();
 
         // Validate productId
         if (!mongoose.Types.ObjectId.isValid(productId)) {
-            // console.log('Invalid product ID:', productId);
             return NextResponse.json(
                 {
                     valid: false,
@@ -57,7 +54,6 @@ export async function POST(request: Request) {
 
         // Validate quantity
         if (!quantity || quantity < 1) {
-            // console.log('Invalid quantity:', quantity);
             return NextResponse.json(
                 {
                     valid: false,
@@ -69,11 +65,9 @@ export async function POST(request: Request) {
             );
         }
 
-        // Find product
         const product = await Product.findById(productId).lean() as unknown as ProductDocument;
 
         if (!product) {
-            // console.log('Product not found:', productId);
             return NextResponse.json(
                 {
                     valid: false,
@@ -85,18 +79,8 @@ export async function POST(request: Request) {
             );
         }
 
-        // console.log('Found product:', {
-        //     title: product.title,
-        //     availability: product.availability,
-        //     quantity: product.quantity,
-        //     productType: product.productType,
-        //     sizeRequirement: product.sizeRequirement,
-        //     sizes: product.sizes
-        // });
-
         // Check availability
         if (product.availability !== 'InStock') {
-            // console.log('Product not in stock:', product.title);
             return NextResponse.json(
                 {
                     valid: false,
@@ -112,7 +96,6 @@ export async function POST(request: Request) {
         // Check maximum per order
         const maxAllowed = product.maxPerOrder || 3;
         if (quantity > maxAllowed) {
-            // console.log('Quantity exceeds max allowed:', quantity, '>', maxAllowed);
             return NextResponse.json(
                 {
                     valid: false,
@@ -126,12 +109,40 @@ export async function POST(request: Request) {
             );
         }
 
+        // ✅ If variantId is provided, validate variant stock
+        if (variantId && mongoose.Types.ObjectId.isValid(variantId)) {
+            const variant = await ProductVariant.findById(variantId);
+
+            if (!variant) {
+                return NextResponse.json(
+                    {
+                        valid: false,
+                        message: 'Product variant not found',
+                        productId,
+                        availableQuantity: 0
+                    },
+                    { status: 400 }
+                );
+            }
+
+            if (quantity > variant.quantity) {
+                return NextResponse.json(
+                    {
+                        valid: false,
+                        message: `Only ${variant.quantity} units available for ${variant.name}`,
+                        productId,
+                        title: `${product.title} (${variant.name})`,
+                        availableQuantity: variant.quantity
+                    },
+                    { status: 400 }
+                );
+            }
+        }
         // For Own products with mandatory size requirement
-        if (product.productType === 'Own' && product.sizeRequirement === 'Mandatory' && size) {
+        else if (product.productType === 'Own' && product.sizeRequirement === 'Mandatory' && size) {
             const sizeData = product.sizes.find((s: Size) => s.name === size);
 
             if (!sizeData) {
-                // console.log('Size not found:', size, 'for product:', product.title);
                 return NextResponse.json(
                     {
                         valid: false,
@@ -145,11 +156,6 @@ export async function POST(request: Request) {
             }
 
             if (quantity > sizeData.quantity) {
-                // console.log('Insufficient stock for size:', {
-                //     size,
-                //     requested: quantity,
-                //     available: sizeData.quantity
-                // });
                 return NextResponse.json(
                     {
                         valid: false,
@@ -166,10 +172,6 @@ export async function POST(request: Request) {
         // For products without size requirement or affiliate products
         else {
             if (quantity > product.quantity) {
-                // console.log('Insufficient overall stock:', {
-                //     requested: quantity,
-                //     available: product.quantity
-                // });
                 return NextResponse.json(
                     {
                         valid: false,
@@ -182,14 +184,6 @@ export async function POST(request: Request) {
                 );
             }
         }
-
-        // Return success
-        // console.log('Cart item validated successfully:', {
-        //     productId,
-        //     title: product.title,
-        //     quantity,
-        //     size: size || 'N/A'
-        // });
 
         return NextResponse.json(
             {

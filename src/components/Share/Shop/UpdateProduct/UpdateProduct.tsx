@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
+import ProductVariantsManager from '@/src/components/Dashboard/ProductVariantsManager/ProductVariantsManager';
 
 // Interface definitions
 interface Category {
@@ -39,6 +40,18 @@ interface AggregateRating {
     ratingValue: string;
     reviewCount: string;
 }
+
+interface VariantType {
+    _id?: string;
+    name: string;
+    weight: string;
+    price: number;
+    comparePrice: number;
+    sku: string;
+    quantity: number;
+    isDefault: boolean;
+}
+
 
 interface FormData {
     title: string;
@@ -78,6 +91,7 @@ interface FormData {
     isGlobal: boolean;
     targetCountry: string;
     targetCity: string;
+    hasVariants: boolean;
 }
 
 interface ImagePreviews {
@@ -94,10 +108,6 @@ export default function UpdateProduct() {
     const router = useRouter();
     const params = useParams();
 
-    // ✅ useParams থেকে productId নিন (early return না করে)
-    const productId = params?.id as string;
-
-    // ✅ প্রথমে সব Hooks declare করো (কোন condition এর আগে না)
     const [formData, setFormData] = useState<FormData>({
         title: '',
         bdtPrice: '',
@@ -136,7 +146,10 @@ export default function UpdateProduct() {
         isGlobal: false,
         targetCountry: 'Bangladesh',
         targetCity: 'Dhaka',
+        hasVariants: false,
     });
+
+
 
     const [errors, setErrors] = useState<Errors>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,21 +157,17 @@ export default function UpdateProduct() {
         mainImage: null,
         additionalImages: []
     });
+
+    const productId = params?.id as string;
     const [categories, setCategories] = useState<Category[]>([]);
     const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const mainImageInputRef = useRef<HTMLInputElement>(null);
     const additionalImageInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const [variants, setVariants] = useState<VariantType[]>([]);
+    const [savedProductId, setSavedProductId] = useState<string | null>(productId);
+    const [loadingVariants, setLoadingVariants] = useState(false);
 
-    // ✅ Early return condition Hooks এর পরে
-    if (!productId) {
-        console.error('No product ID found in params');
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-900">
-                <div className="text-white text-lg">Product ID not found. Please check the URL.</div>
-            </div>
-        );
-    }
 
     useEffect(() => {
         if (formData.category && formData.category !== 'new') {
@@ -180,16 +189,15 @@ export default function UpdateProduct() {
         }
     }, [formData.category]);
 
-    // Fetch product and categories
+
+
     useEffect(() => {
         const fetchData = async () => {
             if (!productId) return;
 
             setIsLoading(true);
             try {
-
-
-                // Product fetch
+                // 1. Product fetch
                 const productRes = await fetch(`/api/products/${productId}`);
                 if (!productRes.ok) {
                     const errorText = await productRes.text();
@@ -199,8 +207,7 @@ export default function UpdateProduct() {
 
                 const product = await productRes.json();
 
-
-                // Categories fetch
+                // 2. Categories fetch
                 const categoriesRes = await fetch('/api/products?type=categories');
                 if (!categoriesRes.ok) throw new Error('Failed to fetch categories');
                 const categoriesData = await categoriesRes.json();
@@ -254,6 +261,7 @@ export default function UpdateProduct() {
                     isGlobal: product.isGlobal || false,
                     targetCountry: product.targetCountry || 'Bangladesh',
                     targetCity: product.targetCity || 'Dhaka',
+                    hasVariants: product.hasVariants || false,
                 });
 
                 // Set image previews
@@ -264,6 +272,22 @@ export default function UpdateProduct() {
 
                 setCategories(categoriesData);
                 setErrors({});
+
+                // ✅ 3. Fetch variants for this product
+                if (product.hasVariants || product._id) {
+                    try {
+                        const variantsRes = await fetch(`/api/products/variants?productId=${productId}`);
+                        if (variantsRes.ok) {
+                            const variantsData = await variantsRes.json();
+                            if (variantsData && variantsData.length > 0) {
+                                setVariants(variantsData);
+                                setFormData(prev => ({ ...prev, hasVariants: true }));
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error fetching variants:', err);
+                    }
+                }
 
                 // Product load হওয়ার পর যদি category থাকে, তাহলে subcategories fetch করো
                 if (product.category?._id) {
@@ -299,6 +323,16 @@ export default function UpdateProduct() {
 
 
 
+    // ✅ Early return condition Hooks এর পরে
+    if (!productId) {
+        console.error('No product ID found in params');
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-900">
+                <div className="text-white text-lg">Product ID not found. Please check the URL.</div>
+            </div>
+        );
+    }
+
     // Validation function
     const validateForm = (): Errors => {
         const newErrors: Errors = {};
@@ -306,7 +340,7 @@ export default function UpdateProduct() {
         if (!formData.title.trim()) newErrors.title = 'Title is required';
 
         const bdtPriceNum = parseFloat(formData.bdtPrice);
-        if (isNaN(bdtPriceNum) || bdtPriceNum <= 0) {
+        if (!formData.hasVariants && (isNaN(bdtPriceNum) || bdtPriceNum <= 0)) {
             newErrors.bdtPrice = 'BDT price must be a positive number';
         }
 
@@ -366,7 +400,8 @@ export default function UpdateProduct() {
         }
 
         // Size validation
-        if (formData.sizeRequirement === 'Mandatory') {
+
+        if (!formData.hasVariants && formData.sizeRequirement === 'Mandatory') {
             if (formData.sizes.length === 0) {
                 newErrors.sizes = 'At least one size with quantity is required';
             } else {
@@ -394,7 +429,8 @@ export default function UpdateProduct() {
         return newErrors;
     };
 
-    // Handle submit
+    // UpdateProduct.tsx - সম্পূর্ণ handleSubmit ফাংশন
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -418,7 +454,7 @@ export default function UpdateProduct() {
 
             // Basic required fields
             data.append('title', formData.title);
-            data.append('bdtPrice', formData.bdtPrice);
+            data.append('bdtPrice', formData.hasVariants ? '1' : formData.bdtPrice);
             data.append('description', formData.description);
             data.append('product_code', formData.product_code);
             data.append('brand', formData.brand);
@@ -431,6 +467,7 @@ export default function UpdateProduct() {
             data.append('availability', formData.availability);
             data.append('sizeRequirement', formData.sizeRequirement);
             data.append('isGlobal', formData.isGlobal.toString());
+            data.append('hasVariants', formData.hasVariants.toString());  // ✅ hasVariants যোগ করুন
 
             // ✅ Subcategory 
             if (formData.subCategory && formData.subCategory.trim() && formData.subCategory !== 'new') {
@@ -439,10 +476,8 @@ export default function UpdateProduct() {
                 data.append('subCategory', 'new');
                 data.append('newSubCategory', formData.newSubCategory);
             } else {
-
                 data.append('subCategory', '');
             }
-
 
             // Optional fields
             if (formData.usdPrice) data.append('usdPrice', formData.usdPrice);
@@ -455,6 +490,11 @@ export default function UpdateProduct() {
             if (formData.targetCountry) data.append('targetCountry', formData.targetCountry);
             if (formData.targetCity) data.append('targetCity', formData.targetCity);
             if (formData.keywords) data.append('keywords', formData.keywords);
+
+            // ✅ variants যোগ করুন
+            if (formData.hasVariants && variants.length > 0) {
+                data.append('variants', JSON.stringify(variants));
+            }
 
             // Main image handling
             if (formData.mainImage) {
@@ -494,11 +534,8 @@ export default function UpdateProduct() {
                 data.append('sizes', JSON.stringify(formData.sizes));
             }
 
-
             data.append('aggregateRating.ratingValue', formData.aggregateRating.ratingValue || '0');
             data.append('aggregateRating.reviewCount', formData.aggregateRating.reviewCount || '0');
-
-
 
             const res = await fetch(`/api/products/${productId}`, {
                 method: 'PUT',
@@ -507,18 +544,63 @@ export default function UpdateProduct() {
 
             const result = await res.json();
 
-
             if (!res.ok) {
                 if (result.details) {
-                    // Merge validation errors
                     setErrors(result.details);
                 }
                 throw new Error(result.error || result.details || 'Failed to update product');
             }
 
+            // ✅ Update variants if product has them
+            if (formData.hasVariants && variants.length > 0) {
+                try {
+                    const variantsRes = await fetch('/api/products/variants', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            productId: productId,
+                            variants: variants.map(v => ({
+                                name: v.name,
+                                weight: v.weight,
+                                price: v.price,
+                                comparePrice: v.comparePrice || 0,
+                                sku: v.sku || '',
+                                quantity: v.quantity || 0,
+                                isDefault: v.isDefault || false,
+                            })),
+                        }),
+                    });
+
+                    if (!variantsRes.ok) {
+                        const errorData = await variantsRes.json();
+                        console.error('Failed to update variants:', errorData);
+                        setErrors(prev => ({
+                            ...prev,
+                            variants: errorData.error || 'Failed to update variants'
+                        }));
+                    }
+                } catch (err) {
+                    console.error('Error updating variants:', err);
+                    setErrors(prev => ({
+                        ...prev,
+                        variants: 'Error updating product variants'
+                    }));
+                }
+            } else if (!formData.hasVariants) {
+                // If variants disabled, delete all variants
+                try {
+                    await fetch(`/api/products/variants?productId=${productId}`, {
+                        method: 'DELETE',
+                    });
+                } catch (err) {
+                    console.error('Error deleting variants:', err);
+                }
+            }
+
             alert('Product updated successfully!');
             router.push('/admin-dashboard/shop/all-products');
-            router.refresh(); // Refresh the page data
+            router.refresh();
+
         } catch (err: any) {
             console.error('Error updating product:', err);
             setErrors(prev => ({
@@ -880,6 +962,7 @@ export default function UpdateProduct() {
                             )}
                         </div>
 
+                        {/* Prices Section */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-gray-300 mb-2 text-sm font-medium">BDT Price*</label>
@@ -887,16 +970,24 @@ export default function UpdateProduct() {
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">৳</span>
                                     <input
                                         type="number"
-                                        value={formData.bdtPrice}
+                                        value={formData.hasVariants ? '' : formData.bdtPrice}
                                         onChange={(e) => setFormData({ ...formData, bdtPrice: e.target.value })}
-                                        className={`w-full pl-8 pr-4 py-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.bdtPrice ? 'border-red-500' : 'border-gray-700'}`}
-                                        placeholder="0.00"
+                                        disabled={formData.hasVariants}
+                                        className={`w-full pl-8 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500
+        ${formData.hasVariants
+                                                ? 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50'
+                                                : 'bg-gray-800 text-white border-gray-700'
+                                            }
+        ${errors.bdtPrice ? 'border-red-500' : ''}
+    `}
+                                        placeholder={formData.hasVariants ? 'Variant পণ্যে প্রযোজ্য নয়' : '0.00'}
                                         step="0.01"
                                         min="0"
                                     />
                                 </div>
                                 {errors.bdtPrice && <p className="mt-1 text-sm text-red-500">{errors.bdtPrice}</p>}
                             </div>
+
                             <div>
                                 <label className="block text-gray-300 mb-2 text-sm font-medium">USD Price</label>
                                 <div className="relative">
@@ -905,7 +996,14 @@ export default function UpdateProduct() {
                                         type="number"
                                         value={formData.usdPrice}
                                         onChange={(e) => setFormData({ ...formData, usdPrice: e.target.value })}
-                                        className={`w-full pl-8 pr-4 py-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.usdPrice ? 'border-red-500' : 'border-gray-700'}`}
+                                        disabled={formData.hasVariants}
+                                        className={`w-full pl-8 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500
+        ${formData.hasVariants
+                                                ? 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50'
+                                                : 'bg-gray-800 text-white border-gray-700'
+                                            }
+        ${errors.usdPrice ? 'border-red-500' : ''}
+    `}
                                         placeholder="0.00"
                                         step="0.01"
                                         min="0"
@@ -919,7 +1017,7 @@ export default function UpdateProduct() {
                                             type="number"
                                             value={formData.usdExchangeRate}
                                             onChange={(e) => setFormData({ ...formData, usdExchangeRate: e.target.value })}
-                                            className={`w-full px-3 py-2 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.usdExchangeRate ? 'border-red-500' : 'border-gray-700'}`}
+                                            className={`w-full pl-8 pr-4 py-3 bg-gray-800 text-white rounded-lg border ${errors.usdExchangeRate ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
                                             placeholder="0.00"
                                             step="0.01"
                                             min="0"
@@ -928,19 +1026,29 @@ export default function UpdateProduct() {
                                     </div>
                                 )}
                             </div>
+
                             <div>
                                 <label className="block text-gray-300 mb-2 text-sm font-medium">EUR Price</label>
                                 <div className="relative">
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">€</span>
+
                                     <input
                                         type="number"
                                         value={formData.eurPrice}
                                         onChange={(e) => setFormData({ ...formData, eurPrice: e.target.value })}
-                                        className={`w-full pl-8 pr-4 py-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.eurPrice ? 'border-red-500' : 'border-gray-700'}`}
+                                        disabled={formData.hasVariants}
+                                        className={`w-full pl-8 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500
+        ${formData.hasVariants
+                                                ? 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50'
+                                                : 'bg-gray-800 text-white border-gray-700'
+                                            }
+        ${errors.eurPrice ? 'border-red-500' : ''}
+    `}
                                         placeholder="0.00"
                                         step="0.01"
                                         min="0"
                                     />
+
                                 </div>
                                 {errors.eurPrice && <p className="mt-1 text-sm text-red-500">{errors.eurPrice}</p>}
                                 {formData.eurPrice && (
@@ -950,7 +1058,7 @@ export default function UpdateProduct() {
                                             type="number"
                                             value={formData.eurExchangeRate}
                                             onChange={(e) => setFormData({ ...formData, eurExchangeRate: e.target.value })}
-                                            className={`w-full px-3 py-2 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.eurExchangeRate ? 'border-red-500' : 'border-gray-700'}`}
+                                            className={`w-full pl-8 pr-4 py-3 bg-gray-800 text-white rounded-lg border ${errors.eurExchangeRate ? 'border-red-500' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-purple-500`}
                                             placeholder="0.00"
                                             step="0.01"
                                             min="0"
@@ -959,6 +1067,30 @@ export default function UpdateProduct() {
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 p-4 bg-gray-800/50 rounded-lg">
+                                <input
+                                    type="checkbox"
+                                    id="hasVariants"
+                                    checked={formData.hasVariants}
+                                    onChange={(e) => setFormData({ ...formData, hasVariants: e.target.checked })}
+                                    className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                />
+                                <label htmlFor="hasVariants" className="text-white font-medium">
+                                    This product has variants (different weights/packages with different prices)
+                                </label>
+                            </div>
+
+                            {formData.hasVariants && (
+                                <ProductVariantsManager
+                                    productId={savedProductId || productId}
+                                    initialVariants={variants}
+                                    onVariantsChange={(newVariants: VariantType[]) => setVariants(newVariants)}
+                                    productQuantity={parseInt(formData.quantity, 10) || 0}
+                                />
+                            )}
                         </div>
 
                         <div>
@@ -1153,7 +1285,14 @@ export default function UpdateProduct() {
                             <select
                                 value={formData.sizeRequirement}
                                 onChange={(e) => setFormData({ ...formData, sizeRequirement: e.target.value as 'Optional' | 'Mandatory' })}
-                                className={`w-full p-3 bg-gray-800 text-white rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.sizeRequirement ? 'border-red-500' : 'border-gray-700'}`}
+                                disabled={formData.hasVariants}
+                                className={`w-full p-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500
+        ${formData.hasVariants
+                                        ? 'bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed opacity-50'
+                                        : 'bg-gray-800 text-white border-gray-700'
+                                    }
+        ${errors.sizeRequirement ? 'border-red-500' : ''}
+    `}
                             >
                                 <option value="Optional">Optional</option>
                                 <option value="Mandatory">Mandatory</option>

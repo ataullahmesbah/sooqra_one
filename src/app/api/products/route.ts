@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '0');
     const categoryId = searchParams.get('categoryId');
 
-   
+
     if (type === 'categories') {
         try {
             const categories = await Category.find({}).lean();
@@ -184,6 +184,7 @@ export async function POST(request: Request) {
         }
 
         // Size Processing
+        const hasVariants = formData.get('hasVariants') === 'true';
         const sizeRequirement = formData.get('sizeRequirement')?.toString() || 'Optional';
         let sizes: Size[] = [];
 
@@ -193,16 +194,18 @@ export async function POST(request: Request) {
                 const parsedSizes = JSON.parse(sizesInput) as Size[];
                 sizes = parsedSizes.filter((size) => size.name.trim() && size.quantity >= 0);
 
-                if (sizeRequirement === 'Mandatory' && sizes.length === 0) {
-                    return Response.json({ error: 'At least one size with quantity is required when size is Mandatory' }, { status: 400 });
-                }
+                // ✅ Variant product হলে size validation skip করো
+                if (!hasVariants) {
+                    if (sizeRequirement === 'Mandatory' && sizes.length === 0) {
+                        return Response.json({ error: 'At least one size with quantity is required when size is Mandatory' }, { status: 400 });
+                    }
 
-                // Validate that sum of size quantities equals total quantity
-                const totalSizeQuantity = sizes.reduce((sum, size) => sum + size.quantity, 0);
-                const totalQuantity = parseInt(formData.get('quantity')?.toString() || '0', 10);
+                    const totalSizeQuantity = sizes.reduce((sum, size) => sum + size.quantity, 0);
+                    const totalQuantity = parseInt(formData.get('quantity')?.toString() || '0', 10);
 
-                if (sizeRequirement === 'Mandatory' && totalSizeQuantity !== totalQuantity) {
-                    return Response.json({ error: 'Sum of size quantities must equal total quantity' }, { status: 400 });
+                    if (sizeRequirement === 'Mandatory' && totalSizeQuantity !== totalQuantity) {
+                        return Response.json({ error: 'Sum of size quantities must equal total quantity' }, { status: 400 });
+                    }
                 }
             } catch {
                 return Response.json({ error: 'Invalid sizes format' }, { status: 400 });
@@ -507,6 +510,7 @@ export async function POST(request: Request) {
             targetCountry: formData.get('targetCountry')?.toString(),
             targetCity: formData.get('targetCity')?.toString(),
             isGlobal: formData.get('isGlobal') === 'true',
+            hasVariants: hasVariants,
         };
 
 

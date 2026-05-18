@@ -21,6 +21,9 @@ interface Product {
     price: number;
     quantity: number;
     size?: string;
+    variantId?: string;
+    variantName?: string;
+    variantWeight?: string;
 }
 
 interface CustomerInfo {
@@ -419,13 +422,27 @@ const CustomerOrderTrack = () => {
                                             <div key={index} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
                                                 <div className="flex-1">
                                                     <p className="text-gray-900 font-medium text-sm sm:text-base">{product.title}</p>
-                                                    <div className="flex items-center gap-4 mt-1">
+                                                    <div className="flex items-center gap-4 mt-1 flex-wrap">
+                                                        {/* ✅ Variant name দেখাবে */}
+                                                        {(product as any).variantName && (
+                                                            <span className="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2 py-0.5">
+                                                                {(product as any).variantName}
+                                                            </span>
+                                                        )}
+                                                        {/* ✅ Variant weight দেখাবে */}
+                                                        {(product as any).variantWeight && (
+                                                            <span className="text-gray-600 text-xs sm:text-sm">
+                                                                Weight: <span className="font-medium text-gray-700">{(product as any).variantWeight}</span>
+                                                            </span>
+                                                        )}
                                                         {product.size && (
                                                             <span className="text-gray-600 text-xs sm:text-sm">Size: {product.size}</span>
                                                         )}
                                                         <span className="text-gray-600 text-xs sm:text-sm">Qty: {product.quantity}</span>
                                                     </div>
                                                 </div>
+
+
                                                 <div className="text-right">
                                                     <p className="text-gray-900 text-sm sm:text-base">৳{product.price.toLocaleString()}</p>
                                                     <p className="text-gray-700 font-semibold text-sm sm:text-base">

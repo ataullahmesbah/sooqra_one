@@ -84,6 +84,10 @@ const productSchema = new mongoose.Schema({
     sizes: [sizeSchema],
     specifications: [specSchema],
     schemaMarkup: { type: Object },
+    hasVariants: {
+        type: Boolean,
+        default: false
+    },
 }, { timestamps: true });
 
 

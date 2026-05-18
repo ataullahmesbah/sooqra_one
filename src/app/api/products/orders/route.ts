@@ -1,5 +1,6 @@
 // src/app/api/products/orders/route.ts
 
+
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
@@ -32,6 +33,9 @@ interface ProductItem {
     price: number;
     mainImage?: string;
     size?: string;
+    variantId?: string | null;
+    variantName?: string | null;
+    variantWeight?: string | null;
 }
 
 interface CreateOrderRequestBody {
@@ -49,22 +53,34 @@ interface CreateOrderRequestBody {
     userPhone?: string;
 }
 
-// ✅ Helper function to check if user is admin OR moderator
 async function isAdminOrModerator(request: NextRequest): Promise<boolean> {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     return token?.role === 'admin' || token?.role === 'moderator';
 }
 
-// ✅ Helper function to check if user is admin only
 async function isAdmin(request: NextRequest): Promise<boolean> {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     return token?.role === 'admin';
 }
 
-// ✅ Helper function to check if user is authenticated
 async function isAuthenticated(request: NextRequest): Promise<boolean> {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     return !!token;
+}
+
+// ✅ Helper: map a product item to include ALL variant fields
+function mapProductItem(p: any) {
+    return {
+        productId: p.productId,
+        title: p.title,
+        quantity: p.quantity,
+        price: p.price,
+        mainImage: p.mainImage || null,
+        size: p.size || null,
+        variantId: p.variantId || null,       // ✅ FIXED: was missing
+        variantName: p.variantName || null,   // ✅ FIXED: was missing
+        variantWeight: p.variantWeight || null, // ✅ FIXED: was missing
+    };
 }
 
 export async function GET(request: NextRequest) {
@@ -77,7 +93,6 @@ export async function GET(request: NextRequest) {
         const phone = searchParams.get('phone');
 
         // ✅ TRACKING PAGE ACCESS - Allow anyone to view order by orderId only
-        // This is for customer order tracking (no authentication needed)
         if (orderId && !email && !phone) {
             const order = await Order.findOne({ orderId }).lean();
 
@@ -85,11 +100,11 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ error: 'Order not found' }, { status: 404 });
             }
 
-            // ✅ Return order for tracking (limited info, no sensitive data)
+            // ✅ FIXED: Now includes variantId, variantName, variantWeight
             return NextResponse.json([{
                 _id: order._id,
                 orderId: order.orderId,
-                products: order.products,
+                products: (order.products as any[]).map(mapProductItem),
                 customerInfo: {
                     name: order.customerInfo.name,
                     email: order.customerInfo.email,
@@ -100,6 +115,9 @@ export async function GET(request: NextRequest) {
                     thana: order.customerInfo.thana,
                     postcode: order.customerInfo.postcode,
                     country: order.customerInfo.country,
+                    notes: order.customerInfo.notes || '',
+                    bkashNumber: order.customerInfo.bkashNumber || '',
+                    transactionId: order.customerInfo.transactionId || '',
                 },
                 paymentMethod: order.paymentMethod,
                 status: order.status,
@@ -125,17 +143,13 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Build query for authenticated users
         const query: any = {};
 
-        // ✅ If admin or moderator - they can see ALL orders
         if (isAdminOrMod) {
-            // Admin or Moderator can see all orders with filters
             if (orderId) {
                 query.orderId = orderId;
             }
         } else {
-            // Regular users can only see their own orders
             if (orderId) {
                 query.orderId = orderId;
                 query.$or = [
@@ -167,18 +181,16 @@ export async function GET(request: NextRequest) {
 
         const orders = await Order.find(query).lean();
 
-        // ✅ Remove sensitive info for non-admin/non-moderator users
+        // ✅ FIXED: Sanitized orders also include variant fields
         const sanitizedOrders = orders.map(order => {
-            // Admin and Moderator get FULL access to all data
             if (isAdminUser || isModeratorUser) {
                 return order;
             }
 
-            // Regular users get limited data
             return {
                 _id: order._id,
                 orderId: order.orderId,
-                products: order.products,
+                products: (order.products as any[]).map(mapProductItem), // ✅ FIXED
                 customerInfo: {
                     name: order.customerInfo.name,
                     email: order.customerInfo.email,
@@ -233,7 +245,6 @@ export async function POST(request: NextRequest) {
             userPhone,
         } = body;
 
-        // Required fields validation
         if (!orderId || !products?.length || !customerInfo || !paymentMethod || !status || total == null) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
@@ -242,7 +253,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing required customer information' }, { status: 400 });
         }
 
-        // Bkash validation
         if (paymentMethod === 'bkash') {
             if (!customerInfo.bkashNumber || !customerInfo.transactionId) {
                 return NextResponse.json({ error: 'Bkash number and Transaction ID required' }, { status: 400 });
@@ -252,14 +262,12 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // COD & Bkash: District + Thana required
         if ((paymentMethod === 'cod' || paymentMethod === 'bkash') && customerInfo.country === 'Bangladesh') {
             if (!customerInfo.district || !customerInfo.thana) {
                 return NextResponse.json({ error: 'District and thana required for delivery' }, { status: 400 });
             }
         }
 
-        // Product validation
         for (const item of products) {
             const product = await Products.findById(item.productId);
             if (!product) {
@@ -284,7 +292,6 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Coupon validation
         if (couponCode) {
             const coupon = await Coupon.findOne({ code: couponCode, isActive: true });
             if (coupon) {
@@ -323,19 +330,22 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Create order
         const order = await Order.create({
             orderId,
             userId: userId || null,
             userEmail: userEmail || customerInfo.email,
             userPhone: userPhone || customerInfo.phone,
+            // ✅ FIXED: variantId, variantName, variantWeight properly saved
             products: products.map(p => ({
                 productId: p.productId,
                 title: p.title,
                 quantity: p.quantity,
                 price: p.price,
                 mainImage: p.mainImage || null,
-                size: p.size || null
+                size: p.size || null,
+                variantId: p.variantId || null,
+                variantName: p.variantName || null,
+                variantWeight: p.variantWeight || null,
             })),
             customerInfo: {
                 name: customerInfo.name,
@@ -359,7 +369,6 @@ export async function POST(request: NextRequest) {
             couponCode,
         });
 
-        // Record coupon usage
         if (couponCode) {
             await UsedCoupon.create({
                 couponCode,

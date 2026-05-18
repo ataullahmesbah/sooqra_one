@@ -13,11 +13,11 @@ interface Product {
     mainImageAlt?: string;
     shortDescription?: string;
     description?: string;
-    prices?: Array<{
-        amount: number;
-        currency: string;
-    }>;
+    prices?: Array<{ amount: number; currency: string; }>;
     availability?: string;
+    hasVariants?: boolean;
+    minVariantPrice?: number | null;
+    maxVariantPrice?: number | null;
 }
 
 interface CategoryData {
@@ -256,9 +256,9 @@ export default function CategoryPage() {
 
                                         {/* Product Info */}
                                         <div className="flex-1 p-3 sm:p-4 flex flex-col">
-                                           <h3 className="font-medium text-gray-900 text-xs sm:text-sm mb-2 group-hover:text-gray-700 transition-colors duration-200 leading-relaxed break-words hyphens-auto">
-    {product.title}
-</h3>
+                                            <h3 className="font-medium text-gray-900 text-xs sm:text-sm mb-2 group-hover:text-gray-700 transition-colors duration-200 leading-relaxed break-words hyphens-auto">
+                                                {product.title}
+                                            </h3>
 
                                             {/* Price and View Button Container */}
                                             <div className="mt-auto pt-2 sm:pt-3 ">
@@ -271,7 +271,18 @@ export default function CategoryPage() {
                                                     <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-100">
                                                         <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2 sm:p-2.5 group-hover:bg-gray-100 transition-colors duration-300">
                                                             <div className="flex-1 min-w-0">
-                                                                {product.prices?.[0] ? (
+                                                                {product.hasVariants && product.minVariantPrice ? (
+                                                                    <div className="flex items-baseline flex-wrap gap-x-1">
+                                                                        <span className="text-sm sm:text-base font-bold text-gray-900">
+                                                                            ৳{product.minVariantPrice.toLocaleString()}
+                                                                        </span>
+                                                                        {product.maxVariantPrice && product.maxVariantPrice !== product.minVariantPrice && (
+                                                                            <span className="text-xs sm:text-sm text-gray-500">
+                                                                                — ৳{product.maxVariantPrice.toLocaleString()}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ) : product.prices?.[0] ? (
                                                                     <div className="flex items-baseline">
                                                                         <span className="text-sm sm:text-base font-bold text-gray-900">
                                                                             {product.prices[0].currency === 'BDT' ? '৳' : '$'}

@@ -21,6 +21,19 @@ interface CartItem {
     mainImageAlt?: string;
     currency: string;
     size?: string;
+    variantId?: string;
+    variantName?: string;
+    variantWeight?: string;
+}
+
+interface Variant {
+    _id: string;
+    name: string;
+    weight: string;
+    price: number;
+    comparePrice: number;
+    quantity: number;
+    isDefault: boolean;
 }
 
 // Validation Response Interface
@@ -60,6 +73,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
     const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
     const [modalSelectedSize, setModalSelectedSize] = useState<string | null>(null);
     const [modalShowSizeError, setModalShowSizeError] = useState(false);
+    const [variants, setVariants] = useState<Variant[]>([]);
+    const [variantsLoaded, setVariantsLoaded] = useState(false);
+    const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+    const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+    const [variantModalError, setVariantModalError] = useState(false);
     const { trackViewContent, trackAddToCart } = useFacebookEvents();
 
 
@@ -81,6 +99,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
         // const defaultRates = { USD: 123, EUR: 135, BDT: 1 };
         // setConversionRates(defaultRates);
     }, []);
+
+
+    useEffect(() => {
+        if (product.hasVariants && product._id) {
+            fetch(`/api/products/variants?productId=${product._id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data) && data.length > 0) {
+                        setVariants(data);
+                    }
+                    setVariantsLoaded(true);
+                })
+                .catch(() => setVariantsLoaded(true));
+        }
+    }, [product._id, product.hasVariants]);
 
     // Custom Toast Function
     const showCustomToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -141,7 +174,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
     };
 
     // Refactored add to cart logic
-    const addToCart = async (size: string | null): Promise<boolean> => {
+    const addToCart = async (size: string | null, variant?: Variant | null): Promise<boolean> => {
         setIsAddingToCart(true);
 
         try {
@@ -149,6 +182,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                 productId: product._id,
                 quantity: quantity,
                 size: size || null,
+                variantId: variant?._id || null,
             });
             const validation = response.data;
 
@@ -186,9 +220,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                 showCustomToast(`Cart updated with ${newQuantity} units of ${product.title}`, 'success');
             } else {
                 const priceObj = product.prices.find((p: any) => p.currency === 'BDT') || product.prices[0];
-                const priceInBDT = priceObj.currency === 'BDT'
-                    ? priceObj.amount
-                    : priceObj.amount * (conversionRates[priceObj.currency as keyof typeof conversionRates] || 1);
+                const priceInBDT = variant
+                    ? variant.price
+                    : (() => {
+                        const priceObj = product.prices.find((p: any) => p.currency === 'BDT') || product.prices[0];
+                        return priceObj.currency === 'BDT'
+                            ? priceObj.amount
+                            : priceObj.amount * (conversionRates[priceObj.currency as keyof typeof conversionRates] || 1);
+                    })();
+
                 cart.push({
                     _id: product._id,
                     title: product.title,
@@ -198,6 +238,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                     mainImageAlt: product.mainImageAlt,
                     currency: 'BDT',
                     size: size || undefined,
+                    variantId: variant?._id,
+                    variantName: variant?.name,
+                    variantWeight: variant?.weight,
                 });
                 showCustomToast(`Added ${quantity} units of ${product.title} to cart`, 'success');
             }
@@ -226,6 +269,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
         }
     };
 
+    const handleVariantModalAdd = async () => {
+        if (!selectedVariant) {
+            setVariantModalError(true);
+            showCustomToast('Please select a variant', 'error');
+            return;
+        }
+
+        const success = await addToCart(null, selectedVariant);
+        if (success) {
+            setIsVariantModalOpen(false);
+            setSelectedVariant(null);
+        }
+    };
+
     // Handle Add to Cart click
     const handleAddToCart = () => {
         if (product.availability !== 'InStock' || product.productType === 'Affiliate') {
@@ -233,6 +290,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
             return;
         }
 
+        // ✅ Variant product হলে variant modal খোলো
+        if (product.hasVariants && variants.length > 0) {
+            setSelectedVariant(null);
+            setVariantModalError(false);
+            setIsVariantModalOpen(true);
+            return;
+        }
+
+        // Size mandatory product
         if (product.productType === 'Own' && product.sizeRequirement === 'Mandatory' && product.sizes) {
             const availableSizes = product.sizes.filter(s => s.quantity > 0);
             if (availableSizes.length === 0) {
@@ -658,9 +724,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                             {mainPrice && (
                                 <div className="space-y-0.5">
                                     <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2">
-                                        <span className="text-sm sm:text-base lg:text-lg font-bold text-gray-900">
-                                            {mainPrice.currency === 'BDT' ? '৳' : '$'}{mainPrice.amount.toLocaleString()}
-                                        </span>
+                                        {product.hasVariants && variants.length > 0 ? (
+                                            <span className="text-sm sm:text-base lg:text-lg font-bold text-gray-900">
+                                                ৳{Math.min(...variants.map(v => v.price)).toLocaleString()}
+                                                {' - '}
+                                                ৳{Math.max(...variants.map(v => v.price)).toLocaleString()}
+                                            </span>
+                                        ) : mainPrice ? (
+                                            <span className="text-sm sm:text-base lg:text-lg font-bold text-gray-900">
+                                                {mainPrice.currency === 'BDT' ? '৳' : '$'}{mainPrice.amount.toLocaleString()}
+                                            </span>
+                                        ) : null}
                                         {hasDiscount && (
                                             <span className="text-xs sm:text-sm text-gray-500 line-through">
                                                 {mainPrice.currency === 'BDT' ? '৳' : '$'}
@@ -793,43 +867,354 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
                 </div>
             )}
 
-            {/* Size Selection Modal */}
-            {isSizeModalOpen && (
+
+            {/* Variant Selection Modal */}
+            {isVariantModalOpen && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-                    onClick={() => setIsSizeModalOpen(false)}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+                    onClick={() => setIsVariantModalOpen(false)}
                 >
                     <div
-                        className="bg-white rounded-lg p-6 w-full max-w-md mx-4"
+                        className="bg-white rounded-xl p-4 sm:p-5 w-full max-w-md sm:max-w-2xl lg:max-w-3xl mx-auto shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold">Select Size</h3>
-                            <button onClick={() => setIsSizeModalOpen(false)}>
-                                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
+                            <div>
+                                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                                    Select Package / Weight
+                                </h3>
+                                {selectedVariant && (
+                                    <p className="text-[10px] sm:text-xs text-green-600 mt-0.5">
+                                        Selected: {selectedVariant.name} • {selectedVariant.weight}
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => setIsVariantModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
-                        <div className="grid grid-cols-3 gap-3 mb-6">
-                            {product.sizes?.filter(s => s.quantity > 0).map(s => (
-                                <button
-                                    key={s.name}
-                                    onClick={() => { setModalSelectedSize(s.name); setModalShowSizeError(false); }}
-                                    className={`p-3 border rounded-lg text-center ${modalSelectedSize === s.name ? 'border-gray-800 bg-gray-100' : 'border-gray-300 hover:border-gray-500'}`}
-                                >
-                                    {s.name}
-                                    <span className="block text-xs text-gray-500">({s.quantity} available)</span>
-                                </button>
-                            ))}
+
+                        {/* Variants - Mobile/Tablet: Vertical, Desktop/LG/XL: Horizontal Single Line */}
+                        <div className="max-h-[400px] overflow-y-auto mb-4">
+                            {/* Mobile & Tablet: Vertical Layout (একের নিচে এক) */}
+                            <div className="block md:hidden space-y-2">
+                                {variants.filter(v => v.quantity > 0).map(v => (
+                                    <button
+                                        key={v._id}
+                                        onClick={() => { setSelectedVariant(v); setVariantModalError(false); }}
+                                        className={`
+                                w-full flex items-center justify-between
+                                px-3 py-2 rounded-lg border 
+                                transition-all duration-200
+                                ${selectedVariant?._id === v._id
+                                                ? 'bg-green-600 border-green-600'
+                                                : 'bg-white border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                                            }
+                            `}
+                                    >
+                                        {/* Left Side: Name + Weight */}
+                                        <div className="flex flex-col items-start gap-0.5">
+                                            <span className={`
+                                    text-sm font-medium
+                                    ${selectedVariant?._id === v._id ? 'text-white' : 'text-gray-800'}
+                                `}>
+                                                {v.name}
+                                            </span>
+                                            <span className={`
+                                    text-[10px]
+                                    ${selectedVariant?._id === v._id ? 'text-green-100' : 'text-gray-500'}
+                                `}>
+                                                {v.weight}
+                                            </span>
+                                        </div>
+
+                                        {/* Right Side: Price + Stock */}
+                                        <div className="text-right">
+                                            <span className={`
+                                    text-sm font-bold
+                                    ${selectedVariant?._id === v._id ? 'text-white' : 'text-gray-900'}
+                                `}>
+                                                ৳{v.price.toLocaleString()}
+                                            </span>
+                                            <div className="text-[9px] text-gray-400 mt-0.5">
+                                                {v.quantity} available
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Desktop, LG, XL: Horizontal Single Line (এক লাইনে) */}
+                            <div className="hidden md:flex flex-wrap items-center gap-2">
+                                {variants.filter(v => v.quantity > 0).map(v => (
+                                    <button
+                                        key={v._id}
+                                        onClick={() => { setSelectedVariant(v); setVariantModalError(false); }}
+                                        className={`
+                                inline-flex items-center gap-1.5
+                                px-2.5 py-1.5 rounded-md border 
+                                transition-all duration-200 whitespace-nowrap
+                                ${selectedVariant?._id === v._id
+                                                ? 'bg-green-600 border-green-600'
+                                                : 'bg-white border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                                            }
+                            `}
+                                    >
+                                        {/* Name - 1st */}
+                                        <span className={`
+                                text-xs font-medium
+                                ${selectedVariant?._id === v._id ? 'text-white' : 'text-gray-800'}
+                            `}>
+                                            {v.name}
+                                        </span>
+
+                                        {/* Weight */}
+                                        <span className={`
+                                text-[10px]
+                                ${selectedVariant?._id === v._id ? 'text-green-200' : 'text-gray-500'}
+                            `}>
+                                            {v.weight}
+                                        </span>
+
+                                        {/* Separator */}
+                                        <span className={`
+                                text-[10px]
+                                ${selectedVariant?._id === v._id ? 'text-green-300' : 'text-gray-400'}
+                            `}>
+                                            •
+                                        </span>
+
+                                        {/* Price */}
+                                        <span className={`
+                                text-xs font-bold
+                                ${selectedVariant?._id === v._id ? 'text-white' : 'text-gray-900'}
+                            `}>
+                                            ৳{v.price.toLocaleString()}
+                                        </span>
+
+                                        {/* Stock (only if low) */}
+                                        {v.quantity <= 5 && (
+                                            <span className={`
+                                    text-[9px] ml-0.5
+                                    ${selectedVariant?._id === v._id ? 'text-green-200' : 'text-orange-500'}
+                                `}>
+                                                ({v.quantity})
+                                            </span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                        {modalShowSizeError && <p className="text-red-600 mb-4">Please select a size</p>}
+
+                        {variantModalError && (
+                            <p className="text-red-600 text-xs sm:text-sm mb-3 text-center bg-red-50 py-2 rounded-lg">
+                                Please select a package/weight
+                            </p>
+                        )}
+
+                        {/* Add to Cart Button */}
+                        <button
+                            onClick={handleVariantModalAdd}
+                            disabled={isAddingToCart || !selectedVariant}
+                            className={`
+                    w-full py-2.5 rounded-lg font-semibold text-sm
+                    transition-all duration-300
+                    flex items-center justify-center gap-2
+                    ${isAddingToCart || !selectedVariant
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-gray-800 text-white hover:bg-gray-900'
+                                }
+                `}
+                        >
+                            {isAddingToCart ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Adding...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <span>Add to Cart</span>
+                                    {selectedVariant && (
+                                        <span className="text-[10px] opacity-80 ml-0.5">
+                                            (৳{selectedVariant.price.toLocaleString()})
+                                        </span>
+                                    )}
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+
+            {/* Size Selection Modal - Responsive Design */}
+            {isSizeModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+                    onClick={() => setIsSizeModalOpen(false)}
+                >
+                    <div
+                        className="bg-white rounded-xl p-4 sm:p-5 w-full max-w-md sm:max-w-lg mx-auto shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
+                            <div>
+                                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                                    Select Size
+                                </h3>
+                                {modalSelectedSize && (
+                                    <p className="text-[10px] sm:text-xs text-green-600 mt-0.5">
+                                        Selected: {modalSelectedSize}
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => setIsSizeModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Sizes - Responsive: Mobile/Tablet Vertical, Desktop Horizontal */}
+                        <div className="max-h-[350px] overflow-y-auto mb-4">
+                            {/* Mobile & Tablet: Vertical Layout */}
+                            <div className="block sm:hidden space-y-2">
+                                {product.sizes?.filter(s => s.quantity > 0).map(s => (
+                                    <button
+                                        key={s.name}
+                                        onClick={() => { setModalSelectedSize(s.name); setModalShowSizeError(false); }}
+                                        className={`
+                                w-full flex items-center justify-between
+                                px-3 py-2.5 rounded-lg border 
+                                transition-all duration-200
+                                ${modalSelectedSize === s.name
+                                                ? 'bg-green-600 border-green-600'
+                                                : 'bg-white border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                                            }
+                            `}
+                                    >
+                                        {/* Size Name */}
+                                        <span className={`
+                                text-sm font-medium
+                                ${modalSelectedSize === s.name ? 'text-white' : 'text-gray-800'}
+                            `}>
+                                            {s.name}
+                                        </span>
+
+                                        {/* Stock Info */}
+                                        <div className="text-right">
+                                            <span className={`
+                                    text-xs
+                                    ${modalSelectedSize === s.name ? 'text-green-100' : 'text-gray-500'}
+                                `}>
+                                                {s.quantity} available
+                                            </span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Desktop: Horizontal Layout (এক লাইনে) */}
+                            <div className="hidden sm:flex flex-wrap items-center gap-2">
+                                {product.sizes?.filter(s => s.quantity > 0).map(s => (
+                                    <button
+                                        key={s.name}
+                                        onClick={() => { setModalSelectedSize(s.name); setModalShowSizeError(false); }}
+                                        className={`
+                                inline-flex items-center gap-1.5
+                                px-3 py-1.5 rounded-md border 
+                                transition-all duration-200 whitespace-nowrap
+                                ${modalSelectedSize === s.name
+                                                ? 'bg-green-600 border-green-600'
+                                                : 'bg-white border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                                            }
+                            `}
+                                    >
+                                        {/* Size Name */}
+                                        <span className={`
+                                text-xs font-medium
+                                ${modalSelectedSize === s.name ? 'text-white' : 'text-gray-800'}
+                            `}>
+                                            {s.name}
+                                        </span>
+
+                                        {/* Separator */}
+                                        <span className={`
+                                text-[10px]
+                                ${modalSelectedSize === s.name ? 'text-green-300' : 'text-gray-400'}
+                            `}>
+                                            •
+                                        </span>
+
+                                        {/* Stock */}
+                                        <span className={`
+                                text-[10px]
+                                ${modalSelectedSize === s.name ? 'text-green-200' : 'text-gray-500'}
+                            `}>
+                                            {s.quantity} left
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {modalShowSizeError && (
+                            <p className="text-red-600 text-xs sm:text-sm mb-3 text-center bg-red-50 py-2 rounded-lg">
+                                Please select a size
+                            </p>
+                        )}
+
+                        {/* Add to Cart Button */}
                         <button
                             onClick={handleModalAdd}
-                            disabled={isAddingToCart}
-                            className="w-full bg-gray-800 text-white py-3 rounded-lg font-medium hover:bg-gray-900 disabled:opacity-50"
+                            disabled={isAddingToCart || !modalSelectedSize}
+                            className={`
+                    w-full py-2.5 rounded-lg font-semibold text-sm
+                    transition-all duration-300
+                    flex items-center justify-center gap-2
+                    ${isAddingToCart || !modalSelectedSize
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-gray-800 text-white hover:bg-gray-900'
+                                }
+                `}
                         >
-                            {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+                            {isAddingToCart ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Adding...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <span>Add to Cart</span>
+                                    {modalSelectedSize && (
+                                        <span className="text-[10px] opacity-80 ml-0.5">
+                                            ({modalSelectedSize})
+                                        </span>
+                                    )}
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

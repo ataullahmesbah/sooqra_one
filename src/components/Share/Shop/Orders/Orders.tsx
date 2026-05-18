@@ -1,14 +1,14 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import { Toaster, toast } from 'react-hot-toast';
 import ShippingLabel from '../ShippingLabel/ShippingLabel';
 
 
-// Interface Definitions
+// ─── Interface Definitions ──────────────────────────────────────────────────
+
 interface CustomerInfo {
     name: string;
     email: string;
@@ -31,6 +31,9 @@ interface OrderProduct {
     price: number;
     mainImage?: string;
     size?: string;
+    variantId?: string;       // ✅ variant support
+    variantName?: string;     // ✅ variant name
+    variantWeight?: string;   // ✅ variant weight
 }
 
 interface Order {
@@ -53,6 +56,7 @@ interface OrderStats {
     pending: number;
     accepted: number;
     rejected: number;
+    returned: number;
     monthly: number;
 }
 
@@ -63,131 +67,124 @@ interface GroupedProduct {
     mainImage?: string;
     size: string | null;
     quantity: number;
+    variantName?: string;
+    variantWeight?: string;
 }
 
-interface ValidationResult {
-    isValid: boolean;
-    issues: string[];
-    orderId?: string;
+interface CustomerHistory {
+    delivered: number;
+    cancelled: number;
+    fraud: number;
+    allOrders: Order[];
 }
+
+type TabType = 'pending' | 'accepted' | 'rejected' | 'returned';
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [showCustomerInfo, setShowCustomerInfo] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState<'pending' | 'accepted' | 'rejected'>('pending');
-    const [searchTerm, setSearchTerm] = useState<string>('');
+    const [showCustomerInfo, setShowCustomerInfo] = useState(false);
+    const [activeTab, setActiveTab] = useState<TabType>('pending');
+    const [searchTerm, setSearchTerm] = useState('');
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [stats, setStats] = useState<OrderStats>({ pending: 0, accepted: 0, rejected: 0, monthly: 0 });
-    const [loading, setLoading] = useState<boolean>(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [stats, setStats] = useState<OrderStats>({ pending: 0, accepted: 0, rejected: 0, returned: 0, monthly: 0 });
+    const [loading, setLoading] = useState(false);
     const [validatingOrder, setValidatingOrder] = useState<string | null>(null);
+    const [deletingOrder, setDeletingOrder] = useState<string | null>(null);
+    const [exporting, setExporting] = useState(false);
+    const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [customerHistory, setCustomerHistory] = useState<CustomerHistory | null>(null);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [showShippingLabel, setShowShippingLabel] = useState(false);
+    const [selectedOrderForLabel, setSelectedOrderForLabel] = useState<Order | null>(null);
     const ordersPerPage = 10;
     const router = useRouter();
-    const [showShippingLabel, setShowShippingLabel] = useState<boolean>(false);
-    const [selectedOrderForLabel, setSelectedOrderForLabel] = useState<Order | null>(null);
-    const [exporting, setExporting] = useState<boolean>(false);
-    const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
     const modalRef = useRef<HTMLDivElement>(null);
+    const historyModalRef = useRef<HTMLDivElement>(null);
 
-    // Fetch orders on component mount
-    useEffect(() => {
-        fetchOrders();
-    }, []);
+    useEffect(() => { fetchOrders(); }, []);
 
-    // Filter orders when dependencies change
     useEffect(() => {
         filterOrders(orders, activeTab, searchTerm, selectedDate);
     }, [activeTab, searchTerm, selectedDate, orders]);
 
-    // Close modal when clicking outside
+    // Close modals on outside click
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        const handler = (e: MouseEvent) => {
+            if (showCustomerInfo && modalRef.current && !modalRef.current.contains(e.target as Node))
                 setShowCustomerInfo(false);
-            }
+            if (showHistoryModal && historyModalRef.current && !historyModalRef.current.contains(e.target as Node))
+                setShowHistoryModal(false);
         };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showCustomerInfo, showHistoryModal]);
 
-        if (showCustomerInfo) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
+    // ── Data Fetching ──────────────────────────────────────────────────────────
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [showCustomerInfo]);
-
-    const fetchOrders = async (): Promise<void> => {
+    const fetchOrders = async () => {
         try {
             setLoading(true);
             const response = await axios.get('/api/products/orders');
-            const sortedOrders = response.data.sort((a: Order, b: Order) =>
+            const sorted = response.data.sort((a: Order, b: Order) =>
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
-            setOrders(sortedOrders);
-            updateStats(sortedOrders);
-            filterOrders(sortedOrders, activeTab, searchTerm, selectedDate);
-        } catch (error: any) {
-            console.error('Error fetching orders:', error);
+            setOrders(sorted);
+            updateStats(sorted);
+        } catch {
             toast.error('Failed to load orders');
         } finally {
             setLoading(false);
         }
     };
 
-    const updateStats = (orders: Order[]): void => {
+    const updateStats = (list: Order[]) => {
         const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-
-        const stats: OrderStats = {
-            pending: orders.filter(o => o.status === 'pending' || o.status === 'pending_payment').length,
-            accepted: orders.filter(o => o.status === 'accepted').length,
-            rejected: orders.filter(o => o.status === 'rejected').length,
-            monthly: orders.filter(o => {
-                const orderDate = new Date(o.createdAt);
-                return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+        setStats({
+            pending: list.filter(o => o.status === 'pending' || o.status === 'pending_payment').length,
+            accepted: list.filter(o => o.status === 'accepted').length,
+            rejected: list.filter(o => o.status === 'rejected').length,
+            returned: list.filter(o => o.status === 'returned').length,
+            monthly: list.filter(o => {
+                const d = new Date(o.createdAt);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
             }).length,
-        };
-        setStats(stats);
+        });
     };
 
-    const filterOrders = (
-        orders: Order[],
-        tab: string,
-        search: string,
-        date: Date | null
-    ): void => {
-        let filtered = [...orders];
+    const filterOrders = (list: Order[], tab: string, search: string, date: Date | null) => {
+        let filtered = [...list];
 
-        // Filter by status tab
-        if (tab === 'pending') {
-            filtered = filtered.filter(o => o.status === 'pending' || o.status === 'pending_payment');
-        } else if (tab === 'accepted') {
-            filtered = filtered.filter(o => o.status === 'accepted');
-        } else if (tab === 'rejected') {
-            filtered = filtered.filter(o => o.status === 'rejected');
-        }
+        // Tab filter
+        if (tab === 'pending') filtered = filtered.filter(o => o.status === 'pending' || o.status === 'pending_payment');
+        else if (tab === 'accepted') filtered = filtered.filter(o => o.status === 'accepted');
+        else if (tab === 'rejected') filtered = filtered.filter(o => o.status === 'rejected');
+        else if (tab === 'returned') filtered = filtered.filter(o => o.status === 'returned');
 
-        // Filter by search term
-        if (search) {
+        // Search — checks orderId, name, phone, email across ALL orders for history badge
+        if (search.trim()) {
+            const q = search.toLowerCase().trim();
             filtered = filtered.filter(o =>
-                o.orderId.toLowerCase().includes(search.toLowerCase()) ||
-                o.customerInfo.name.toLowerCase().includes(search.toLowerCase()) ||
-                o.customerInfo.phone.includes(search) ||
-                o.customerInfo.email.toLowerCase().includes(search.toLowerCase())
+                o.orderId.toLowerCase().includes(q) ||
+                o.customerInfo.name.toLowerCase().includes(q) ||
+                o.customerInfo.phone.includes(q) ||
+                o.customerInfo.email.toLowerCase().includes(q)
             );
         }
 
-        // Filter by date
+        // Date filter — fixed: compare date parts only
         if (date) {
             filtered = filtered.filter(o => {
-                const orderDate = new Date(o.createdAt);
+                const d = new Date(o.createdAt);
                 return (
-                    orderDate.getDate() === date.getDate() &&
-                    orderDate.getMonth() === date.getMonth() &&
-                    orderDate.getFullYear() === date.getFullYear()
+                    d.getFullYear() === date.getFullYear() &&
+                    d.getMonth() === date.getMonth() &&
+                    d.getDate() === date.getDate()
                 );
             });
         }
@@ -196,639 +193,332 @@ export default function OrdersPage() {
         setCurrentPage(1);
     };
 
-    const validateOrderProducts = async (order: Order): Promise<ValidationResult> => {
-        try {
-            setValidatingOrder(order.orderId);
-            const response = await axios.post('/api/products/orders/validate-products', {
-                orderId: order.orderId,
-                products: order.products
-            });
-            return response.data;
-        } catch (error: any) {
-            console.error('Error validating order products:', error);
-            if (error.response?.data?.error) {
-                toast.error(error.response.data.error, {
-                    duration: 5000,
-                    style: {
-                        background: '#ef4444',
-                        color: '#fff',
-                        fontWeight: 'bold'
-                    }
-                });
-                return { isValid: false, issues: [error.response.data.error] };
-            } else {
-                toast.error('Failed to validate products. Please try again.', {
-                    duration: 3000,
-                    style: {
-                        background: '#ef4444',
-                        color: '#fff',
-                        fontWeight: 'bold'
-                    }
-                });
-                return { isValid: false, issues: ['Validation error. Please try again.'] };
-            }
-        } finally {
-            setValidatingOrder(null);
-        }
-    };
+    // ── Customer History ───────────────────────────────────────────────────────
 
-    // Order Management Page - handleAction ফাংশন আপডেট
-    const handleAction = async (orderId: string, action: 'accept' | 'reject'): Promise<void> => {
+    const loadCustomerHistory = useCallback(async (phone: string) => {
+        if (!phone.trim()) return;
+        setHistoryLoading(true);
+        try {
+            const res = await axios.get('/api/products/orders');
+            const all: Order[] = res.data;
+            const customerOrders = all.filter(o =>
+                o.customerInfo.phone === phone ||
+                o.customerInfo.email.toLowerCase() === phone.toLowerCase()
+            );
+            const delivered = customerOrders.filter(o => o.status === 'accepted').length;
+            const cancelled = customerOrders.filter(o => o.status === 'rejected').length;
+            const fraud = customerOrders.filter(o => o.status === 'returned').length;
+            setCustomerHistory({ delivered, cancelled, fraud, allOrders: customerOrders });
+            setShowHistoryModal(true);
+        } catch {
+            toast.error('Failed to load customer history');
+        } finally {
+            setHistoryLoading(false);
+        }
+    }, []);
+
+    // Calculate history badge for search results
+    const getSearchCustomerHistory = useCallback((searchQ: string): CustomerHistory | null => {
+        if (!searchQ.trim()) return null;
+        const q = searchQ.toLowerCase().trim();
+        const customerOrders = orders.filter(o =>
+            o.customerInfo.phone.includes(q) ||
+            o.customerInfo.email.toLowerCase().includes(q)
+        );
+        if (customerOrders.length === 0) return null;
+        return {
+            delivered: customerOrders.filter(o => o.status === 'accepted').length,
+            cancelled: customerOrders.filter(o => o.status === 'rejected').length,
+            fraud: customerOrders.filter(o => o.status === 'returned').length,
+            allOrders: customerOrders,
+        };
+    }, [orders]);
+
+    const searchHistory = searchTerm.trim().length > 3 ? getSearchCustomerHistory(searchTerm) : null;
+
+    // ── Order Actions ──────────────────────────────────────────────────────────
+
+    const handleAction = async (orderId: string, action: 'accept' | 'reject' | 'return') => {
         try {
             const order = orders.find(o => o.orderId === orderId);
-            if (!order) {
-                toast.error('Order not found');
-                return;
-            }
+            if (!order) { toast.error('Order not found'); return; }
 
-            // Additional validation before accept
             if (action === 'accept') {
-
-                // Check if all products are available
                 for (const product of order.products) {
                     try {
-                        const productResponse = await axios.get(`/api/products/${product.productId}`);
-                        const productData = productResponse.data;
-
-
-
+                        const { data: productData } = await axios.get(`/api/products/${product.productId}`);
                         if (productData.availability !== 'InStock') {
-                            toast.error(`Product "${productData.title}" is out of stock`);
-                            return;
+                            toast.error(`"${productData.title}" is out of stock`); return;
                         }
-
                         if (product.size && productData.sizeRequirement === 'Mandatory') {
                             const sizeData = productData.sizes.find((s: any) => s.name === product.size);
-                            if (!sizeData) {
-                                toast.error(`Size "${product.size}" not available for "${productData.title}"`);
-                                return;
-                            }
+                            if (!sizeData) { toast.error(`Size "${product.size}" not available for "${productData.title}"`); return; }
                             if (sizeData.quantity < product.quantity) {
-                                toast.error(`Only ${sizeData.quantity} units available for "${productData.title}" (Size: ${product.size})`);
-                                return;
+                                toast.error(`Only ${sizeData.quantity} units available for "${productData.title}" (${product.size})`); return;
                             }
-                        } else if (productData.quantity < product.quantity) {
-                            toast.error(`Only ${productData.quantity} units available for "${productData.title}"`);
-                            return;
+                        } else if (!product.variantId && productData.quantity < product.quantity) {
+                            toast.error(`Only ${productData.quantity} units available for "${productData.title}"`); return;
                         }
-                    } catch (error) {
-                        console.error(`Error checking product ${product.productId}:`, error);
-                        toast.error(`Failed to check availability for "${product.title}"`);
-                        return;
+                    } catch {
+                        toast.error(`Failed to check "${product.title}"`); return;
                     }
                 }
             }
 
-            // Perform the action
             setValidatingOrder(orderId);
-
-            // TEMPORARY: Try direct update if regular API fails
-            const performAction = async () => {
-                try {
-                    const response = await axios.post('/api/products/orders/action', {
-                        orderId,
-                        action
-                    });
-                    return response;
-                } catch (error: any) {
-
-                    // Fallback to direct update
-                    const status = action === 'accept' ? 'accepted' : 'rejected';
-                    const directResponse = await axios.post('/api/products/orders/direct-update', {
-                        orderId,
-                        status
-                    });
-                    return directResponse;
-                }
-            };
-
-            const response = await performAction();
+            const response = await axios.post('/api/products/orders/action', { orderId, action });
 
             if (response.data.success) {
-                // Update local state
-                setOrders((prev) =>
-                    prev.map((o) =>
-                        o.orderId === orderId
-                            ? {
-                                ...o,
-                                status: action === 'accept' ? 'accepted' : 'rejected',
-                                updatedAt: new Date().toISOString()
-                            }
-                            : o
-                    )
-                );
-
-                // Update stats
-                updateStats(orders);
-
-                // Refresh filtered orders
-                filterOrders(orders, activeTab, searchTerm, selectedDate);
-
-                // Show success message
-                toast.success(`Order ${action === 'accept' ? 'accepted' : 'rejected'} successfully!`, {
-                    duration: 3000,
-                    style: {
-                        background: action === 'accept' ? '#10b981' : '#ef4444',
-                        color: '#fff',
-                        fontWeight: 'bold'
-                    }
-                });
-
-                // Force refresh orders from server
-                setTimeout(() => {
-                    fetchOrders();
-                }, 1000);
-
-                // If we're in modal, close it
-                if (showCustomerInfo) {
-                    setShowCustomerInfo(false);
-                }
-            } else {
-                throw new Error(response.data.error || `Failed to ${action} order`);
+                const newStatus = action === 'accept' ? 'accepted' : action === 'reject' ? 'rejected' : 'returned';
+                setOrders(prev => prev.map(o =>
+                    o.orderId === orderId ? { ...o, status: newStatus, updatedAt: new Date().toISOString() } : o
+                ));
+                toast.success(`Order ${action === 'accept' ? 'accepted' : action === 'reject' ? 'rejected' : 'marked as returned'} successfully!`);
+                if (showCustomerInfo) setShowCustomerInfo(false);
+                setTimeout(fetchOrders, 1000);
             }
         } catch (error: any) {
-            console.error(`Error performing ${action} on order ${orderId}:`, error);
-
-            let errorMessage = `Failed to ${action} order. Please try again.`;
-
-            if (error.response?.data?.error) {
-                errorMessage = error.response.data.error;
-            } else if (error.response?.data?.details) {
-                // Show all validation errors
-                if (Array.isArray(error.response.data.details)) {
-                    error.response.data.details.forEach((detail: string) => {
-                        toast.error(detail, {
-                            duration: 5000,
-                            style: {
-                                background: '#ef4444',
-                                color: '#fff',
-                                fontWeight: 'bold'
-                            }
-                        });
-                    });
-                    return;
-                }
-            }
-
-            toast.error(errorMessage, {
-                duration: 5000,
-                style: {
-                    background: '#ef4444',
-                    color: '#fff',
-                    fontWeight: 'bold'
-                }
-            });
+            const msg = error.response?.data?.error || `Failed to ${action} order`;
+            toast.error(msg);
         } finally {
             setValidatingOrder(null);
         }
     };
 
-    const groupProductsBySize = (products: OrderProduct[]): GroupedProduct[] => {
-        const grouped: { [key: string]: GroupedProduct } = {};
-        products.forEach(product => {
-            const key = `${product.productId}-${product.size || 'no-size'}`;
+    const handleDeleteOrder = async (orderId: string) => {
+        if (!confirm(`Delete order ${orderId}? This cannot be undone.`)) return;
+        try {
+            setDeletingOrder(orderId);
+            await axios.delete(`/api/products/orders/${orderId}`);
+            setOrders(prev => prev.filter(o => o.orderId !== orderId));
+            toast.success('Order deleted successfully');
+            if (showCustomerInfo) setShowCustomerInfo(false);
+        } catch {
+            toast.error('Failed to delete order');
+        } finally {
+            setDeletingOrder(null);
+        }
+    };
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    const groupProductsByVariantAndSize = (products: OrderProduct[]): GroupedProduct[] => {
+        const grouped: Record<string, GroupedProduct> = {};
+        products.forEach(p => {
+            const key = `${p.productId}-${p.variantId || 'no-variant'}-${p.size || 'no-size'}`;
             if (!grouped[key]) {
                 grouped[key] = {
-                    productId: product.productId,
-                    title: product.title,
-                    price: product.price,
-                    mainImage: product.mainImage,
-                    size: product.size || null,
-                    quantity: 0
+                    productId: p.productId, title: p.title, price: p.price,
+                    mainImage: p.mainImage, size: p.size || null,
+                    variantName: p.variantName, variantWeight: p.variantWeight,
+                    quantity: 0,
                 };
             }
-            grouped[key].quantity += product.quantity;
+            grouped[key].quantity += p.quantity;
         });
         return Object.values(grouped);
     };
 
-    const formatDate = (dateString: string): string => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
+    const formatDate = (ds: string) =>
+        new Date(ds).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-    const formatSize = (size?: string): string => {
-        if (!size || typeof size !== 'string' || size.trim() === '') {
-            return 'N/A';
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'pending': case 'pending_payment': return 'bg-blue-100 text-blue-700 border border-blue-200';
+            case 'accepted': return 'bg-green-100 text-green-700 border border-green-200';
+            case 'rejected': return 'bg-red-100 text-red-700 border border-red-200';
+            case 'returned': return 'bg-orange-100 text-orange-700 border border-orange-200';
+            default: return 'bg-gray-100 text-gray-700';
         }
-        return size.charAt(0).toUpperCase() + size.slice(1).toLowerCase();
     };
 
-    const paginatedOrders = filteredOrders.slice(
-        (currentPage - 1) * ordersPerPage,
-        currentPage * ordersPerPage
-    );
-
-    const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-
-    const handlePrintLabel = (order: Order): void => {
-        setSelectedOrderForLabel(order);
-        setShowShippingLabel(true);
+    const getPaymentMethodColor = (m: string) => {
+        switch (m) {
+            case 'cod': return 'bg-yellow-100 text-yellow-700';
+            case 'bkash': return 'bg-green-100 text-green-700';
+            default: return 'bg-blue-100 text-blue-700';
+        }
     };
 
-    const exportOrdersToCSV = async (): Promise<void> => {
+    const exportOrdersToCSV = async () => {
         try {
             setExporting(true);
-            const ordersToExport = filteredOrders.length > 0 ? filteredOrders : orders;
-
-            const headers = [
-                'Order ID',
-                'Customer Name',
-                'Email',
-                'Phone',
-                'Address',
-                'Payment Method',
-                'Total Amount',
-                'Discount',
-                'Shipping Charge',
-                'Status',
-                'Order Date',
-                'Products Count'
-            ];
-
-            const rows = ordersToExport.map(order => [
-                order.orderId,
-                order.customerInfo.name,
-                order.customerInfo.email,
-                order.customerInfo.phone,
-                order.customerInfo.address,
-                order.paymentMethod === 'cod' ? 'Cash on Delivery' :
-                    order.paymentMethod === 'bkash' ? 'bKash' : 'Online',
-                order.total.toString(),
-                order.discount.toString(),
-                order.shippingCharge.toString(),
-                order.status,
-                formatDate(order.createdAt),
-                order.products.reduce((sum, p) => sum + p.quantity, 0).toString()
+            const list = filteredOrders.length > 0 ? filteredOrders : orders;
+            const headers = ['Order ID', 'Customer Name', 'Email', 'Phone', 'Address', 'Payment', 'Total', 'Discount', 'Shipping', 'Status', 'Date', 'Items'];
+            const rows = list.map(o => [
+                o.orderId, o.customerInfo.name, o.customerInfo.email, o.customerInfo.phone,
+                o.customerInfo.address,
+                o.paymentMethod === 'cod' ? 'COD' : o.paymentMethod === 'bkash' ? 'bKash' : 'Online',
+                o.total, o.discount, o.shippingCharge, o.status, formatDate(o.createdAt),
+                o.products.reduce((s, p) => s + p.quantity, 0),
             ]);
-
-            const csvContent = [
-                headers.join(','),
-                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-            ].join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
+            const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-
-            link.setAttribute('href', url);
-            link.setAttribute('download', `orders_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            toast.success('Orders exported successfully!', {
-                duration: 3000,
-                style: { background: '#10b981', color: '#fff' }
-            });
-        } catch (error) {
-            console.error('Error exporting orders:', error);
-            toast.error('Failed to export orders');
-        } finally {
-            setExporting(false);
-        }
+            const a = document.createElement('a');
+            a.href = url; a.download = `orders_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            toast.success('Exported successfully!');
+        } catch { toast.error('Export failed'); }
+        finally { setExporting(false); }
     };
 
-    const toggleSelectOrder = (orderId: string): void => {
-        const newSelected = new Set(selectedOrders);
-        if (newSelected.has(orderId)) {
-            newSelected.delete(orderId);
-        } else {
-            newSelected.add(orderId);
-        }
-        setSelectedOrders(newSelected);
+    const toggleSelectOrder = (id: string) => {
+        const next = new Set(selectedOrders);
+        next.has(id) ? next.delete(id) : next.add(id);
+        setSelectedOrders(next);
     };
 
-    const toggleSelectAll = (): void => {
-        if (selectedOrders.size === paginatedOrders.length) {
-            setSelectedOrders(new Set());
-        } else {
-            const allIds = paginatedOrders.map(order => order.orderId);
-            setSelectedOrders(new Set(allIds));
-        }
+    const toggleSelectAll = () => {
+        if (selectedOrders.size === paginatedOrders.length) setSelectedOrders(new Set());
+        else setSelectedOrders(new Set(paginatedOrders.map(o => o.orderId)));
     };
 
-    const handleBulkAction = async (action: 'accept' | 'reject'): Promise<void> => {
-        if (selectedOrders.size === 0) {
-            toast.error('Please select at least one order');
-            return;
-        }
-
-        if (action === 'accept') {
-            // Validate all selected orders first
-            const invalidOrders: string[] = [];
-
-            for (const orderId of selectedOrders) {
-                const order = orders.find(o => o.orderId === orderId);
-                if (order) {
-                    const validation = await validateOrderProducts(order);
-                    if (!validation.isValid) {
-                        invalidOrders.push(order.orderId);
-                    }
-                }
-            }
-
-            if (invalidOrders.length > 0) {
-                toast.error(`Cannot accept orders: ${invalidOrders.join(', ')}. Please check stock.`);
-                return;
-            }
-        }
-
+    const handleBulkAction = async (action: 'accept' | 'reject') => {
+        if (selectedOrders.size === 0) { toast.error('Select at least one order'); return; }
         try {
-            const promises = Array.from(selectedOrders).map(orderId =>
-                axios.post('/api/products/orders/action', { orderId, action })
-            );
-
-            await Promise.all(promises);
-
-            // Update local state
-            setOrders(prev => prev.map(order =>
-                selectedOrders.has(order.orderId)
-                    ? { ...order, status: action === 'accept' ? 'accepted' : 'rejected' }
-                    : order
+            await Promise.all(Array.from(selectedOrders).map(id =>
+                axios.post('/api/products/orders/action', { orderId: id, action })
             ));
-
-            updateStats(orders);
-            filterOrders(orders, activeTab, searchTerm, selectedDate);
+            const newStatus = action === 'accept' ? 'accepted' : 'rejected';
+            setOrders(prev => prev.map(o => selectedOrders.has(o.orderId) ? { ...o, status: newStatus } : o));
             setSelectedOrders(new Set());
-
-            toast.success(`${selectedOrders.size} orders ${action}ed successfully!`, {
-                duration: 3000,
-                style: {
-                    background: action === 'accept' ? '#10b981' : '#ef4444',
-                    color: '#fff'
-                }
-            });
-        } catch (error) {
-            console.error('Error in bulk action:', error);
-            toast.error('Failed to process bulk action');
-        }
+            toast.success(`${selectedOrders.size} orders ${action}ed!`);
+        } catch { toast.error('Bulk action failed'); }
     };
 
-    const getStatusColor = (status: string): string => {
-        switch (status) {
-            case 'pending':
-            case 'pending_payment':
-                return 'bg-blue-500/20 text-blue-400';
-            case 'accepted':
-                return 'bg-green-500/20 text-green-400';
-            case 'rejected':
-                return 'bg-red-500/20 text-red-400';
-            default:
-                return 'bg-gray-500/20 text-gray-400';
-        }
-    };
+    const paginatedOrders = filteredOrders.slice((currentPage - 1) * ordersPerPage, currentPage * ordersPerPage);
+    const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
-    const getPaymentMethodColor = (method: string): string => {
-        switch (method) {
-            case 'cod':
-                return 'bg-yellow-500/20 text-yellow-400';
-            case 'bkash':
-                return 'bg-green-500/20 text-green-400';
-            default:
-                return 'bg-blue-500/20 text-blue-400';
-        }
-    };
+    // ── Render ─────────────────────────────────────────────────────────────────
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-            <Toaster
-                position="top-right"
-                toastOptions={{
-                    duration: 4000,
-                    style: {
-                        background: 'linear-gradient(135deg, #363636, #4b4b4b)',
-                        color: '#fff',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-                        padding: '12px 16px',
-                        fontWeight: 500,
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                    },
-                    success: {
-                        duration: 3000,
-                        style: {
-                            background: 'linear-gradient(135deg, #10b981, #059669)',
-                            border: '1px solid rgba(16, 185, 129, 0.5)',
-                        },
-                        icon: (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                        ),
-                    },
-                    error: {
-                        duration: 5000,
-                        style: {
-                            background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                            border: '1px solid rgba(239, 68, 68, 0.5)',
-                        },
-                        icon: (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        ),
-                    },
-                }}
-            />
+        <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
+            <Toaster position="top-right" />
 
             <div className="max-w-7xl mx-auto">
-                {/* Header Section */}
+
+                {/* ── Header ── */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
-                        <p className="text-gray-600 mt-2">Manage and track all customer orders</p>
+                        <p className="text-gray-500 mt-1 text-sm">Manage and track all customer orders</p>
                     </div>
-
                     <div className="flex flex-wrap gap-3">
-                        <button
-                            onClick={exportOrdersToCSV}
-                            disabled={exporting || orders.length === 0}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {exporting ? (
-                                <>
-                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Exporting...
-                                </>
-                            ) : (
-                                <>
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    Export CSV
-                                </>
-                            )}
+                        <button onClick={exportOrdersToCSV} disabled={exporting || orders.length === 0}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm">
+                            {exporting ? 'Exporting...' : '⬇ Export CSV'}
                         </button>
-
-                        <button
-                            onClick={fetchOrders}
-                            className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2"
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <>
-                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Refreshing...
-                                </>
-                            ) : (
-                                <>
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    Refresh
-                                </>
-                            )}
+                        <button onClick={fetchOrders} disabled={loading}
+                            className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm">
+                            {loading ? 'Refreshing...' : '↺ Refresh'}
                         </button>
                     </div>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-gray-600 text-sm">Pending Orders</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.pending}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
+                {/* ── Stats ── */}
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                    {[
+                        { label: 'Pending', value: stats.pending, color: 'blue' },
+                        { label: 'Accepted', value: stats.accepted, color: 'green' },
+                        { label: 'Rejected', value: stats.rejected, color: 'red' },
+                        { label: 'Returned', value: stats.returned, color: 'orange' },
+                        { label: 'This Month', value: stats.monthly, color: 'purple' },
+                    ].map(({ label, value, color }) => (
+                        <div key={label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                            <p className="text-gray-500 text-xs font-medium">{label}</p>
+                            <p className={`text-2xl font-bold mt-1 text-${color}-600`}>{value}</p>
                         </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-gray-600 text-sm">Accepted Orders</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.accepted}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-gray-600 text-sm">Rejected Orders</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.rejected}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-gray-600 text-sm">This Month</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.monthly}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
-                {/* Tabs and Filters */}
-                <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-200">
-                    {/* Status Tabs */}
-                    <div className="flex flex-wrap gap-2 mb-6">
-                        <button
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'pending'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                            onClick={() => setActiveTab('pending')}
-                        >
-                            Pending ({stats.pending})
-                        </button>
-                        <button
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'accepted'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                            onClick={() => setActiveTab('accepted')}
-                        >
-                            Accepted ({stats.accepted})
-                        </button>
-                        <button
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'rejected'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                            onClick={() => setActiveTab('rejected')}
-                        >
-                            Rejected ({stats.rejected})
-                        </button>
+                {/* ── Tabs + Filters ── */}
+                <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border border-gray-200">
+                    {/* Tabs */}
+                    <div className="flex flex-wrap gap-2 mb-5">
+                        {([
+                            { key: 'pending', label: 'Pending', count: stats.pending, color: 'blue' },
+                            { key: 'accepted', label: 'Accepted', count: stats.accepted, color: 'green' },
+                            { key: 'rejected', label: 'Rejected', count: stats.rejected, color: 'red' },
+                            { key: 'returned', label: 'Return', count: stats.returned, color: 'orange' },
+                        ] as const).map(({ key, label, count, color }) => (
+                            <button
+                                key={key}
+                                onClick={() => setActiveTab(key)}
+                                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === key
+                                    ? `bg-${color}-600 text-white`
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                            >
+                                {label} ({count})
+                            </button>
+                        ))}
                     </div>
 
-                    {/* Search and Filter Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="relative">
-                            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                type="text"
-                                placeholder="Search orders..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
+                    {/* Search + Date + History Badge */}
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1 flex flex-col gap-2">
+                            <div className="relative">
+                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <input
+                                    type="text"
+                                    placeholder="Search by Order ID, name, phone, or email…"
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                />
+                            </div>
+
+                            {/* Customer History Badge */}
+                            {searchHistory && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-gray-500 font-medium">Customer history:</span>
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                                        ✅ Delivery-{searchHistory.delivered}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
+                                        ⚠ Cancelled-{searchHistory.cancelled}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                                        🚩 Fraud Report-{searchHistory.fraud}
+                                    </span>
+                                    <button
+                                        onClick={() => { setCustomerHistory(searchHistory); setShowHistoryModal(true); }}
+                                        className="px-3 py-0.5 bg-gray-800 text-white rounded-full text-xs font-medium hover:bg-gray-900 transition-colors"
+                                    >
+                                        Show Full History
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        <div>
+                        {/* Date Picker — Fixed */}
+                        <div className="md:w-52">
                             <DatePicker
                                 selected={selectedDate}
-                                onChange={(date) => setSelectedDate(date)}
+                                onChange={(date: Date | null) => setSelectedDate(date)}
                                 placeholderText="Filter by date"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                dateFormat="dd MMM yyyy"
                                 isClearable
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             />
                         </div>
 
+                        {/* Bulk Actions */}
                         {selectedOrders.size > 0 && (
                             <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleBulkAction('accept')}
-                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                                >
-                                    Accept Selected ({selectedOrders.size})
+                                <button onClick={() => handleBulkAction('accept')}
+                                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                                    Accept ({selectedOrders.size})
                                 </button>
-                                <button
-                                    onClick={() => handleBulkAction('reject')}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                                >
-                                    Reject Selected ({selectedOrders.size})
+                                <button onClick={() => handleBulkAction('reject')}
+                                    className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
+                                    Reject ({selectedOrders.size})
                                 </button>
-                                <button
-                                    onClick={() => setSelectedOrders(new Set())}
-                                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                                >
+                                <button onClick={() => setSelectedOrders(new Set())}
+                                    className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">
                                     Clear
                                 </button>
                             </div>
@@ -836,211 +526,143 @@ export default function OrdersPage() {
                     </div>
                 </div>
 
-                {/* Orders Table */}
+                {/* ── Orders Table ── */}
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
                     {loading ? (
-                        <div className="flex justify-center items-center py-12">
-                            <div className="text-center">
-                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                                <p className="text-gray-600 mt-4">Loading orders...</p>
-                            </div>
+                        <div className="flex justify-center items-center py-16">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto" />
                         </div>
                     ) : (
                         <>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-gray-50">
+                                    <thead className="bg-gray-50 border-b border-gray-200">
                                         <tr>
-                                            <th className="w-12 px-6 py-3">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={paginatedOrders.length > 0 && selectedOrders.size === paginatedOrders.length}
-                                                    onChange={toggleSelectAll}
-                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                />
+                                            <th className="w-10 px-4 py-3">
+                                                <input type="checkbox" checked={paginatedOrders.length > 0 && selectedOrders.size === paginatedOrders.length} onChange={toggleSelectAll} className="rounded border-gray-300" />
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                            {['Order ID', 'Customer', 'Products', 'Total', 'Payment', 'Date', 'Status', 'Actions'].map(h => (
+                                                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                                            ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200">
+                                    <tbody className="divide-y divide-gray-100">
                                         {paginatedOrders.length === 0 ? (
                                             <tr>
-                                                <td colSpan={9} className="px-6 py-12 text-center">
-                                                    <div className="text-gray-400">
-                                                        <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                                        </svg>
-                                                        <p className="text-lg font-medium">No orders found</p>
-                                                        <p className="text-sm mt-1">Try changing your search or filter criteria</p>
-                                                    </div>
+                                                <td colSpan={9} className="py-16 text-center text-gray-400">
+                                                    <p className="text-lg font-medium">No orders found</p>
+                                                    <p className="text-sm mt-1">Try adjusting your filters</p>
                                                 </td>
                                             </tr>
-                                        ) : (
-                                            paginatedOrders.map((order) => {
-                                                const groupedProducts = groupProductsBySize(order.products);
-                                                return (
-                                                    <tr key={order.orderId} className="hover:bg-gray-50 transition-colors">
-                                                        <td className="px-6 py-4">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedOrders.has(order.orderId)}
-                                                                onChange={() => toggleSelectOrder(order.orderId)}
-                                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                            />
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="font-mono text-sm font-medium text-gray-900">{order.orderId}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div>
-                                                                <div className="font-medium text-gray-900">{order.customerInfo.name}</div>
-                                                                <div className="text-sm text-gray-500">{order.customerInfo.phone}</div>
+                                        ) : paginatedOrders.map(order => {
+                                            const grouped = groupProductsByVariantAndSize(order.products);
+                                            return (
+                                                <tr key={order.orderId} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-4 py-3">
+                                                        <input type="checkbox" checked={selectedOrders.has(order.orderId)} onChange={() => toggleSelectOrder(order.orderId)} className="rounded border-gray-300" />
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="font-mono text-xs font-semibold text-gray-800">{order.orderId}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <p className="font-medium text-gray-900 text-sm">{order.customerInfo.name}</p>
+                                                        <p className="text-xs text-gray-500">{order.customerInfo.phone}</p>
+                                                    </td>
+                                                    <td className="px-4 py-3 max-w-[220px]">
+                                                        {grouped.slice(0, 2).map((p, i) => (
+                                                            <div key={i} className="mb-1.5 last:mb-0">
+                                                                <p className="text-sm font-medium text-gray-900 truncate">{p.title}</p>
+                                                                <p className="text-xs text-gray-500">
+                                                                    Qty: {p.quantity} × ৳{p.price.toLocaleString()}
+                                                                    {p.variantName && <span className="ml-1 text-blue-600">• {p.variantName}</span>}
+                                                                    {p.variantWeight && <span className="ml-1">({p.variantWeight})</span>}
+                                                                    {p.size && !p.variantName && <span className="ml-1">• Size: {p.size}</span>}
+                                                                </p>
                                                             </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="max-w-xs">
-                                                                {groupedProducts.slice(0, 2).map((product, index) => (
-                                                                    <div key={index} className="mb-2 last:mb-0">
-                                                                        <div className="font-medium text-sm text-gray-900">{product.title}</div>
-                                                                        <div className="text-xs text-gray-500">
-                                                                            Qty: {product.quantity} × ৳{product.price.toLocaleString()}
-                                                                            {product.size && ` • Size: ${formatSize(product.size)}`}
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                                {groupedProducts.length > 2 && (
-                                                                    <div className="text-xs text-blue-600 font-medium">
-                                                                        +{groupedProducts.length - 2} more items
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="font-bold text-gray-900">৳{order.total.toLocaleString()}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentMethodColor(order.paymentMethod)}`}>
-                                                                {order.paymentMethod === 'cod' ? 'COD' :
-                                                                    order.paymentMethod === 'bkash' ? 'bKash' : 'Online'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="text-sm text-gray-500">{formatDate(order.createdAt)}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                                                                {order.status.replace('_', ' ')}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex gap-2">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setSelectedOrder(order);
-                                                                        setShowCustomerInfo(true);
-                                                                    }}
-                                                                    className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-xs font-medium transition-colors"
-                                                                >
-                                                                    View
-                                                                </button>
+                                                        ))}
+                                                        {grouped.length > 2 && <span className="text-xs text-blue-600">+{grouped.length - 2} more</span>}
+                                                    </td>
+                                                    <td className="px-4 py-3 font-bold text-gray-900 text-sm whitespace-nowrap">৳{order.total.toLocaleString()}</td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentMethodColor(order.paymentMethod)}`}>
+                                                            {order.paymentMethod === 'cod' ? 'COD' : order.paymentMethod === 'bkash' ? 'bKash' : 'Online'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(order.createdAt)}</td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
+                                                            {order.status.replace('_', ' ')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex gap-1.5 flex-wrap">
+                                                            {/* View */}
+                                                            <button onClick={() => { setSelectedOrder(order); setShowCustomerInfo(true); }}
+                                                                className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-xs font-medium">View</button>
 
-                                                                {(order.status === 'pending' || order.status === 'pending_payment') && (
-                                                                    <>
-                                                                        <button
-                                                                            onClick={() => handleAction(order.orderId, 'accept')}
-                                                                            disabled={validatingOrder === order.orderId}
-                                                                            className="px-3 py-1 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-xs font-medium transition-colors disabled:opacity-50"
-                                                                        >
-                                                                            {validatingOrder === order.orderId ? 'Checking...' : 'Accept'}
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleAction(order.orderId, 'reject')}
-                                                                            className="px-3 py-1 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 text-xs font-medium transition-colors"
-                                                                        >
-                                                                            Reject
-                                                                        </button>
-                                                                    </>
-                                                                )}
-
-                                                                {order.status === 'accepted' && (
-                                                                    <button
-                                                                        onClick={() => handlePrintLabel(order)}
-                                                                        className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-xs font-medium transition-colors flex items-center gap-1"
-                                                                    >
-                                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                                                        </svg>
-                                                                        Print
+                                                            {/* Accept / Reject for pending */}
+                                                            {(order.status === 'pending' || order.status === 'pending_payment') && (
+                                                                <>
+                                                                    <button onClick={() => handleAction(order.orderId, 'accept')} disabled={validatingOrder === order.orderId}
+                                                                        className="px-2.5 py-1 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-xs font-medium disabled:opacity-50">
+                                                                        {validatingOrder === order.orderId ? '…' : 'Accept'}
                                                                     </button>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
-                                        )}
+                                                                    <button onClick={() => handleAction(order.orderId, 'reject')}
+                                                                        className="px-2.5 py-1 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 text-xs font-medium">Reject</button>
+                                                                </>
+                                                            )}
+
+                                                            {/* Return button for accepted */}
+                                                            {order.status === 'accepted' && (
+                                                                <>
+                                                                    <button onClick={() => handleAction(order.orderId, 'return')}
+                                                                        className="px-2.5 py-1 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 text-xs font-medium">Return</button>
+                                                                    <button onClick={() => { setSelectedOrderForLabel(order); setShowShippingLabel(true); }}
+                                                                        className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-xs font-medium">Print</button>
+                                                                </>
+                                                            )}
+
+                                                            {/* ✅ Delete for rejected */}
+                                                            {order.status === 'rejected' && (
+                                                                <button onClick={() => handleDeleteOrder(order.orderId)} disabled={deletingOrder === order.orderId}
+                                                                    className="px-2.5 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs font-medium disabled:opacity-50">
+                                                                    {deletingOrder === order.orderId ? '…' : 'Delete'}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
 
                             {/* Pagination */}
                             {totalPages > 1 && (
-                                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                                        <div className="text-sm text-gray-700">
-                                            Showing <span className="font-medium">{(currentPage - 1) * ordersPerPage + 1}</span> to{' '}
-                                            <span className="font-medium">{Math.min(currentPage * ordersPerPage, filteredOrders.length)}</span> of{' '}
-                                            <span className="font-medium">{filteredOrders.length}</span> results
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                                disabled={currentPage === 1}
-                                                className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                                            >
-                                                Previous
-                                            </button>
-
-                                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                                let pageNum: number;
-                                                if (totalPages <= 5) {
-                                                    pageNum = i + 1;
-                                                } else if (currentPage <= 3) {
-                                                    pageNum = i + 1;
-                                                } else if (currentPage >= totalPages - 2) {
-                                                    pageNum = totalPages - 4 + i;
-                                                } else {
-                                                    pageNum = currentPage - 2 + i;
-                                                }
-                                                return (
-                                                    <button
-                                                        key={pageNum}
-                                                        onClick={() => setCurrentPage(pageNum)}
-                                                        className={`px-3 py-1 rounded-lg text-sm ${currentPage === pageNum
-                                                            ? 'bg-blue-600 text-white'
-                                                            : 'border border-gray-300 hover:bg-gray-50'
-                                                            }`}
-                                                    >
-                                                        {pageNum}
-                                                    </button>
-                                                );
-                                            })}
-
-                                            <button
-                                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                                disabled={currentPage === totalPages}
-                                                className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                                            >
-                                                Next
-                                            </button>
-                                        </div>
+                                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                                    <p className="text-sm text-gray-600">
+                                        Showing <strong>{(currentPage - 1) * ordersPerPage + 1}</strong>–<strong>{Math.min(currentPage * ordersPerPage, filteredOrders.length)}</strong> of <strong>{filteredOrders.length}</strong>
+                                    </p>
+                                    <div className="flex gap-1">
+                                        <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}
+                                            className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-40">← Prev</button>
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let n = i + 1;
+                                            if (totalPages > 5) {
+                                                if (currentPage <= 3) n = i + 1;
+                                                else if (currentPage >= totalPages - 2) n = totalPages - 4 + i;
+                                                else n = currentPage - 2 + i;
+                                            }
+                                            return (
+                                                <button key={n} onClick={() => setCurrentPage(n)}
+                                                    className={`w-8 h-8 rounded-lg text-sm font-medium ${currentPage === n ? 'bg-blue-600 text-white' : 'border border-gray-300 hover:bg-gray-50'}`}>
+                                                    {n}
+                                                </button>
+                                            );
+                                        })}
+                                        <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+                                            className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-40">Next →</button>
                                     </div>
                                 </div>
                             )}
@@ -1049,206 +671,207 @@ export default function OrdersPage() {
                 </div>
             </div>
 
-            {/* Order Details Modal - RESPONSIVE VERSION */}
+            {/* ── Order Details Modal ── */}
             {showCustomerInfo && selectedOrder && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-                    <div
-                        ref={modalRef}
-                        className="bg-white rounded-xl sm:rounded-2xl w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto mx-2 sm:mx-0"
-                        style={{
-                            width: 'calc(100vw - 16px)',
-                            maxWidth: 'min(calc(100vw - 32px), 800px)'
-                        }}
-                    >
-                        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center z-10">
-                            <div className="min-w-0 flex-1">
-                                <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Order Details</h2>
-                                <p className="text-gray-600 text-xs sm:text-sm truncate">Order ID: {selectedOrder.orderId}</p>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-6">
+                    <div ref={modalRef} className="bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl">
+
+                        {/* Modal Header */}
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-4 flex justify-between items-center z-10 rounded-t-2xl">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
+                                <div className="flex items-center gap-3 mt-1">
+                                    <span className="font-mono text-sm text-gray-500">{selectedOrder.orderId}</span>
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(selectedOrder.status)}`}>
+                                        {selectedOrder.status.replace('_', ' ')}
+                                    </span>
+                                </div>
                             </div>
-                            <button
-                                onClick={() => setShowCustomerInfo(false)}
-                                className="text-gray-400 hover:text-gray-600 p-1 sm:p-2 rounded-full hover:bg-gray-100 ml-2 flex-shrink-0"
-                                aria-label="Close modal"
-                            >
-                                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <button onClick={() => setShowCustomerInfo(false)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
 
-                        <div className="p-4 sm:p-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-                                {/* Left Column: Customer Info */}
-                                <div>
-                                    <div className="mb-6 sm:mb-8">
-                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
-                                            Customer Information
-                                        </h3>
-                                        <div className="space-y-3">
+                        <div className="p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                            {/* Left: Customer Info */}
+                            <div className="space-y-5">
+                                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                        <span>👤</span> Customer Information
+                                    </h3>
+                                    <div className="space-y-2.5">
+                                        <div>
+                                            <p className="text-xs text-gray-400 font-medium">Full Name</p>
+                                            <p className="font-semibold text-gray-900">{selectedOrder.customerInfo.name}</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <label className="text-xs sm:text-sm text-gray-500">Full Name</label>
-                                                <p className="font-medium text-gray-900 text-sm sm:text-base">{selectedOrder.customerInfo.name}</p>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                                <div>
-                                                    <label className="text-xs sm:text-sm text-gray-500">Email</label>
-                                                    <p className="font-medium text-gray-900 text-sm sm:text-base break-words">{selectedOrder.customerInfo.email}</p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs sm:text-sm text-gray-500">Phone</label>
-                                                    <p className="font-medium text-gray-900 text-sm sm:text-base">{selectedOrder.customerInfo.phone}</p>
-                                                </div>
+                                                <p className="text-xs text-gray-400 font-medium">Phone</p>
+                                                <p className="font-medium text-gray-800 text-sm">{selectedOrder.customerInfo.phone}</p>
                                             </div>
                                             <div>
-                                                <label className="text-xs sm:text-sm text-gray-500">Shipping Address</label>
-                                                <p className="font-medium text-gray-900 text-sm sm:text-base">
-                                                    {selectedOrder.customerInfo.address}
-                                                    {selectedOrder.customerInfo.city && `, ${selectedOrder.customerInfo.city}`}
-                                                    {selectedOrder.customerInfo.postcode && ` - ${selectedOrder.customerInfo.postcode}`}
-                                                </p>
-                                                <div className="text-xs sm:text-sm text-gray-600 mt-1">
-                                                    {selectedOrder.customerInfo.district && `${selectedOrder.customerInfo.district}, `}
-                                                    {selectedOrder.customerInfo.thana && `${selectedOrder.customerInfo.thana}, `}
-                                                    {selectedOrder.customerInfo.country}
-                                                </div>
+                                                <p className="text-xs text-gray-400 font-medium">Email</p>
+                                                <p className="font-medium text-gray-800 text-sm break-all">{selectedOrder.customerInfo.email}</p>
                                             </div>
-
-                                            {/* ✅ Additional Notes Section */}
-                                            {selectedOrder.customerInfo.notes && (
-                                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                                    <label className="text-xs sm:text-sm text-gray-500 font-medium mb-2 block">
-                                                        Additional Notes:
-                                                    </label>
-                                                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                                                        <p className="text-gray-700 whitespace-pre-line text-sm sm:text-base">
-                                                            {selectedOrder.customerInfo.notes}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
-                                    </div>
-
-                                    {/* Order Status Section */}
-                                    <div>
-                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
-                                            Order Status
-                                        </h3>
-                                        <div className="space-y-3 sm:space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-gray-600 text-sm sm:text-base">Current Status:</span>
-                                                <span className={`px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(selectedOrder.status)}`}>
-                                                    {selectedOrder.status.replace('_', ' ')}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-gray-600 text-sm sm:text-base">Payment Method:</span>
-                                                <span className={`px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium ${getPaymentMethodColor(selectedOrder.paymentMethod)}`}>
-                                                    {selectedOrder.paymentMethod === 'cod' ? 'COD' :
-                                                        selectedOrder.paymentMethod === 'bkash' ? 'bKash' : 'Online'}
-                                                </span>
-                                            </div>
-                                            {selectedOrder.couponCode && (
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-gray-600 text-sm sm:text-base">Coupon Used:</span>
-                                                    <span className="font-medium text-purple-600 text-sm sm:text-base">{selectedOrder.couponCode}</span>
-                                                </div>
-                                            )}
+                                        <div>
+                                            <p className="text-xs text-gray-400 font-medium">Address</p>
+                                            <p className="text-gray-800 text-sm">{selectedOrder.customerInfo.address}</p>
+                                            <p className="text-gray-600 text-xs mt-0.5">
+                                                {[selectedOrder.customerInfo.thana, selectedOrder.customerInfo.district, selectedOrder.customerInfo.city].filter(Boolean).join(', ')}
+                                                {selectedOrder.customerInfo.postcode && ` - ${selectedOrder.customerInfo.postcode}`}
+                                            </p>
+                                            <p className="text-gray-500 text-xs">{selectedOrder.customerInfo.country}</p>
                                         </div>
+                                        {selectedOrder.customerInfo.notes && (
+                                            <div className="pt-2 border-t border-gray-200">
+                                                <p className="text-xs text-gray-400 font-medium mb-1">Notes</p>
+                                                <p className="text-gray-700 text-sm bg-white rounded-lg p-2 border border-gray-200">{selectedOrder.customerInfo.notes}</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Right Column: Order Summary */}
-                                <div>
-                                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
-                                        Order Summary
+                                {/* Payment */}
+                                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                        <span>💳</span> Payment & Status
                                     </h3>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-gray-500">Method</span>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentMethodColor(selectedOrder.paymentMethod)}`}>
+                                                {selectedOrder.paymentMethod === 'cod' ? '💵 COD' : selectedOrder.paymentMethod === 'bkash' ? '📱 bKash' : '💳 Online'}
+                                            </span>
+                                        </div>
+                                        {selectedOrder.paymentMethod === 'bkash' && selectedOrder.customerInfo.bkashNumber && (
+                                            <>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-gray-500">bKash No.</span>
+                                                    <span className="font-mono text-sm">{selectedOrder.customerInfo.bkashNumber.slice(0, 4)}***{selectedOrder.customerInfo.bkashNumber.slice(7)}</span>
+                                                </div>
+                                                {selectedOrder.customerInfo.transactionId && (
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-500">Txn ID</span>
+                                                        <span className="font-mono text-sm">{selectedOrder.customerInfo.transactionId}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        {selectedOrder.couponCode && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-500">Coupon</span>
+                                                <span className="text-purple-600 font-medium text-sm">{selectedOrder.couponCode}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-gray-500">Date</span>
+                                            <span className="text-sm text-gray-700">{formatDate(selectedOrder.createdAt)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                                    <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
-                                        {groupProductsBySize(selectedOrder.products).map((product, index) => (
-                                            <div key={index} className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                                                <div className="flex justify-between items-start">
+                            {/* Right: Order Items + Summary */}
+                            <div>
+                                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                        <span>🛍</span> Order Items
+                                    </h3>
+                                    <div className="space-y-3 mb-4">
+                                        {groupProductsByVariantAndSize(selectedOrder.products).map((p, i) => (
+                                            <div key={i} className="bg-white rounded-lg p-3 border border-gray-200">
+                                                <div className="flex justify-between items-start gap-2">
                                                     <div className="flex-1 min-w-0">
-                                                        <h4 className="font-medium text-gray-900 text-sm sm:text-base truncate">{product.title}</h4>
-                                                        <div className="text-xs sm:text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
-                                                            <span>Quantity: {product.quantity}</span>
-                                                            {product.size && <span>Size: {formatSize(product.size)}</span>}
+                                                        <p className="font-semibold text-gray-900 text-sm">{p.title}</p>
+                                                        <div className="flex flex-wrap gap-1.5 mt-1">
+                                                            {p.variantName && (
+                                                                <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-medium">
+                                                                    {p.variantName}
+                                                                </span>
+                                                            )}
+                                                            {p.variantWeight && (
+                                                                <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                                                                    {p.variantWeight}
+                                                                </span>
+                                                            )}
+                                                            {p.size && !p.variantName && (
+                                                                <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                                                                    Size: {p.size}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs text-gray-500">Qty: {p.quantity}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right ml-2 flex-shrink-0">
-                                                        <div className="font-medium text-gray-900 text-sm sm:text-base">
-                                                            ৳{(product.price * product.quantity).toLocaleString()}
-                                                        </div>
-                                                        <div className="text-xs sm:text-sm text-gray-500">
-                                                            ৳{product.price.toLocaleString()} each
-                                                        </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className="font-bold text-gray-900 text-sm">৳{(p.price * p.quantity).toLocaleString()}</p>
+                                                        <p className="text-xs text-gray-400">৳{p.price.toLocaleString()} each</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
 
-                                    {/* Order Totals */}
-                                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600 text-sm sm:text-base">Subtotal</span>
-                                                <span className="font-medium text-sm sm:text-base">
-                                                    ৳{selectedOrder.products.reduce((sum, p) => sum + (p.price * p.quantity), 0).toLocaleString()}
-                                                </span>
+                                    {/* Totals */}
+                                    <div className="bg-white rounded-lg p-3 border border-gray-200 space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Subtotal</span>
+                                            <span>৳{selectedOrder.products.reduce((s, p) => s + p.price * p.quantity, 0).toLocaleString()}</span>
+                                        </div>
+                                        {selectedOrder.discount > 0 && (
+                                            <div className="flex justify-between text-sm text-green-600">
+                                                <span>Discount</span>
+                                                <span>-৳{selectedOrder.discount.toLocaleString()}</span>
                                             </div>
-                                            {selectedOrder.discount > 0 && (
-                                                <div className="flex justify-between text-green-600">
-                                                    <span className="text-sm sm:text-base">Discount</span>
-                                                    <span className="font-medium text-sm sm:text-base">-৳{selectedOrder.discount.toLocaleString()}</span>
-                                                </div>
-                                            )}
-                                            {selectedOrder.shippingCharge > 0 && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600 text-sm sm:text-base">Shipping</span>
-                                                    <span className="font-medium text-sm sm:text-base">৳{selectedOrder.shippingCharge.toLocaleString()}</span>
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between pt-2 border-t border-gray-200">
-                                                <span className="font-bold text-gray-900 text-sm sm:text-base">Total</span>
-                                                <span className="font-bold text-gray-900 text-sm sm:text-base">৳{selectedOrder.total.toLocaleString()}</span>
+                                        )}
+                                        {selectedOrder.shippingCharge > 0 && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-500">Shipping</span>
+                                                <span>৳{selectedOrder.shippingCharge.toLocaleString()}</span>
                                             </div>
+                                        )}
+                                        <div className="flex justify-between font-bold text-base pt-2 border-t border-gray-200">
+                                            <span>Total</span>
+                                            <span>৳{selectedOrder.total.toLocaleString()}</span>
                                         </div>
                                     </div>
+                                </div>
 
-                                    {/* Action Buttons */}
-                                    <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200">
-                                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                                            {selectedOrder.status === 'accepted' && (
-                                                <button
-                                                    onClick={() => {
-                                                        handlePrintLabel(selectedOrder);
-                                                        setShowCustomerInfo(false);
-                                                    }}
-                                                    className="flex-1 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors text-sm sm:text-base"
-                                                >
-                                                    Print Shipping Label
-                                                </button>
-                                            )}
-                                            {(selectedOrder.status === 'pending' || selectedOrder.status === 'pending_payment') && (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleAction(selectedOrder.orderId, 'accept')}
-                                                        disabled={validatingOrder === selectedOrder.orderId}
-                                                        className="flex-1 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 text-sm sm:text-base"
-                                                    >
-                                                        {validatingOrder === selectedOrder.orderId ? 'Checking...' : 'Accept Order'}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleAction(selectedOrder.orderId, 'reject')}
-                                                        className="flex-1 px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors text-sm sm:text-base"
-                                                    >
-                                                        Reject Order
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
+                                {/* Modal Actions */}
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    {(selectedOrder.status === 'pending' || selectedOrder.status === 'pending_payment') && (
+                                        <>
+                                            <button onClick={() => handleAction(selectedOrder.orderId, 'accept')} disabled={validatingOrder === selectedOrder.orderId}
+                                                className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm disabled:opacity-50">
+                                                {validatingOrder === selectedOrder.orderId ? 'Checking...' : '✓ Accept Order'}
+                                            </button>
+                                            <button onClick={() => handleAction(selectedOrder.orderId, 'reject')}
+                                                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm">
+                                                ✕ Reject Order
+                                            </button>
+                                        </>
+                                    )}
+                                    {selectedOrder.status === 'accepted' && (
+                                        <>
+                                            <button onClick={() => handleAction(selectedOrder.orderId, 'return')}
+                                                className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium text-sm">
+                                                ↩ Mark as Return
+                                            </button>
+                                            <button onClick={() => { setSelectedOrderForLabel(selectedOrder); setShowShippingLabel(true); setShowCustomerInfo(false); }}
+                                                className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm">
+                                                🖨 Print Label
+                                            </button>
+                                        </>
+                                    )}
+                                    {selectedOrder.status === 'rejected' && (
+                                        <button onClick={() => handleDeleteOrder(selectedOrder.orderId)} disabled={deletingOrder === selectedOrder.orderId}
+                                            className="flex-1 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm disabled:opacity-50">
+                                            🗑 Delete Order
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1256,14 +879,72 @@ export default function OrdersPage() {
                 </div>
             )}
 
-            {/* Shipping Label Modal */}
+            {/* ── Customer Full History Modal ── */}
+            {showHistoryModal && customerHistory && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div ref={historyModalRef} className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-4 flex justify-between items-center rounded-t-2xl">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">Customer Full History</h2>
+                                <div className="flex gap-2 mt-2 flex-wrap">
+                                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                                        ✅ Delivery: {customerHistory.delivered}
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
+                                        ⚠ Cancelled: {customerHistory.cancelled}
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                                        🚩 Fraud Report: {customerHistory.fraud}
+                                    </span>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowHistoryModal(false)} className="p-2 rounded-full hover:bg-gray-100">
+                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-3">
+                            {customerHistory.allOrders.length === 0 ? (
+                                <p className="text-center text-gray-400 py-8">No orders found</p>
+                            ) : customerHistory.allOrders.map(o => (
+                                <div key={o.orderId} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                    <div className="flex justify-between items-start flex-wrap gap-2">
+                                        <div>
+                                            <p className="font-mono text-sm font-semibold text-gray-800">{o.orderId}</p>
+                                            <p className="text-xs text-gray-500 mt-0.5">{formatDate(o.createdAt)}</p>
+                                            <div className="mt-2 space-y-1">
+                                                {o.products.slice(0, 2).map((p, i) => (
+                                                    <p key={i} className="text-xs text-gray-600">
+                                                        • {p.title}
+                                                        {p.variantName && <span className="text-blue-600 ml-1">({p.variantName})</span>}
+                                                        {p.variantWeight && <span className="text-gray-500 ml-1">[{p.variantWeight}]</span>}
+                                                        {p.size && !p.variantName && <span className="text-gray-500 ml-1">[{p.size}]</span>}
+                                                        <span className="ml-1">× {p.quantity}</span>
+                                                    </p>
+                                                ))}
+                                                {o.products.length > 2 && <p className="text-xs text-blue-500">+{o.products.length - 2} more</p>}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(o.status)}`}>
+                                                {o.status.replace('_', ' ')}
+                                            </span>
+                                            <p className="font-bold text-gray-900 text-sm mt-1">৳{o.total.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Shipping Label ── */}
             {showShippingLabel && selectedOrderForLabel && (
                 <ShippingLabel
                     order={selectedOrderForLabel}
-                    onClose={() => {
-                        setShowShippingLabel(false);
-                        setSelectedOrderForLabel(null);
-                    }}
+                    onClose={() => { setShowShippingLabel(false); setSelectedOrderForLabel(null); }}
                 />
             )}
         </div>

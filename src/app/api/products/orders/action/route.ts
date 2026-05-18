@@ -1,4 +1,5 @@
-// src/app/api/products/orders/action/route.ts 
+// src/app/api/products/orders/action/route.ts
+
 import { NextResponse } from 'next/server';
 import dbConnect from '@/src/lib/dbConnect';
 import Order from '@/src/models/Order';
@@ -6,7 +7,7 @@ import Product from '@/src/models/Products';
 
 interface ActionRequestBody {
     orderId: string;
-    action: 'accept' | 'reject';
+    action: 'accept' | 'reject' | 'return';
 }
 
 export async function POST(request: Request) {
@@ -16,32 +17,24 @@ export async function POST(request: Request) {
         const body: ActionRequestBody = await request.json();
         const { orderId, action } = body;
 
-        if (!orderId || !['accept', 'reject'].includes(action)) {
+        // ✅ action validation
+        if (!orderId || !['accept', 'reject', 'return'].includes(action)) {
             return NextResponse.json(
                 { error: 'Invalid request parameters' },
                 { status: 400 }
             );
         }
 
-
-
         // Find order
         const order = await Order.findOne({ orderId });
         if (!order) {
-            // console.log(`Order not found: ${orderId}`);
             return NextResponse.json(
                 { error: 'Order not found' },
                 { status: 404 }
             );
         }
 
-        // TEMPORARY: Print current status options (TypeScript compatible)
-        const statusPath = (Order.schema as any).path('status');
-        if (statusPath && statusPath.enumValues) {
-            // console.log('Order schema status enum:', statusPath.enumValues);
-        }
-
-        // Check current status
+        // ✅ Check current status for duplicate actions
         if (order.status === 'accepted' && action === 'accept') {
             return NextResponse.json(
                 { error: 'Order is already accepted' },
@@ -56,12 +49,20 @@ export async function POST(request: Request) {
             );
         }
 
-        if (action === 'accept') {
-            // Validate product availability
-            // console.log('Validating products for order:', orderId);
+        if (order.status === 'returned' && action === 'return') {
+            return NextResponse.json(
+                { error: 'Order is already returned' },
+                { status: 400 }
+            );
+        }
 
+        // ============================================
+        // ✅ ACTION: ACCEPT
+        // ============================================
+        if (action === 'accept') {
             const validationErrors: string[] = [];
 
+            // Validate product availability
             for (const item of order.products) {
                 const product = await Product.findById(item.productId);
 
@@ -69,8 +70,6 @@ export async function POST(request: Request) {
                     validationErrors.push(`Product "${item.title}" not found`);
                     continue;
                 }
-
-                // console.log(`Checking product: ${product.title}, Quantity: ${item.quantity}, Size: ${item.size || 'N/A'}`);
 
                 // Check availability
                 if (product.availability !== 'InStock') {
@@ -95,7 +94,6 @@ export async function POST(request: Request) {
             }
 
             if (validationErrors.length > 0) {
-                // console.log('Validation errors:', validationErrors);
                 return NextResponse.json(
                     {
                         error: 'Product validation failed',
@@ -106,12 +104,9 @@ export async function POST(request: Request) {
             }
 
             // Update product quantities
-            // console.log('Updating product quantities...');
             for (const item of order.products) {
                 const product = await Product.findById(item.productId);
                 if (!product) continue;
-
-                // console.log(`Processing product: ${product.title}, Qty: ${item.quantity}, Size: ${item.size || 'N/A'}`);
 
                 if (item.size && product.sizeRequirement === 'Mandatory') {
                     const sizeIndex = product.sizes.findIndex((s: any) => s.name === item.size);
@@ -119,26 +114,19 @@ export async function POST(request: Request) {
                         product.sizes[sizeIndex].quantity -= item.quantity;
                         product.quantity -= item.quantity;
                         await product.save();
-                        // console.log(`Updated size ${item.size} quantity to ${product.sizes[sizeIndex].quantity}`);
                     }
                 } else {
                     product.quantity -= item.quantity;
                     await product.save();
-                    // console.log(`Updated general quantity to ${product.quantity}`);
                 }
             }
 
-            // Update order status - WORKAROUND VERSION
-            // console.log(`Updating order ${orderId} status to ${action === 'accept' ? 'accepted' : 'rejected'}`);
-
-            const newStatus = action === 'accept' ? 'accepted' : 'rejected';
-
-            // Direct MongoDB update (bypass Mongoose validation temporarily)
+            // Update order status to accepted
             const updateResult = await Order.updateOne(
                 { orderId },
                 {
                     $set: {
-                        status: newStatus,
+                        status: 'accepted',
                         updatedAt: new Date()
                     }
                 }
@@ -151,57 +139,106 @@ export async function POST(request: Request) {
                 );
             }
 
-            // console.log(`Order ${action}ed successfully`);
             return NextResponse.json(
                 {
                     success: true,
-                    message: `Order ${action}ed successfully`,
+                    message: 'Order accepted successfully',
                     order: {
                         orderId: order.orderId,
-                        status: newStatus,
-                        updatedAt: new Date()
-                    }
-                },
-                { status: 200 }
-            );
-        } else {
-            // Reject order
-            const newStatus = 'rejected';
-
-            const updateResult = await Order.updateOne(
-                { orderId },
-                {
-                    $set: {
-                        status: newStatus,
-                        updatedAt: new Date()
-                    }
-                }
-            );
-
-            if (updateResult.matchedCount === 0) {
-                return NextResponse.json(
-                    { error: 'Failed to update order status' },
-                    { status: 500 }
-                );
-            }
-
-            // console.log('Order rejected successfully');
-            return NextResponse.json(
-                {
-                    success: true,
-                    message: 'Order rejected successfully',
-                    order: {
-                        orderId: order.orderId,
-                        status: newStatus,
+                        status: 'accepted',
                         updatedAt: new Date()
                     }
                 },
                 { status: 200 }
             );
         }
+
+        // ============================================
+        // ✅ ACTION: REJECT
+        // ============================================
+        if (action === 'reject') {
+            const updateResult = await Order.updateOne(
+                { orderId },
+                {
+                    $set: {
+                        status: 'rejected',
+                        updatedAt: new Date()
+                    }
+                }
+            );
+
+            if (updateResult.matchedCount === 0) {
+                return NextResponse.json(
+                    { error: 'Failed to update order status' },
+                    { status: 500 }
+                );
+            }
+
+            return NextResponse.json(
+                {
+                    success: true,
+                    message: 'Order rejected successfully',
+                    order: {
+                        orderId: order.orderId,
+                        status: 'rejected',
+                        updatedAt: new Date()
+                    }
+                },
+                { status: 200 }
+            );
+        }
+
+        // ============================================
+        // ✅ ACTION: RETURN (এটি এখানে যোগ করুন)
+        // ============================================
+        if (action === 'return') {
+            // Check if order can be returned (only accepted orders can be returned)
+            if (order.status !== 'accepted') {
+                return NextResponse.json(
+                    { error: 'Only accepted orders can be returned' },
+                    { status: 400 }
+                );
+            }
+
+            const updateResult = await Order.updateOne(
+                { orderId },
+                {
+                    $set: {
+                        status: 'returned',
+                        updatedAt: new Date()
+                    }
+                }
+            );
+
+            if (updateResult.matchedCount === 0) {
+                return NextResponse.json(
+                    { error: 'Failed to update order status' },
+                    { status: 500 }
+                );
+            }
+
+            return NextResponse.json(
+                {
+                    success: true,
+                    message: 'Order marked as returned',
+                    order: {
+                        orderId: order.orderId,
+                        status: 'returned',
+                        updatedAt: new Date()
+                    }
+                },
+                { status: 200 }
+            );
+        }
+
+        // If no action matched (should not happen)
+        return NextResponse.json(
+            { error: 'Invalid action' },
+            { status: 400 }
+        );
+
     } catch (error: any) {
         console.error('Order action error:', error);
-
         return NextResponse.json(
             {
                 error: 'Failed to process order action',

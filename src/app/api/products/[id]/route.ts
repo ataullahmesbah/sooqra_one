@@ -87,6 +87,8 @@ export async function GET(request: Request, { params }: { params: Promise<Params
     }
 }
 
+// app/api/products/[id]/route.ts - PUT ফাংশনটি replace করুন
+
 export async function PUT(request: Request, { params }: { params: Promise<Params> }) {
     await dbConnect();
     const session = await getServerSession(authOptions);
@@ -96,8 +98,6 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
 
     try {
         const { id: productId } = await params;
-
-
 
         if (!mongoose.Types.ObjectId.isValid(productId)) {
             return Response.json({ error: 'Invalid product ID' }, { status: 400 });
@@ -110,12 +110,19 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
 
         const formData = await request.formData();
 
+        // ✅ Extract hasVariants from formData (সঠিকভাবে)
+        const hasVariantsFromForm = formData.get('hasVariants') === 'true';
 
-
-        for (const [key, value] of formData.entries()) {
-            // console.log(`${key}:`, typeof value, value);
+        // ✅ Extract variants JSON if present
+        let variantsData = [];
+        const variantsJson = formData.get('variants') as string;
+        if (variantsJson && variantsJson.trim()) {
+            try {
+                variantsData = JSON.parse(variantsJson);
+            } catch (error) {
+                console.error('Error parsing variants:', error);
+            }
         }
-
 
         // Extract ALL fields
         const title = formData.get('title') as string;
@@ -133,7 +140,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         const affiliateLink = productType === 'Affiliate' ? (formData.get('affiliateLink') as string) : '';
         const categoryId = formData.get('category') as string;
         const newCategory = formData.get('newCategory') as string;
-        const subCategoryId = formData.get('subCategory') as string; // ✅ subCategory
+        const subCategoryId = formData.get('subCategory') as string;
         const newSubCategory = formData.get('newSubCategory') as string;
         const mainImage = formData.get('mainImage') as File;
         const mainImageAlt = formData.get('mainImageAlt') as string;
@@ -166,13 +173,11 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         const quantity = parseInt(formData.get('quantity') as string || '0', 10);
         const sizeRequirement = (formData.get('sizeRequirement') as string) || 'Optional';
 
-        // Handle aggregateRating correctly
+        // Handle aggregateRating
         const aggregateRating: AggregateRating = {
             ratingValue: parseFloat(formData.get('aggregateRating.ratingValue') as string || '0'),
             reviewCount: parseInt(formData.get('aggregateRating.reviewCount') as string || '0', 10)
         };
-
-
 
         // Handle sizes
         let sizes: Size[] = [];
@@ -246,7 +251,6 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         }
 
         if (Object.keys(errors).length > 0) {
-            // console.log('Validation errors:', errors);
             return Response.json({
                 error: 'Validation failed',
                 details: errors
@@ -282,16 +286,14 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             return Response.json({ error: 'Category is required' }, { status: 400 });
         }
 
-        // ✅ Handle subcategory
+        // Handle subcategory
         let subCategory = null;
         if (subCategoryId && subCategoryId.trim() && subCategoryId !== 'new' && mongoose.Types.ObjectId.isValid(subCategoryId)) {
-            // Existing subcategory
             subCategory = await SubCategory.findOne({
                 _id: subCategoryId,
                 category: category._id
             });
         } else if (newSubCategory && newSubCategory.trim() && subCategoryId === 'new') {
-            // New subcategory create করো
             const slug = newSubCategory
                 .trim()
                 .toLowerCase()
@@ -358,7 +360,6 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
         // Handle additional images
         const additionalImageUrls: AdditionalImage[] = [...existingAdditionalImages];
 
-        // Upload new additional images
         for (const [index, image] of additionalImages.entries()) {
             try {
                 const arrayBuffer = await image.arrayBuffer();
@@ -419,7 +420,6 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)/g, '');
 
-        // Check for duplicate slug
         const existingSlugProduct = await Product.findOne({
             slug,
             _id: { $ne: productId }
@@ -434,7 +434,7 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             slug = newSlug;
         }
 
-        // Update product
+        // ✅ Update product data (সঠিকভাবে hasVariants সেট করুন)
         const updateData: any = {
             title: title.trim(),
             slug,
@@ -451,7 +451,6 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             affiliateLink: productType === 'Affiliate' ? affiliateLink : undefined,
             brand: brand.trim(),
             category: category._id,
-            // subCategory: subCategory?._id || null, 
             subCategory: subCategoryIdToSave,
             quantity,
             availability,
@@ -466,20 +465,47 @@ export async function PUT(request: Request, { params }: { params: Promise<Params
             isGlobal,
             targetCountry: isGlobal ? '' : targetCountry.trim(),
             targetCity: isGlobal ? '' : targetCity.trim(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            // ✅ এখানে সঠিকভাবে hasVariants সেট করুন
+            hasVariants: hasVariantsFromForm,
         };
-
-
 
         const updatedProduct = await Product.findByIdAndUpdate(
             productId,
             updateData,
             { new: true, runValidators: true }
         ).populate('category')
-            .populate('subCategory'); // ✅ subCategory populate করো
+            .populate('subCategory');
 
         if (!updatedProduct) {
             return Response.json({ error: 'Failed to update product' }, { status: 500 });
+        }
+
+        // ✅ If variants data exists, update them via the variants API
+        if (hasVariantsFromForm && variantsData.length > 0) {
+            try {
+                const variantsRes = await fetch(`${process.env.NEXTAUTH_URL}/api/products/variants`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        productId: productId,
+                        variants: variantsData.map((v: any) => ({
+                            name: v.name,
+                            weight: v.weight,
+                            price: v.price,
+                            comparePrice: v.comparePrice || 0,
+                            sku: v.sku || `${productId}-${Date.now()}`,
+                            quantity: v.quantity || 0,
+                            isDefault: v.isDefault || false,
+                        })),
+                    }),
+                });
+                if (!variantsRes.ok) {
+                    console.error('Failed to update variants');
+                }
+            } catch (err) {
+                console.error('Error updating variants:', err);
+            }
         }
 
         return Response.json({

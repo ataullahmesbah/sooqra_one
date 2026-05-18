@@ -13,6 +13,9 @@ interface OrderProduct {
     quantity: number;
     price: number;
     size?: string;
+    variantId?: string;
+    variantName?: string;
+    variantWeight?: string;
 }
 
 interface CustomerInfo {
@@ -64,7 +67,7 @@ export default function OrderSuccess() {
                     return;
                 }
 
-                // ✅ শুধু orderId পাঠান - কোন email/phone প্রয়োজন নেই
+
                 const url = `/api/products/orders?orderId=${encodeURIComponent(orderId)}`;
                 const response = await axios.get(url);
 
@@ -267,6 +270,8 @@ export default function OrderSuccess() {
                 </div>
 
                 {/* Order Summary */}
+
+
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
                     <h3 className="text-gray-900 font-bold text-lg mb-4 flex items-center gap-2">
                         <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,11 +284,23 @@ export default function OrderSuccess() {
                         {order.products.map((item, index) => (
                             <div key={index} className="flex justify-between items-start pb-3 border-b border-gray-200 last:border-0 last:pb-0">
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-800">{item.title}</p>
-                                    <div className="flex items-center gap-4 mt-1 text-xs text-gray-600">
+                                    <p className="text-sm font-medium text-gray-800">
+                                        {item.title}
+                                        {item.variantName && (
+                                            <span className="ml-2 inline-block text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2 py-0.5">
+                                                {item.variantName}
+                                            </span>
+                                        )}
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-600">
                                         <span>Qty: {item.quantity}</span>
-                                        {item.size && <span>Size: {item.size}</span>}
                                         <span>৳{item.price.toLocaleString()} each</span>
+                                        {item.variantWeight && (
+                                            <span className="text-gray-500">
+                                                Weight: <span className="font-medium text-gray-700">{item.variantWeight}</span>
+                                            </span>
+                                        )}
+                                        {item.size && <span>Size: {item.size}</span>}
                                     </div>
                                 </div>
                                 <span className="text-sm font-medium text-gray-800 whitespace-nowrap">
@@ -292,7 +309,7 @@ export default function OrderSuccess() {
                             </div>
                         ))}
 
-                        {/* Order Totals */}
+                        {/* Order Totals - Same as before */}
                         <div className="pt-4 space-y-2">
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Subtotal</span>

@@ -9,6 +9,9 @@ interface IOrderProduct {
     price: number;
     mainImage: string;
     size?: string;
+    variantId?: string;
+    variantName?: string;
+    variantWeight?: string;
 }
 
 // Interface for Customer Information
@@ -90,6 +93,18 @@ const OrderSchema: Schema = new Schema({
         size: {
             type: String,
             required: false
+        },
+        variantId: {
+            type: String,
+            required: false
+        },
+        variantName: {
+            type: String,
+            required: false
+        },
+        variantWeight: {
+            type: String,
+            required: false
         }
     }],
     customerInfo: {
@@ -109,10 +124,10 @@ const OrderSchema: Schema = new Schema({
             type: String,
             required: true
         },
-        notes: { 
+        notes: {
             type: String,
             required: false,
-            default: '' 
+            default: ''
         },
         city: {
             type: String,

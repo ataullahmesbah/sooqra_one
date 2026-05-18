@@ -10,8 +10,7 @@ import { CiDeliveryTruck } from "react-icons/ci";
 import { useState, useEffect, useRef } from 'react';
 import { TbCategoryFilled } from "react-icons/tb";
 import { useFacebookEvents } from '@/src/hooks/useFacebookEvents';
-
-
+import ProductVariantSelector from '../ProductVariantSelector/ProductVariantSelector';
 
 // Define proper interfaces
 interface ProductPrice {
@@ -48,6 +47,8 @@ interface ProductCategory {
     name: string;
 }
 
+
+
 interface Product {
     _id: string;
     title: string;
@@ -78,6 +79,7 @@ interface Product {
     targetCity?: string;
     targetCountry?: string;
     affiliateLink?: string;
+    hasVariants?: boolean;
 }
 
 interface Tab {
@@ -98,6 +100,17 @@ interface ConversionRates {
     [key: string]: number;
 }
 
+interface Variant {
+    _id: string;
+    name: string;
+    weight: string;
+    price: number;
+    comparePrice: number;
+    sku: string;
+    quantity: number;
+    isDefault: boolean;
+}
+
 interface CartItem {
     _id: string;
     title: string;
@@ -107,6 +120,9 @@ interface CartItem {
     mainImageAlt?: string;
     currency: string;
     size?: string;
+    variantId?: string;
+    variantName?: string;
+    variantWeight?: string;
 }
 
 export default function ProductDetailsClient({ product, latestProducts }: ProductDetailsClientProps) {
@@ -125,6 +141,18 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
     const [isClient, setIsClient] = useState(false);
     // fb tracking
     const { trackViewContent, trackAddToCart } = useFacebookEvents();
+    const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+    const [hasVariants, setHasVariants] = useState<boolean>(product.hasVariants || false);
+
+
+    // 4. getCurrentPrice ফাংশন (ঠিক আছে)
+    const getCurrentPrice = () => {
+        if (hasVariants && selectedVariant) {
+            return selectedVariant.price;
+        }
+        const priceObj = product.prices.find(p => p.currency === currency) || product.prices[0];
+        return priceObj.amount;
+    };
 
     useEffect(() => {
         if (product) {
@@ -136,7 +164,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
 
     useEffect(() => {
         setIsClient(true);
-    }, []);
+    }, []); //  warning production no issue
 
     // Custom Toast Function
     const showCustomToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -268,17 +296,31 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
         }
         : null;
 
-    // ProductDetailsClient.tsx - handleAddToCart ফাংশনটি replace করুন
+
 
     const handleAddToCart = async () => {
+        // Size validation
         if (product.productType === 'Own' && product.sizeRequirement === 'Mandatory' && product.sizes && product.sizes.length > 0 && !selectedSize) {
             setShowSizeError(true);
             showCustomToast('Please select a size before adding to cart', 'error');
             return;
         }
 
-        if (product.availability !== 'InStock' || product.quantity <= 0 || product.productType === 'Affiliate') {
+        // Stock and availability check
+        if (product.availability !== 'InStock' || product.productType === 'Affiliate') {
             showCustomToast('This product cannot be added to cart', 'error');
+            return;
+        }
+
+        // Variant stock check
+        if (hasVariants && selectedVariant && selectedVariant.quantity <= 0) {
+            showCustomToast(`${selectedVariant.name} is out of stock`, 'error');
+            return;
+        }
+
+        // Regular product stock check
+        if (!hasVariants && product.quantity <= 0) {
+            showCustomToast('This product is out of stock', 'error');
             return;
         }
 
@@ -287,6 +329,7 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                 productId: product._id,
                 quantity,
                 size: selectedSize ? selectedSize.name : null,
+                variantId: selectedVariant?._id,
             });
             const validation = response.data;
 
@@ -295,38 +338,69 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                 return;
             }
 
+            let priceInBDT: number;
+            let productTitle: string;
 
-            const priceObj = product.prices.find((p) => p.currency === 'BDT') || product.prices[0];
-            const priceInBDT = priceObj.currency === 'BDT'
-                ? priceObj.amount
-                : priceObj.amount * (conversionRates[priceObj.currency] || 1);
+            if (hasVariants && selectedVariant) {
+                priceInBDT = selectedVariant.price;
+                productTitle = `${product.title} (${selectedVariant.name})`;
+            } else {
+                const priceObj = product.prices.find((p) => p.currency === 'BDT') || product.prices[0];
+                priceInBDT = priceObj.currency === 'BDT'
+                    ? priceObj.amount
+                    : priceObj.amount * (conversionRates[priceObj.currency] || 1);
+                productTitle = product.title;
+            }
 
             const cart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
-            const existingItem = cart.find((item) =>
-                item._id === product._id &&
-                (item.size || null) === (selectedSize?.name || null)
-            );
+
+            const existingItem = cart.find((item) => {
+                if (hasVariants && selectedVariant) {
+                    return item._id === product._id &&
+                        item.variantId === selectedVariant._id &&
+                        (item.size || null) === (selectedSize?.name || null);
+                } else {
+                    return item._id === product._id &&
+                        (item.size || null) === (selectedSize?.name || null);
+                }
+            });
+
             let newQuantity = quantity;
 
             if (existingItem) {
                 newQuantity = existingItem.quantity + quantity;
+
                 if (newQuantity > 3) {
                     showCustomToast('Cannot add more than 3 units of this product', 'error');
                     return;
                 }
+
+                if (hasVariants && selectedVariant && newQuantity > selectedVariant.quantity) {
+                    showCustomToast(`Only ${selectedVariant.quantity} units available for ${selectedVariant.name}`, 'error');
+                    return;
+                }
+
                 if (selectedSize && newQuantity > selectedSize.quantity) {
                     showCustomToast(`Only ${selectedSize.quantity} units available for size ${selectedSize.name}`, 'error');
                     return;
                 }
-                cart.splice(cart.indexOf(existingItem), 1);
+
+                const index = cart.indexOf(existingItem);
+                cart.splice(index, 1);
                 cart.push({
                     ...existingItem,
                     quantity: newQuantity,
-                    size: selectedSize?.name
+
+                    ...(hasVariants && selectedVariant ? {
+                        variantId: selectedVariant._id,
+                        variantName: selectedVariant.name,
+                        variantWeight: selectedVariant.weight,
+                        price: selectedVariant.price,
+                    } : {}),
                 });
-                showCustomToast(`Cart updated with ${newQuantity} units of ${product.title}`, 'success');
+                showCustomToast(`Cart updated with ${newQuantity} units of ${productTitle}`, 'success');
             } else {
-                cart.push({
+                const newCartItem: CartItem = {
                     _id: product._id,
                     title: product.title,
                     quantity,
@@ -335,33 +409,59 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                     mainImageAlt: product.mainImageAlt,
                     currency: 'BDT',
                     size: selectedSize?.name,
-                });
-                showCustomToast(`Added ${quantity} units of ${product.title} to cart`, 'success');
+                };
+
+
+                if (hasVariants && selectedVariant) {
+                    newCartItem.variantId = selectedVariant._id;
+                    newCartItem.variantName = selectedVariant.name;
+                    newCartItem.variantWeight = selectedVariant.weight;
+                }
+
+                cart.push(newCartItem);
+                showCustomToast(`Added ${quantity} units of ${productTitle} to cart`, 'success');
             }
+
             localStorage.setItem('cart', JSON.stringify(cart));
             window.dispatchEvent(new Event('cartUpdated'));
             setIsCartOpen(true);
 
-
             trackAddToCart(product, quantity, priceInBDT);
+
         } catch (error: any) {
             console.error('Error validating product stock:', error);
             showCustomToast(error.response?.data?.message || 'Error checking product availability', 'error');
         }
     };
 
+
     const handleBuyNow = async () => {
+        // Size validation (যদি size mandatory থাকে)
         if (product.productType === 'Own' && product.sizeRequirement === 'Mandatory' && product.sizes && product.sizes.length > 0 && !selectedSize) {
             setShowSizeError(true);
             showCustomToast('Please select a size before buying', 'error');
             return;
         }
 
-        if (product.availability !== 'InStock' || product.quantity <= 0) {
+        // Stock and availability check
+        if (product.availability !== 'InStock') {
             showCustomToast('This product is out of stock', 'error');
             return;
         }
 
+        // Variant stock check
+        if (hasVariants && selectedVariant && selectedVariant.quantity <= 0) {
+            showCustomToast(`${selectedVariant.name} is out of stock`, 'error');
+            return;
+        }
+
+        // Regular product stock check (if no variants)
+        if (!hasVariants && product.quantity <= 0) {
+            showCustomToast('This product is out of stock', 'error');
+            return;
+        }
+
+        // Affiliate product redirect
         if (product.productType === 'Affiliate') {
             window.open(product.affiliateLink || '#', '_blank', 'noopener,noreferrer');
             showCustomToast('Redirecting to affiliate site', 'success');
@@ -369,10 +469,12 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
         }
 
         try {
+            // Get validation from backend
             const response = await axios.post('/api/products/cart/validate', {
                 productId: product._id,
                 quantity,
                 size: selectedSize ? selectedSize.name : null,
+                variantId: selectedVariant?._id,
             });
             const validation = response.data;
 
@@ -381,34 +483,66 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                 return;
             }
 
-            const cart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
-            const filteredCart = cart.filter((item) =>
-                item._id !== product._id ||
-                (item.size && item.size !== selectedSize?.name)
-            );
-            const priceObj = product.prices.find((p) => p.currency === 'BDT') || product.prices[0];
-            const priceInBDT = priceObj.currency === 'BDT'
-                ? priceObj.amount
-                : priceObj.amount * (conversionRates[priceObj.currency] || 1);
+            // Determine price based on variant or regular price
+            let priceInBDT: number;
+            let productTitle: string;
 
-            const updatedCart = [
-                ...filteredCart,
-                {
-                    _id: product._id,
-                    title: product.title,
-                    quantity,
-                    price: priceInBDT,
-                    mainImage: product.mainImage,
-                    mainImageAlt: product.mainImageAlt,
-                    currency: 'BDT',
-                    size: selectedSize?.name,
-                },
-            ];
+            if (hasVariants && selectedVariant) {
+                priceInBDT = selectedVariant.price;
+                productTitle = `${product.title} (${selectedVariant.name})`;
+            } else {
+                const priceObj = product.prices.find((p) => p.currency === 'BDT') || product.prices[0];
+                priceInBDT = priceObj.currency === 'BDT'
+                    ? priceObj.amount
+                    : priceObj.amount * (conversionRates[priceObj.currency] || 1);
+                productTitle = product.title;
+            }
 
-            localStorage.setItem('cart', JSON.stringify(updatedCart));
+            // Get existing cart and filter out same product
+            let cart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
+
+            if (hasVariants && selectedVariant) {
+                cart = cart.filter((item) => {
+                    if (item._id === product._id && item.variantId === selectedVariant._id) {
+                        return false;
+                    }
+                    return true;
+                });
+            } else {
+                cart = cart.filter((item) => {
+                    if (item._id === product._id && (item.size || null) === (selectedSize?.name || null)) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+
+            const newCartItem: CartItem = {
+                _id: product._id,
+                title: product.title,
+                quantity,
+                price: priceInBDT,
+                mainImage: product.mainImage,
+                mainImageAlt: product.mainImageAlt,
+                currency: 'BDT',
+                size: selectedSize?.name,
+            };
+
+            // ✅ Add variant info if exists (variantWeight সহ)
+            if (hasVariants && selectedVariant) {
+                newCartItem.variantId = selectedVariant._id;
+                newCartItem.variantName = selectedVariant.name;
+                newCartItem.variantWeight = selectedVariant.weight;
+            }
+
+            cart.push(newCartItem);
+
+            localStorage.setItem('cart', JSON.stringify(cart));
             window.dispatchEvent(new Event('cartUpdated'));
-            showCustomToast(`Proceeding to cart with ${quantity} units of ${product.title}`, 'success');
+
+            showCustomToast(`Proceeding to cart with ${quantity} units of ${productTitle}`, 'success');
             router.push('/cart');
+
         } catch (error: any) {
             console.error('Error validating product stock:', error);
             showCustomToast(error.response?.data?.message || 'Error checking product availability', 'error');
@@ -419,17 +553,44 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
         return price * (conversionRates[curr] || 1);
     };
 
+    // const getPriceDisplay = () => {
+    //     const priceObj = product.prices.find((p) => p.currency === currency) || product.prices[0];
+    //     const priceInBDT = priceObj.currency === 'BDT'
+    //         ? priceObj.amount
+    //         : priceObj.amount * (conversionRates[priceObj.currency] || 1);
+    //     const total = priceInBDT * quantity;
+    //     const symbol = currency === 'BDT' ? '৳' : currency === 'USD' ? '$' : '€';
+    //     return `${symbol}${new Intl.NumberFormat(undefined, {
+    //         minimumFractionDigits: 2,
+    //         maximumFractionDigits: 2,
+    //     }).format(currency === 'BDT' ? total : total / (conversionRates[currency] || 1))}`;
+    // };
+
+    // 5. getPriceDisplay ফাংশন আপডেট করুন (variant price ব্যবহার করতে)
     const getPriceDisplay = () => {
-        const priceObj = product.prices.find((p) => p.currency === currency) || product.prices[0];
-        const priceInBDT = priceObj.currency === 'BDT'
-            ? priceObj.amount
-            : priceObj.amount * (conversionRates[priceObj.currency] || 1);
-        const total = priceInBDT * quantity;
+        const currentPrice = getCurrentPrice();
+        const total = currentPrice * quantity;
         const symbol = currency === 'BDT' ? '৳' : currency === 'USD' ? '$' : '€';
-        return `${symbol}${new Intl.NumberFormat(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(currency === 'BDT' ? total : total / (conversionRates[currency] || 1))}`;
+
+        // যদি variant থাকে এবং তা comparePrice support করে
+        if (hasVariants && selectedVariant && selectedVariant.comparePrice) {
+            const compareTotal = selectedVariant.comparePrice * quantity;
+            return (
+                <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-gray-800">
+                        {symbol}{total.toLocaleString()}
+                    </span>
+                    <span className="text-sm text-gray-500 line-through">
+                        {symbol}{compareTotal.toLocaleString()}
+                    </span>
+                    <span className="text-xs text-green-600">
+                        Save {symbol}{(compareTotal - total).toLocaleString()}
+                    </span>
+                </div>
+            );
+        }
+
+        return `${symbol}${total.toLocaleString()}`;
     };
 
     const tabs: Tab[] = [
@@ -650,29 +811,47 @@ export default function ProductDetailsClient({ product, latestProducts }: Produc
                         </div>
 
                         {/* Price */}
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <div className="flex flex-wrap items-center justify-between gap-4">
-                                <div>
-                                    <div className="text-2xl font-bold text-gray-800">
-                                        {getPriceDisplay()}
+
+                        {!hasVariants && (
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <div>
+                                        <div className="text-2xl font-bold text-gray-800">
+                                            {getPriceDisplay()}
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            Price in {currency}
+                                        </p>
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        Price in {currency}
-                                    </p>
+                                    <select
+                                        value={currency}
+                                        onChange={(e) => setCurrency(e.target.value)}
+                                        className="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-800"
+                                    >
+                                        {product.prices.map((price) => (
+                                            <option key={price.currency} value={price.currency}>
+                                                {price.currency}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
-                                <select
-                                    value={currency}
-                                    onChange={(e) => setCurrency(e.target.value)}
-                                    className="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-800"
-                                >
-                                    {product.prices.map((price) => (
-                                        <option key={price.currency} value={price.currency}>
-                                            {price.currency}
-                                        </option>
-                                    ))}
-                                </select>
                             </div>
-                        </div>
+                        )}
+
+                        {hasVariants && (
+                            <div className="mt-4">
+                                <ProductVariantSelector
+                                    productId={product._id}
+                                    onVariantChange={(variant: Variant | null) => {
+                                        if (variant) {
+                                            setHasVariants(true);
+                                            setSelectedVariant(variant);
+                                        }
+                                    }}
+                                    selectedVariantId={selectedVariant?._id}
+                                />
+                            </div>
+                        )}
 
                         {/* Size Selection */}
                         {product.productType === 'Own' && product.sizeRequirement === 'Mandatory' && product.sizes && product.sizes.length > 0 && (

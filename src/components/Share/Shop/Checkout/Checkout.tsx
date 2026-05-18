@@ -21,6 +21,9 @@ interface CartItem {
     mainImageAlt?: string;
     currency: string;
     size?: string | null;
+    variantId?: string;
+    variantName?: string;
+    variantWeight?: string;
 }
 
 interface CustomerInfo {
@@ -68,6 +71,9 @@ interface OrderData {
         price: number;
         mainImage: string | null;
         size: string | null;
+        variantId?: string | null;
+        variantName?: string | null;
+        variantWeight?: string | null;
     }>;
     customerInfo: CustomerInfo & {
         bkashNumber?: string;
@@ -149,6 +155,16 @@ export default function Checkout() {
     const [acceptedTerms, setAcceptedTerms] = useState<boolean>(false);
     const [orderData, setOrderData] = useState<OrderData | null>(null);
     const { trackPurchase } = useFacebookEvents();
+
+
+    useEffect(() => {
+    console.log('Cart items with variants:', cart.map(item => ({
+        title: item.title,
+        variantId: item.variantId,
+        variantName: item.variantName,
+        variantWeight: item.variantWeight,
+    })));
+}, [cart]);
 
     // Add this useEffect to get user info if logged in
     useEffect(() => {
@@ -671,7 +687,10 @@ export default function Checkout() {
                 quantity: item.quantity || 1,
                 price: getBDTPrice(item),
                 mainImage: item.mainImage || null,
-                size: item.size || null
+                size: item.size || null,
+                 variantId: item.variantId || null,
+        variantName: item.variantName || null,
+        variantWeight: item.variantWeight || null,
             })),
             customerInfo: {
                 name: customerInfo.name,
@@ -1082,8 +1101,8 @@ export default function Checkout() {
                                     <div className="space-y-4">
                                         {cart.map((item) => (
                                             <div
-                                                key={`${item._id}-${item.size || 'no-size'}`}
-                                                className="flex items-start gap-4 pb-4 border-b border-gray-200"
+                                                key={`${item._id}-${item.variantId || item.size || 'no-size'}`}
+                                                className="flex items-start gap-4 pb-4 border-b border-gray-200 last:border-b-0"
                                             >
                                                 <div className="relative w-16 h-16 flex-shrink-0">
                                                     <Image
@@ -1094,14 +1113,38 @@ export default function Checkout() {
                                                         sizes="64px"
                                                     />
                                                 </div>
-                                                <div className="flex-1">
-                                                    <h3 className="text-sm font-medium text-gray-800">{item.title || 'Unknown Product'}</h3>
-                                                    <p className="text-gray-600 text-xs">
+                                                <div className="flex-1 min-w-0">
+                                                    {/* Product Title */}
+                                                    <h3 className="text-sm font-medium text-gray-800">
+                                                        {item.title || 'Unknown Product'}
+                                                    </h3>
+
+                                                    {/* ✅ Variant Name Badge */}
+                                                    {item.variantName && (
+                                                        <span className="inline-block mt-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2 py-0.5">
+                                                            {item.variantName}
+                                                        </span>
+                                                    )}
+
+                                                    {/* ✅ Variant/Size Details */}
+                                                    <div className="mt-1 space-y-0.5">
+                                                        {item.variantWeight && (
+                                                            <p className="text-xs text-gray-500">
+                                                                Weight: <span className="font-medium text-gray-700">{item.variantWeight}</span>
+                                                            </p>
+                                                        )}
+                                                        {item.size && !item.variantWeight && (
+                                                            <p className="text-xs text-gray-500">
+                                                                Size: <span className="font-medium text-gray-700">{item.size}</span>
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    {/* Price Info */}
+                                                    <p className="text-gray-600 text-xs mt-1">
                                                         ৳{(getBDTPrice(item) || 0).toLocaleString()} × {item.quantity || 1}
                                                     </p>
-                                                    {item.size && <p className="text-xs text-gray-500">Size: {item.size}</p>}
                                                 </div>
-                                                <div className="text-sm font-medium text-gray-800">
+                                                <div className="text-sm font-medium text-gray-800 flex-shrink-0">
                                                     ৳{((getBDTPrice(item) || 0) * (item.quantity || 1)).toLocaleString()}
                                                 </div>
                                             </div>
