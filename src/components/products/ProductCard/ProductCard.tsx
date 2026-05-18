@@ -11,6 +11,8 @@ interface ProductCardProps {
     viewMode?: 'grid' | 'list';
 }
 
+
+// Cart Item Interface
 // Cart Item Interface
 interface CartItem {
     _id: string;
