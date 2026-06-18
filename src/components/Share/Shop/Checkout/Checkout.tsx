@@ -5,10 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import axios from 'axios';
-import 'react-phone-input-2/lib/style.css';
 import CheckoutPayment from '../CheckoutPayment/CheckoutPayment';
 import { useFacebookEvents } from '@/src/hooks/useFacebookEvents';
-
 
 
 // Interface Definitions
@@ -1155,7 +1153,7 @@ export default function Checkout() {
                                             <div className="flex items-center gap-2 cursor-pointer" onClick={toggleCoupon}>
                                                 <svg
                                                     xmlns="http://www.w3.org/2000/svg"
-                                                    className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700 flex-shrink-0"
+                                                    className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500 flex-shrink-0"
                                                     fill="none"
                                                     viewBox="0 0 24 24"
                                                     stroke="currentColor"
@@ -1167,8 +1165,8 @@ export default function Checkout() {
                                                         d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
                                                     />
                                                 </svg>
-                                                <span className="text-xs sm:text-sm text-gray-700 hover:text-gray-900 whitespace-nowrap">
-                                                    Have a Coupon?
+                                                <span className="text-base sm:text-lg text-orange-600 font-semibold hover:text-orange-700 whitespace-nowrap">
+                                                    Have any coupon or gift voucher?
                                                 </span>
                                             </div>
 

@@ -1,5 +1,7 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+// src/components/Banner/Banner.tsx
+
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
@@ -20,27 +22,73 @@ interface BannerData {
   buttonPosition?: string;
 }
 
+// ── Skeleton ───────────────────────────────────────────────────────────────────
+function BannerSkeleton() {
+  return (
+    <div
+      className="banner-container relative w-full overflow-hidden bg-gray-200"
+      style={{ aspectRatio: '1920/600' }}
+    >
+      {/* Shimmer sweep */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%)',
+          backgroundSize: '200% 100%',
+          animation: 'banner-shimmer 1.4s ease-in-out infinite',
+        }}
+      />
+
+      {/* Fake text + button — centered */}
+      <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 sm:pb-12 md:pb-16 gap-2 sm:gap-3 px-4">
+        <div className="h-3 sm:h-4 md:h-5 w-40 sm:w-56 md:w-72 bg-gray-300/70 rounded-full" />
+        <div className="h-2.5 sm:h-3.5 md:h-4 w-56 sm:w-72 md:w-96 bg-gray-300/50 rounded-full" />
+        <div className="h-7 sm:h-9 md:h-10 w-24 sm:w-28 md:w-32 bg-gray-300/60 rounded-lg mt-1" />
+      </div>
+
+      <style>{`
+                @keyframes banner-shimmer {
+                    0%   { background-position: -200% 0; }
+                    100% { background-position:  200% 0; }
+                }
+            `}</style>
+    </div>
+  );
+}
+
+// ── Image placeholder while individual slide loads ─────────────────────────────
+function ImageLoader() {
+  return (
+    <div className="absolute inset-0 bg-gray-300 animate-pulse" />
+  );
+}
+
+// ── Main Banner Component ──────────────────────────────────────────────────────
 export default function Banner() {
   const [banners, setBanners] = useState<BannerData[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);          // ✅ initial fetch skeleton
   const [isPaused, setIsPaused] = useState(false);
   const [fade, setFade] = useState(true);
 
+  // ✅ track which images have finished loading
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchBanners = async () => {
       try {
+        // ✅ no-store so we always get fresh data on page load,
+        //    but Next.js edge cache handles repeat requests
         const response = await fetch('/api/banners', {
-          next: { revalidate: 600 },
-          cache: 'force-cache',
+          cache: 'no-store',
         });
 
-        if (!response.ok) {
-          throw new Error(`Banner fetch failed: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Banner fetch failed: ${response.status}`);
 
         const result = await response.json();
-
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           setBanners(result.data);
         }
@@ -54,32 +102,27 @@ export default function Banner() {
     fetchBanners();
   }, []);
 
-  // Auto-slide (একই রাখা)
+  // ── Auto-slide ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (banners.length <= 1 || isPaused) return;
 
-    const currentBanner = banners[currentIndex];
-    const slideDuration = (currentBanner?.duration || 5) * 1000;
+    const duration = (banners[currentIndex]?.duration || 5) * 1000;
 
-    const timer = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setFade(false);
       setTimeout(() => {
-        setCurrentIndex((prevIndex) =>
-          prevIndex === banners.length - 1 ? 0 : prevIndex + 1
-        );
+        setCurrentIndex(prev => (prev === banners.length - 1 ? 0 : prev + 1));
         setFade(true);
       }, 300);
-    }, slideDuration);
+    }, duration);
 
-    return () => clearTimeout(timer);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [banners, currentIndex, isPaused]);
 
   const nextSlide = useCallback(() => {
     setFade(false);
     setTimeout(() => {
-      setCurrentIndex((prevIndex) =>
-        prevIndex === banners.length - 1 ? 0 : prevIndex + 1
-      );
+      setCurrentIndex(prev => (prev === banners.length - 1 ? 0 : prev + 1));
       setFade(true);
     }, 300);
   }, [banners.length]);
@@ -87,136 +130,131 @@ export default function Banner() {
   const prevSlide = useCallback(() => {
     setFade(false);
     setTimeout(() => {
-      setCurrentIndex((prevIndex) =>
-        prevIndex === 0 ? banners.length - 1 : prevIndex - 1
-      );
+      setCurrentIndex(prev => (prev === 0 ? banners.length - 1 : prev - 1));
       setFade(true);
     }, 300);
   }, [banners.length]);
 
   const goToSlide = (index: number) => {
-    if (index !== currentIndex) {
-      setFade(false);
-      setTimeout(() => {
-        setCurrentIndex(index);
-        setFade(true);
-      }, 300);
-    }
+    if (index === currentIndex) return;
+    setFade(false);
+    setTimeout(() => {
+      setCurrentIndex(index);
+      setFade(true);
+    }, 300);
   };
 
-  // UPDATED: বাটন সাইজ মোবাইল + ট্যাবলেটে আরও ছোট
-  const getButtonClasses = (type: string) => {
-    const baseClasses =
-      "min-w-[90px] xs:min-w-[100px] sm:min-w-[110px] " +     // মোবাইলে খুব ছোট min-width
-      "px-3.5 xs:px-4 sm:px-5 md:px-6 " +                     // মোবাইলে px-3.5 (ছোট)
-      "py-1.5 xs:py-2 sm:py-2.5 md:py-3 " +                   // height মোবাইলে py-1.5 (আরও ছোট)
-      "text-xs xs:text-xs sm:text-sm md:text-base " +         // text মোবাইলে text-xs
-      "rounded-md sm:rounded-lg font-medium " +
-      "transition-all duration-300 hover:scale-105 active:scale-95 " +
-      "inline-flex items-center justify-center shadow-md sm:shadow-lg";
-
-    switch (type) {
-      case 'gray':
-        return `${baseClasses} bg-gradient-to-r from-gray-800 to-gray-900 text-white border border-gray-700/30 hover:from-gray-900 hover:to-gray-950 hover:shadow-xl`;
-      case 'primary':
-        return `${baseClasses} bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:from-blue-700 hover:to-blue-900 hover:shadow-xl`;
-      case 'outline':
-        return `${baseClasses} bg-white/10 border-2 border-white/40 text-white hover:bg-white/20 hover:border-white/60 backdrop-blur-sm hover:shadow-xl`;
-      default:
-        return baseClasses;
-    }
-  };
-
-  const getPositionClasses = (position = 'center-bottom') => {
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const getPositionClass = (position = 'center-bottom') => {
     switch (position) {
-      case 'center-bottom':
-        return {
-          container: 'justify-center items-end pb-10 xs:pb-12 sm:pb-14 md:pb-16 lg:pb-20 xl:pb-24',
-          content: 'text-center',
-          buttons: 'justify-center'
-        };
-      case 'left-bottom':
-        return {
-          container: 'justify-start items-end pb-10 xs:pb-12 sm:pb-14 md:pb-16 pl-4 sm:pl-8 md:pl-12',
-          content: 'text-left',
-          buttons: 'justify-start'
-        };
-      case 'right-bottom':
-        return {
-          container: 'justify-end items-end pb-10 xs:pb-12 sm:pb-14 md:pb-16 pr-4 sm:pr-8 md:pr-12',
-          content: 'text-right',
-          buttons: 'justify-end'
-        };
-      default:
-        return {
-          container: 'justify-center items-end pb-10 xs:pb-12 sm:pb-14 md:pb-16 lg:pb-20 xl:pb-24',
-          content: 'text-center',
-          buttons: 'justify-center'
-        };
+      case 'center-bottom': return 'banner-content-center-bottom banner-text-center';
+      case 'left-bottom': return 'banner-content-left-bottom banner-text-left';
+      case 'right-bottom': return 'banner-content-right-bottom banner-text-right';
+      default: return 'banner-content-center-bottom banner-text-center';
     }
   };
 
-  if (loading) {
-    return (
-      <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-100 to-gray-200 animate-pulse" />
-    );
-  }
+  const getButtonClass = (type: string) => {
+    switch (type) {
+      case 'gray': return 'banner-btn banner-btn-gray';
+      case 'primary': return 'banner-btn banner-btn-primary';
+      case 'outline': return 'banner-btn banner-btn-outline';
+      default: return 'banner-btn';
+    }
+  };
 
-  if (banners.length === 0) {
-    return null;
-  }
+  const getButtonsAlignment = (position = 'center-bottom') => {
+    switch (position) {
+      case 'center-bottom': return 'banner-buttons-center';
+      case 'left-bottom': return 'banner-buttons-start';
+      case 'right-bottom': return 'banner-buttons-end';
+      default: return 'banner-buttons-center';
+    }
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  // ✅ Show skeleton while fetching
+  if (loading) return <BannerSkeleton />;
+
+  // No active banners
+  if (banners.length === 0) return null;
 
   const currentBanner = banners[currentIndex];
-  const position = getPositionClasses(currentBanner.buttonPosition);
-
-  const imageUrl = currentBanner.image;
+  const positionClass = getPositionClass(currentBanner.buttonPosition);
+  const buttonsAlignment = getButtonsAlignment(currentBanner.buttonPosition);
+  const isCurrentLoaded = loadedImages.has(currentBanner._id);
 
   return (
     <div
-      className="relative w-full overflow-hidden aspect-[16/5] md:aspect-[3/1] lg:aspect-[16/5]"
+      className="banner-container"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Image */}
-      <div className={`absolute inset-0 transition-opacity duration-500 ${fade ? 'opacity-100' : 'opacity-0'}`}>
+      {/* ── Image ── */}
+      <div className={`banner-image-wrapper ${!fade ? 'fade-out' : ''}`}>
+
+        {/* ✅ Placeholder while this slide's image loads */}
+        {!isCurrentLoaded && <ImageLoader />}
+
         <Image
-          src={imageUrl}
+          src={currentBanner.image}
           alt={currentBanner.title || 'Banner Image'}
           fill
-          className="object-cover object-center"
-          priority
+          /*
+           * ✅ Only first banner is priority (above the fold).
+           *    The rest use lazy loading so they don't block initial paint.
+           */
+          priority={currentIndex === 0}
+          loading={currentIndex === 0 ? 'eager' : 'lazy'}
           sizes="100vw"
-          quality={75}
+          quality={80}
+          className={`
+                        object-cover object-center rounded-md
+                        transition-opacity duration-500
+                        ${isCurrentLoaded ? 'opacity-100' : 'opacity-0'}
+                    `}
+          onLoad={() =>
+            setLoadedImages(prev => new Set(prev).add(currentBanner._id))
+          }
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-black/10 to-black/20 pointer-events-none" />
+
+        <div className="banner-image-overlay" />
       </div>
 
-      {/* Content */}
-      <div className={`absolute inset-0 flex ${position.container} px-4 xs:px-6 sm:px-8 lg:px-16`}>
-        <div className={`max-w-7xl w-full mx-auto transition-all duration-700 transform ${fade ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'} flex flex-col ${position.content}`}>
+      {/* ── Preload next slide image (hidden) ── */}
+      {banners.length > 1 && (() => {
+        const nextIdx = (currentIndex + 1) % banners.length;
+        const nextBanner = banners[nextIdx];
+        return !loadedImages.has(nextBanner._id) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={nextBanner.image}
+            alt=""
+            aria-hidden
+            className="absolute w-0 h-0 opacity-0 pointer-events-none"
+            onLoad={() =>
+              setLoadedImages(prev => new Set(prev).add(nextBanner._id))
+            }
+          />
+        ) : null;
+      })()}
+
+      {/* ── Content ── */}
+      <div className={`banner-content ${positionClass}`}>
+        <div className={`banner-content-wrapper ${fade ? 'animate-in' : 'animate-out'}`}>
           {currentBanner.title && (
-            <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-3 sm:mb-4 md:mb-6 drop-shadow-2xl leading-tight">
-              {currentBanner.title}
-            </h1>
+            <h1 className="banner-title">{currentBanner.title}</h1>
           )}
-
           {currentBanner.subtitle && (
-            <p className="text-base xs:text-lg sm:text-xl md:text-2xl text-white mb-5 sm:mb-6 md:mb-8 max-w-3xl drop-shadow-lg">
-              {currentBanner.subtitle}
-            </p>
+            <p className="banner-subtitle">{currentBanner.subtitle}</p>
           )}
-
-          {/* Buttons - চূড়ান্ত ছোট সংস্করণ */}
-          {currentBanner.buttons && currentBanner.buttons.length > 0 && (
-            <div className={`flex flex-wrap gap-1.5 xs:gap-2 sm:gap-3 md:gap-4 w-full ${position.buttons}`}>
-              {currentBanner.buttons.map((button, index) => (
-                <Link
-                  key={index}
-                  href={button.link}
-                  className={getButtonClasses(button.type)}
-                >
-                  {button.text}
-                  <ChevronRight className="ml-1 xs:ml-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          {currentBanner.buttons?.length > 0 && (
+            <div className={`banner-buttons ${buttonsAlignment}`}>
+              {currentBanner.buttons.map((btn, i) => (
+                <Link key={i} href={btn.link} className={getButtonClass(btn.type)}>
+                  {btn.text}
+                  <ChevronRight className="banner-btn-icon" />
                 </Link>
               ))}
             </div>
@@ -224,39 +262,41 @@ export default function Banner() {
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* ── Navigation ── */}
       {banners.length > 1 && (
         <>
           <button
             onClick={prevSlide}
-            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 sm:p-3 rounded-full transition"
+            className="banner-nav-btn banner-nav-left"
             aria-label="Previous banner"
           >
-            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="banner-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
 
           <button
             onClick={nextSlide}
-            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 sm:p-3 rounded-full transition"
+            className="banner-nav-btn banner-nav-right"
             aria-label="Next banner"
           >
-            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="banner-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
 
-          <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 sm:space-x-3">
-            {banners.map((_, index) => (
+          {/* Dots */}
+          <div className="banner-dots">
+            {banners.map((_, i) => (
               <button
-                key={index}
-                onClick={() => goToSlide(index)}
-                className={`rounded-full transition-all duration-300 ${index === currentIndex
-                  ? 'bg-white w-6 sm:w-8 h-2 sm:h-3'
-                  : 'bg-white/50 hover:bg-white/80 w-2 sm:w-3 h-2 sm:h-3'
-                  }`}
-                aria-label={`Go to slide ${index + 1}`}
+                key={i}
+                onClick={() => goToSlide(i)}
+                className={
+                  i === currentIndex
+                    ? 'banner-dot banner-dot-active'
+                    : 'banner-dot banner-dot-inactive'
+                }
+                aria-label={`Go to slide ${i + 1}`}
               />
             ))}
           </div>

@@ -1,605 +1,360 @@
 'use client';
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+// src/components/share/shop/shopbanner.tsx
 
-// Types
-interface BannerFeature {
-    icon: string;
-    text: string;
-}
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import Image from 'next/image';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ShopBanner {
     _id: string;
+    image: string;
     title?: string;
     subtitle?: string;
-    highlights?: string[];
-    cta?: string;
-    bg?: string;
-    textColor?: string;
-    badgeColor?: string;
-    features?: BannerFeature[];
-    image: string;
-    link?: string;
+    offer?: string;
+    ctaText?: string;
+    ctaLink?: string;
+    textPosition?: 'left' | 'center';
+    isActive: boolean;
 }
 
-interface BannerFormData {
+interface FormState {
     title: string;
     subtitle: string;
-    highlights: string[];
-    cta: string;
-    bg: string;
-    textColor: string;
-    badgeColor: string;
-    features: BannerFeature[];
+    offer: string;
+    ctaText: string;
+    ctaLink: string;
+    textPosition: 'left' | 'center';
+    isActive: boolean;
     image: File | null;
-    link: string;
 }
 
-interface ApiResponse<T = any> {
-    success: boolean;
-    data?: T;
-    error?: string;
-    message?: string;
-}
+const EMPTY_FORM: FormState = {
+    title: '',
+    subtitle: '',
+    offer: '',
+    ctaText: '',
+    ctaLink: '/shop',
+    textPosition: 'left',
+    isActive: true,
+    image: null,
+};
 
-const ShopBannerPage = () => {
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export default function ShopBannerPage() {
     const [banners, setBanners] = useState<ShopBanner[]>([]);
-    const [formData, setFormData] = useState<BannerFormData>({
-        title: '',
-        subtitle: '',
-        highlights: [''],
-        cta: '',
-        bg: 'bg-gradient-to-br from-gray-900 via-purple-900/70 to-gray-900',
-        textColor: 'text-white',
-        badgeColor: 'from-purple-600 to-indigo-600',
-        features: [{ icon: '', text: '' }],
-        image: null,
-        link: '',
-    });
+    const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
-    const [uploading, setUploading] = useState<boolean>(false);
+    const [uploading, setUploading] = useState(false);
+    const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
-    useEffect(() => {
-        fetchBanners();
-    }, []);
+    useEffect(() => { fetchBanners(); }, []);
+
+    const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3500);
+    };
+
+    // ── API ───────────────────────────────────────────────────────────────────
 
     const fetchBanners = async () => {
         try {
-            const response = await fetch('/api/products/shop-banner');
-            const data: ApiResponse<ShopBanner[]> = await response.json();
-            if (data.success) {
-                setBanners(data.data || []);
-            } else {
-                setError(data.error || 'Failed to fetch banners');
-            }
-        } catch (err) {
-            setError('Network error while fetching banners');
-        }
-    };
-
-    const handleInputChange = (
-        e: ChangeEvent<HTMLInputElement>,
-        index?: number,
-        type?: 'highlight' | 'feature'
-    ) => {
-        const { name, value } = e.target;
-
-        if (type === 'highlight' && index !== undefined) {
-            const newHighlights = [...formData.highlights];
-            newHighlights[index] = value;
-            setFormData({ ...formData, highlights: newHighlights });
-        } else if (type === 'feature' && index !== undefined) {
-            const newFeatures = [...formData.features];
-            newFeatures[index] = { ...newFeatures[index], [name]: value };
-            setFormData({ ...formData, features: newFeatures });
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
-    };
-
-    const addHighlight = () => {
-        setFormData({ ...formData, highlights: [...formData.highlights, ''] });
-    };
-
-    const removeHighlight = (index: number) => {
-        const newHighlights = formData.highlights.filter((_, i) => i !== index);
-        setFormData({ ...formData, highlights: newHighlights });
-    };
-
-    const addFeature = () => {
-        setFormData({ ...formData, features: [...formData.features, { icon: '', text: '' }] });
-    };
-
-    const removeFeature = (index: number) => {
-        const newFeatures = formData.features.filter((_, i) => i !== index);
-        setFormData({ ...formData, features: newFeatures });
-    };
-
-    const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) {
-            setError('No file selected');
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            setError('Image size should be less than 5MB');
-            return;
-        }
-        if (!file.type.startsWith('image/')) {
-            setError('Please select an image file');
-            return;
-        }
-        setFormData({ ...formData, image: file });
-        setImagePreview(URL.createObjectURL(file));
-        setError(null);
-    };
-
-    const isFormValid = (): boolean => {
-        // Only require image for new banners
-        if (!editingId && !formData.image) {
-            return false;
-        }
-        return true; // All other fields are optional
+            const res = await fetch('/api/products/shop-banner');
+            const data = await res.json();
+            if (data.success) setBanners(data.data || []);
+        } catch { showToast('Failed to fetch banners', 'error'); }
     };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        setError(null);
-        setSuccess(null);
-        setUploading(true);
-
-        // Only validate image for new banners
-        if (!editingId && !formData.image) {
-            setError('Image is required for new banners');
-            setUploading(false);
+        if (!editingId && !form.image) {
+            showToast('Please select an image', 'error');
             return;
         }
 
-        const formDataToSend = new FormData();
-
-        // Only append fields that have values (optional fields)
-        if (formData.title?.trim()) formDataToSend.append('title', formData.title);
-        if (formData.subtitle?.trim()) formDataToSend.append('subtitle', formData.subtitle);
-        if (formData.cta?.trim()) formDataToSend.append('cta', formData.cta);
-        if (formData.link?.trim()) formDataToSend.append('link', formData.link);
-        if (formData.bg?.trim()) formDataToSend.append('bg', formData.bg);
-        if (formData.textColor?.trim()) formDataToSend.append('textColor', formData.textColor);
-        if (formData.badgeColor?.trim()) formDataToSend.append('badgeColor', formData.badgeColor);
-
-        // Handle highlights (only if they have values)
-        const validHighlights = formData.highlights.filter(h => h.trim() !== '');
-        if (validHighlights.length > 0) {
-            formDataToSend.append('highlights', JSON.stringify(validHighlights));
-        }
-
-        // features
-        const validFeatures = formData.features.filter(f =>
-            (f.icon || '').trim() !== '' || (f.text || '').trim() !== ''
-        );
-        if (validFeatures.length > 0) {
-            formDataToSend.append('features', JSON.stringify(validFeatures));
-        }
-
-        // string fields – শুধু non-empty append
-        ['title', 'subtitle', 'cta', 'link', 'bg', 'textColor', 'badgeColor'].forEach(key => {
-            const val = formData[key as keyof typeof formData];
-            if (typeof val === 'string' && val.trim() !== '') {
-                formDataToSend.append(key, val.trim());
-            }
-        });
-
-        // Always append image if present
-        if (formData.image) {
-            formDataToSend.append('image', formData.image);
-        }
-
-        if (editingId) {
-            formDataToSend.append('id', editingId);
-        }
-
+        setUploading(true);
         try {
-            const url = '/api/products/shop-banner';
-            const method = editingId ? 'PUT' : 'POST';
+            const fd = new FormData();
+            if (editingId) fd.append('id', editingId);
 
-            const response = await fetch(url, {
-                method,
-                body: formDataToSend,
+            // Always send text fields (even empty — PUT handles clearing)
+            fd.append('title', form.title);
+            fd.append('subtitle', form.subtitle);
+            fd.append('offer', form.offer);
+            fd.append('ctaText', form.ctaText);
+            fd.append('ctaLink', form.ctaLink || '/shop');
+            fd.append('textPosition', form.textPosition);
+            fd.append('isActive', String(form.isActive));
+            if (form.image) fd.append('image', form.image);
+
+            const res = await fetch('/api/products/shop-banner', {
+                method: editingId ? 'PUT' : 'POST',
+                body: fd,
             });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed');
 
-            const data: ApiResponse<ShopBanner> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to save banner');
-            }
-
+            showToast(editingId ? 'Banner updated!' : 'Banner created!');
             await fetchBanners();
             resetForm();
-            setSuccess(editingId ? 'Banner updated successfully!' : 'Banner added successfully!');
         } catch (err) {
-            setError(`Save failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            showToast(err instanceof Error ? err.message : 'Save failed', 'error');
         } finally {
             setUploading(false);
         }
     };
 
-    const handleEdit = (banner: ShopBanner) => {
-        setFormData({
-            title: banner.title || '',
-            subtitle: banner.subtitle || '',
-            highlights: banner.highlights?.length ? banner.highlights : [''],
-            cta: banner.cta || '',
-            bg: banner.bg || 'bg-gradient-to-br from-gray-900 via-purple-900/70 to-gray-900',
-            textColor: banner.textColor || 'text-white',
-            badgeColor: banner.badgeColor || 'from-purple-600 to-indigo-600',
-            features: banner.features?.length ? banner.features : [{ icon: '', text: '' }],
-            image: null,
-            link: banner.link || '',
-        });
-        setImagePreview(banner.image);
-        setEditingId(banner._id);
-        setError(null);
-        setSuccess(null);
-    };
-
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this banner?')) return;
-
+        if (!confirm('Delete this banner?')) return;
         try {
-            const response = await fetch('/api/products/shop-banner', {
+            const res = await fetch('/api/products/shop-banner', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id }),
             });
-
-            const data: ApiResponse = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to delete banner');
-            }
-
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            showToast('Banner deleted!');
             await fetchBanners();
-            setSuccess('Banner deleted successfully!');
+            if (editingId === id) resetForm();
         } catch (err) {
-            setError(`Delete failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            showToast(err instanceof Error ? err.message : 'Delete failed', 'error');
         }
     };
 
-    const resetForm = () => {
-        setFormData({
-            title: '',
-            subtitle: '',
-            highlights: [''],
-            cta: '',
-            bg: 'bg-gradient-to-br from-gray-900 via-purple-900/70 to-gray-900',
-            textColor: 'text-white',
-            badgeColor: 'from-purple-600 to-indigo-600',
-            features: [{ icon: '', text: '' }],
+    const handleEdit = (banner: ShopBanner) => {
+        setForm({
+            title: banner.title || '',
+            subtitle: banner.subtitle || '',
+            offer: banner.offer || '',
+            ctaText: banner.ctaText || '',
+            ctaLink: banner.ctaLink || '/shop',
+            textPosition: banner.textPosition || 'left',
+            isActive: banner.isActive,
             image: null,
-            link: '',
         });
-        setEditingId(null);
-        setImagePreview(null);
-        setError(null);
-        setSuccess(null);
+        setImagePreview(banner.image);
+        setEditingId(banner._id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const resetForm = () => {
+        setForm(EMPTY_FORM);
+        setEditingId(null);
+        setImagePreview(null);
+    };
+
+    // ── Image handler ─────────────────────────────────────────────────────────
+
+    const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5MB', 'error'); return; }
+        if (!file.type.startsWith('image/')) { showToast('Please select an image file', 'error'); return; }
+        setForm(f => ({ ...f, image: file }));
+        setImagePreview(URL.createObjectURL(file));
+    };
+
+    // ── Render ────────────────────────────────────────────────────────────────
+
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
-            <div className="max-w-7xl mx-auto">
-                {/* Form Section */}
-                <div className="bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-8">
-                    <div className="p-6 bg-gradient-to-r from-gray-700 to-gray-900 text-white">
-                        <h1 className="text-3xl font-bold">Shop Banner Management</h1>
-                        <p className="mt-2 text-gray-300">Create and manage hero banners for your shop</p>
+        <div className="min-h-screen bg-gray-900 text-gray-100 p-4 md:p-6">
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+                    {toast.msg}
+                </div>
+            )}
+
+            <div className="max-w-5xl mx-auto space-y-8">
+
+                {/* ── Form ── */}
+                <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
+                    <div className="px-6 py-5 bg-gradient-to-r from-gray-700 to-gray-800 border-b border-gray-700">
+                        <h1 className="text-xl font-bold text-white">
+                            {editingId ? '✏️ Edit Banner' : '➕ Create New Banner'}
+                        </h1>
+                        <p className="text-gray-400 text-sm mt-0.5">
+                            All text fields are optional — image only is fine.
+                        </p>
                     </div>
 
-                    <div className="p-6">
-                        {(error || success) && (
-                            <div className={`mb-6 p-4 rounded-lg border-l-4 ${error ? 'bg-red-900/50 border-red-500 text-red-200' :
-                                'bg-green-900/50 border-green-500 text-green-200'
-                                }`}>
-                                <p>{error || success}</p>
-                            </div>
-                        )}
+                    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                        {/* Image upload */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">
+                                Banner Image <span className="text-red-400">{editingId ? '' : '*'}</span>
+                                <span className="ml-2 font-normal text-gray-500 text-xs">Recommended: WebP · 1920×600px · max 5MB</span>
+                            </label>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Left Column */}
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Title (Optional)</label>
-                                        <input
-                                            type="text"
-                                            name="title"
-                                            value={formData.title}
-                                            onChange={(e) => handleInputChange(e)}
-                                            placeholder="e.g., Elite Member Exclusive"
-                                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Subtitle (Optional)</label>
-                                        <input
-                                            type="text"
-                                            name="subtitle"
-                                            value={formData.subtitle}
-                                            onChange={(e) => handleInputChange(e)}
-                                            placeholder="e.g., Enjoy special privileges with Team Mesbah membership"
-                                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Highlights (Optional)</label>
-                                        <div className="space-y-2">
-                                            {formData.highlights.map((highlight, index) => (
-                                                <div key={index} className="flex items-center gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={highlight}
-                                                        onChange={(e) => handleInputChange(e, index, 'highlight')}
-                                                        placeholder={`Highlight ${index + 1}`}
-                                                        className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                                    />
-                                                    {formData.highlights.length > 1 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeHighlight(index)}
-                                                            className="p-2 text-red-400 hover:text-red-300"
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            <button
-                                                type="button"
-                                                onClick={addHighlight}
-                                                className="mt-2 px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-500 text-sm"
-                                            >
-                                                + Add Highlight
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">CTA Button Text (Optional)</label>
-                                        <input
-                                            type="text"
-                                            name="cta"
-                                            value={formData.cta}
-                                            onChange={(e) => handleInputChange(e)}
-                                            placeholder="e.g., Join Now"
-                                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Link (Optional)</label>
-                                        <input
-                                            type="text"
-                                            name="link"
-                                            value={formData.link}
-                                            onChange={(e) => handleInputChange(e)}
-                                            placeholder="e.g., /membership"
-                                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                        />
-                                    </div>
-                                </div>
+                            <div className="flex flex-col sm:flex-row gap-4 items-start">
+                                <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-600 hover:border-gray-400 rounded-xl py-6 px-4 cursor-pointer transition-colors bg-gray-700/30 hover:bg-gray-700/50">
+                                    <svg className="w-8 h-8 text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                    </svg>
+                                    <span className="text-sm text-gray-400">{form.image ? form.image.name : 'Click to upload image'}</span>
+                                    <input type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
+                                </label>
 
-                                {/* Right Column */}
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Background Gradient (Optional)</label>
-                                        <input
-                                            type="text"
-                                            name="bg"
-                                            value={formData.bg}
-                                            onChange={(e) => handleInputChange(e)}
-                                            placeholder="e.g., bg-gradient-to-br from-gray-900 via-purple-900/70 to-gray-900"
-                                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Text Color (Optional)</label>
-                                        <input
-                                            type="text"
-                                            name="textColor"
-                                            value={formData.textColor}
-                                            onChange={(e) => handleInputChange(e)}
-                                            placeholder="e.g., text-white"
-                                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Badge Gradient (Optional)</label>
-                                        <input
-                                            type="text"
-                                            name="badgeColor"
-                                            value={formData.badgeColor}
-                                            onChange={(e) => handleInputChange(e)}
-                                            placeholder="e.g., from-purple-600 to-indigo-600"
-                                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Features (Optional)</label>
-                                        <div className="space-y-2">
-                                            {formData.features.map((feature, index) => (
-                                                <div key={index} className="flex items-center gap-2">
-                                                    <input
-                                                        type="text"
-                                                        name="icon"
-                                                        value={feature.icon}
-                                                        onChange={(e) => handleInputChange(e, index, 'feature')}
-                                                        placeholder="Icon (e.g., 🚚)"
-                                                        className="w-1/4 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        name="text"
-                                                        value={feature.text}
-                                                        onChange={(e) => handleInputChange(e, index, 'feature')}
-                                                        placeholder="Text (e.g., Free Delivery)"
-                                                        className="w-3/4 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder-gray-400"
-                                                    />
-                                                    {formData.features.length > 1 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeFeature(index)}
-                                                            className="p-2 text-red-400 hover:text-red-300"
-                                                        >
-                                                            ×
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            <button
-                                                type="button"
-                                                onClick={addFeature}
-                                                className="mt-2 px-4 py-2 bg-gray-600 text-gray-200 rounded-lg hover:bg-gray-500 text-sm"
-                                            >
-                                                + Add Feature
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">
-                                            {editingId ? 'Update Image' : 'Image *'}
-                                        </label>
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex-1">
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={handleImageChange}
-                                                    className="block w-full text-sm text-gray-400
-                                                        file:mr-4 file:py-2 file:px-4
-                                                        file:rounded-lg file:border-0
-                                                        file:text-sm file:font-semibold
-                                                        file:bg-purple-900 file:text-purple-200
-                                                        file:hover:bg-purple-800"
-                                                    disabled={uploading}
-                                                />
-                                                <p className="mt-1 text-xs text-red-400">
-                                                    Recommended: WebP, 1920×700px, max 5MB
-                                                </p>
-                                            </div>
-                                            {imagePreview && (
-                                                <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-600">
-                                                    <img
-                                                        src={imagePreview}
-                                                        alt="Preview"
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-4 pt-6 border-t border-gray-700">
-                                {editingId && (
-                                    <button
-                                        type="button"
-                                        onClick={resetForm}
-                                        className="px-6 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700"
-                                    >
-                                        Cancel
-                                    </button>
-                                )}
-                                <button
-                                    type="submit"
-                                    disabled={uploading || !isFormValid()}
-                                    className={`px-6 py-2 rounded-lg text-white font-medium flex items-center gap-2 ${uploading || !isFormValid()
-                                        ? 'bg-gray-600 cursor-not-allowed'
-                                        : 'bg-purple-600 hover:bg-purple-700'
-                                        }`}
-                                >
-                                    {uploading && (
-                                        <svg
-                                            className="animate-spin h-4 w-4 text-white"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
+                                {imagePreview && (
+                                    <div className="relative w-full sm:w-48 aspect-[1920/600] rounded-xl overflow-hidden border border-gray-600 shrink-0">
+                                        <Image src={imagePreview} alt="Preview" fill className="object-cover" unoptimized={imagePreview.startsWith('blob:')} />
+                                        <button
+                                            type="button"
+                                            onClick={() => { setImagePreview(null); setForm(f => ({ ...f, image: null })); }}
+                                            className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full p-0.5 hover:bg-red-600"
                                         >
-                                            <circle
-                                                className="opacity-25"
-                                                cx="12"
-                                                cy="12"
-                                                r="10"
-                                                stroke="currentColor"
-                                                strokeWidth="4"
-                                            ></circle>
-                                            <path
-                                                className="opacity-75"
-                                                fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                            ></path>
-                                        </svg>
-                                    )}
-                                    {uploading
-                                        ? editingId
-                                            ? 'Updating...'
-                                            : 'Creating...'
-                                        : editingId
-                                            ? 'Update Banner'
-                                            : 'Create Banner'}
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Text fields grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <Field
+                                label="Title" placeholder="e.g., এক্সক্লুসিভ অফার"
+                                value={form.title}
+                                onChange={v => setForm(f => ({ ...f, title: v }))}
+                            />
+                            <Field
+                                label="Offer Badge" placeholder="e.g., ৳500 ছাড় · Free Delivery"
+                                value={form.offer}
+                                onChange={v => setForm(f => ({ ...f, offer: v }))}
+                            />
+                            <Field
+                                label="Subtitle" placeholder="e.g., সেরা মানের অর্গানিক পণ্য..."
+                                value={form.subtitle}
+                                onChange={v => setForm(f => ({ ...f, subtitle: v }))}
+                                className="sm:col-span-2"
+                            />
+                            <Field
+                                label="Button Text (CTA)" placeholder="e.g., Shop Now / এখনই কিনুন"
+                                value={form.ctaText}
+                                onChange={v => setForm(f => ({ ...f, ctaText: v }))}
+                            />
+                            <Field
+                                label="Button Link" placeholder="e.g., /shop or /products/slug"
+                                value={form.ctaLink}
+                                onChange={v => setForm(f => ({ ...f, ctaLink: v }))}
+                            />
+                        </div>
+
+                        {/* Text position + Active */}
+                        <div className="flex flex-wrap items-center gap-4">
+                            <div>
+                                <p className="text-sm font-medium text-gray-300 mb-2">Text Position</p>
+                                <div className="flex gap-2">
+                                    {(['left', 'center'] as const).map(pos => (
+                                        <button
+                                            key={pos}
+                                            type="button"
+                                            onClick={() => setForm(f => ({ ...f, textPosition: pos }))}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${form.textPosition === pos
+                                                ? 'bg-purple-600 border-purple-600 text-white'
+                                                : 'border-gray-600 text-gray-400 hover:border-gray-400'
+                                                }`}
+                                        >
+                                            {pos === 'left' ? '⬅ Left' : '↔ Center'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 ml-auto">
+                                <span className="text-sm text-gray-400">Active</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setForm(f => ({ ...f, isActive: !f.isActive }))}
+                                    className={`relative w-11 h-6 rounded-full transition-colors ${form.isActive ? 'bg-green-600' : 'bg-gray-600'}`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.isActive ? 'translate-x-5' : ''}`} />
                                 </button>
                             </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-3 pt-2 border-t border-gray-700">
+                            {editingId && (
+                                <button type="button" onClick={resetForm}
+                                    className="px-5 py-2.5 rounded-xl border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm font-medium">
+                                    Cancel
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={uploading || (!editingId && !form.image)}
+                                className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${uploading || (!editingId && !form.image)
+                                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                    : 'bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-purple-500/30'
+                                    }`}
+                            >
+                                {uploading && (
+                                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                )}
+                                {uploading ? (editingId ? 'Updating…' : 'Creating…') : (editingId ? 'Update Banner' : 'Create Banner')}
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
-                {/* Existing Banners Section */}
-                <div className="bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-                    <div className="p-6 bg-gray-700 border-b border-gray-600">
-                        <h2 className="text-xl font-semibold text-gray-100">Existing Banners</h2>
+                {/* ── Banner list ── */}
+                <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
+                    <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-gray-100">All Banners ({banners.length})</h2>
                     </div>
+
                     {banners.length === 0 ? (
-                        <div className="p-6 text-center text-gray-400">
-                            No banners found. Create your first banner above.
-                        </div>
+                        <div className="py-12 text-center text-gray-500">No banners yet. Create your first one above.</div>
                     ) : (
                         <div className="divide-y divide-gray-700">
-                            {banners.map((banner) => (
-                                <div key={banner._id} className="p-6 hover:bg-gray-700/50 transition-colors">
-                                    <div className="flex items-start gap-6">
-                                        <div className="flex-shrink-0 w-32 h-24 rounded-lg overflow-hidden border border-gray-600">
-                                            <img
-                                                src={banner.image}
-                                                alt={banner.title || 'Banner'}
-                                                className="w-full h-full object-cover"
-                                            />
+                            {banners.map(banner => (
+                                <div key={banner._id} className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start hover:bg-gray-700/30 transition-colors">
+                                    {/* Thumbnail */}
+                                    <div className="relative w-full sm:w-40 aspect-[1920/600] rounded-xl overflow-hidden border border-gray-600 shrink-0">
+                                        <Image src={banner.image} alt={banner.title || 'Banner'} fill className="object-cover" />
+                                        {/* Active badge */}
+                                        <div className={`absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${banner.isActive ? 'bg-green-500/90 text-white' : 'bg-gray-500/90 text-gray-200'}`}>
+                                            {banner.isActive ? 'Active' : 'Hidden'}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-lg font-medium text-gray-100 truncate">{banner.title || 'Untitled'}</h3>
-                                            <p className="mt-1 text-sm text-gray-400 truncate">{banner.subtitle || 'No subtitle'}</p>
-                                            <div className="mt-2 flex flex-wrap gap-1">
-                                                {banner.highlights?.map((highlight, i) => (
-                                                    <span
-                                                        key={i}
-                                                        className="px-2 py-1 text-xs font-medium bg-purple-900/50 text-purple-200 rounded-full"
-                                                    >
-                                                        {highlight}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-gray-100 truncate">{banner.title || <span className="text-gray-500 font-normal italic">No title</span>}</p>
+                                        {banner.offer && (
+                                            <span className="inline-block mt-1 bg-red-900/50 text-red-300 text-xs px-2 py-0.5 rounded-full">
+                                                🔥 {banner.offer}
+                                            </span>
+                                        )}
+                                        {banner.subtitle && (
+                                            <p className="text-gray-400 text-sm mt-1 line-clamp-1">{banner.subtitle}</p>
+                                        )}
+                                        <div className="flex flex-wrap gap-2 mt-2 text-xs text-gray-500">
+                                            {banner.ctaText && <span>🔘 {banner.ctaText}</span>}
+                                            {banner.ctaLink && <span>🔗 {banner.ctaLink}</span>}
+                                            <span>↔ {banner.textPosition || 'left'}</span>
                                         </div>
-                                        <div className="flex-shrink-0 flex gap-2">
-                                            <button
-                                                onClick={() => handleEdit(banner)}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(banner._id)}
-                                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
-                                            >
-                                                Delete
-                                            </button>
-                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex gap-2 shrink-0">
+                                        <button onClick={() => handleEdit(banner)}
+                                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                                            Edit
+                                        </button>
+                                        <button onClick={() => handleDelete(banner._id)}
+                                            className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+                                            Delete
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -609,6 +364,31 @@ const ShopBannerPage = () => {
             </div>
         </div>
     );
-};
+}
 
-export default ShopBannerPage;
+// ── Reusable field ────────────────────────────────────────────────────────────
+
+function Field({
+    label, placeholder, value, onChange, className = '',
+}: {
+    label: string;
+    placeholder?: string;
+    value: string;
+    onChange: (v: string) => void;
+    className?: string;
+}) {
+    return (
+        <div className={className}>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                {label} <span className="font-normal normal-case text-gray-600">— optional</span>
+            </label>
+            <input
+                type="text"
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="w-full px-3.5 py-2.5 bg-gray-700 border border-gray-600 rounded-xl text-gray-100 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+        </div>
+    );
+}

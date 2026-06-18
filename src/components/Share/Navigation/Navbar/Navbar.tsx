@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
@@ -5,17 +6,10 @@ import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    FaShoppingBag,
-    FaSearch,
-    FaBars,
-    FaTimes,
-    FaStore,
-    FaSignOutAlt,
-    FaTachometerAlt,
-    FaBox,
-    FaUser,
+    FaShoppingBag, FaSearch, FaBars, FaTimes, FaStore,
+    FaSignOutAlt, FaTachometerAlt, FaBox, FaUser,
 } from 'react-icons/fa';
-import { FiChevronDown, FiPhone, FiShoppingBag } from 'react-icons/fi';
+import { FiChevronDown, FiPhone, FiShoppingBag, FiArrowRight } from 'react-icons/fi';
 import { signOut, useSession } from 'next-auth/react';
 import CartSlider from '../../Shop/CartSlider/CartSlider';
 
@@ -39,6 +33,33 @@ interface NavigationItem {
     children?: NavigationItem[];
 }
 
+// ── Skeleton navbar shown on first load ────────────────────────────────────────
+function NavbarSkeleton() {
+    return (
+        <div className="hidden lg:block">
+            <div className="bg-gray-100/95 border-b border-gray-200/50 fixed top-16 left-0 right-0 w-full z-40 h-16">
+                <div className="max-w-7xl mx-auto px-4 lg:px-8 flex items-center justify-between h-16">
+                    <div className="flex items-center gap-2">
+                        {[80, 64, 72, 56].map((w, i) => (
+                            <div key={i} className="h-8 rounded-lg bg-gray-200 animate-pulse" style={{ width: w }} />
+                        ))}
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                </div>
+            </div>
+            {/* Mobile skeleton */}
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-16 bg-gray-100 border-b border-gray-200 flex items-center justify-between px-4">
+                <div className="h-10 w-36 bg-gray-200 rounded animate-pulse" />
+                <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                    <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                    <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Navbar({ contactNumber = '+880 1571-083401' }: { contactNumber?: string }) {
     const { data: session } = useSession();
     const pathname = usePathname();
@@ -47,26 +68,23 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
     const [navigation, setNavigation] = useState<NavigationItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Mobile states
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
-
-    // Common states
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const [cartCount, setCartCount] = useState(0);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isNavbarVisible, setIsNavbarVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
-    const searchRef = useRef<HTMLDivElement>(null);
 
+    const searchRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const conversionRates = { USD: 0.0091, EUR: 0.0084, BDT: 1 };
 
-    // Scroll hide/show
+    // ── Scroll hide/show ──────────────────────────────────────────────────────
     useEffect(() => {
         const handleScroll = () => {
             const current = window.scrollY;
@@ -84,38 +102,28 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
         return () => window.removeEventListener('scroll', handleScroll);
     }, [lastScrollY]);
 
-    // Fetch navigation
+    // ── Fetch navigation ──────────────────────────────────────────────────────
     useEffect(() => {
-        const fetchNavigation = async () => {
-            try {
-                const res = await fetch('/api/navigation');
-                const data = await res.json();
-                if (data.success) setNavigation(data.data);
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchNavigation();
+        fetch('/api/navigation')
+            .then(r => r.json())
+            .then(data => { if (data.success) setNavigation(data.data); })
+            .catch(console.error)
+            .finally(() => setLoading(false));
     }, []);
 
-    // Cart count
+    // ── Cart count ────────────────────────────────────────────────────────────
     useEffect(() => {
-        const updateCart = () => {
+        const update = () => {
             const cart = JSON.parse(localStorage.getItem('cart') || '[]');
             setCartCount(cart.reduce((s: number, i: any) => s + i.quantity, 0));
         };
-        updateCart();
-        window.addEventListener('storage', updateCart);
-        window.addEventListener('cartUpdated', updateCart);
-        return () => {
-            window.removeEventListener('storage', updateCart);
-            window.removeEventListener('cartUpdated', updateCart);
-        };
+        update();
+        window.addEventListener('storage', update);
+        window.addEventListener('cartUpdated', update);
+        return () => { window.removeEventListener('storage', update); window.removeEventListener('cartUpdated', update); };
     }, []);
 
-    // Close on route change
+    // ── Close on route change ─────────────────────────────────────────────────
     useEffect(() => {
         setMobileMenuOpen(false);
         setShowMobileSearch(false);
@@ -124,164 +132,116 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
         setActiveDropdown(null);
     }, [pathname]);
 
-    // Toggle dropdown for desktop & mobile navigation
-    const toggleDropdown = (id: string) => {
-        setActiveDropdown(activeDropdown === id ? null : id);
-    };
+    // ── Click outside search ──────────────────────────────────────────────────
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node))
+                setShowSearchResults(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
-    const isItemActive = (item: NavigationItem): boolean => {
-        if (pathname === item.slug) return true;
-        return item.children?.some(child => pathname === child.slug) ?? false;
-    };
+    // ── Focus search on open ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (showMobileSearch) setTimeout(() => searchInputRef.current?.focus(), 100);
+    }, [showMobileSearch]);
 
-    // Search logic
+    // ── Search ────────────────────────────────────────────────────────────────
     const searchProducts = useCallback(async (q: string) => {
-        if (!q.trim()) {
-            setSearchResults([]);
-            setShowSearchResults(false);
-            return;
-        }
+        if (!q.trim()) { setSearchResults([]); setShowSearchResults(false); return; }
         setIsSearching(true);
         try {
             const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=6`);
             if (res.ok) {
                 const json = await res.json();
-                if (json.success) {
-                    setSearchResults(json.data);
-                    setShowSearchResults(true);
-                }
+                if (json.success) { setSearchResults(json.data); setShowSearchResults(true); }
             }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsSearching(false);
-        }
+        } catch (e) { console.error(e); }
+        finally { setIsSearching(false); }
     }, []);
 
     useEffect(() => {
-        const timer = setTimeout(() => searchProducts(searchQuery), 300);
-        return () => clearTimeout(timer);
+        const t = setTimeout(() => searchProducts(searchQuery), 300);
+        return () => clearTimeout(t);
     }, [searchQuery, searchProducts]);
 
-    useEffect(() => {
-        if (showMobileSearch && searchInputRef.current) {
-            searchInputRef.current.focus();
-        }
-    }, [showMobileSearch]);
-
-    const handleSearchKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            if (searchQuery.trim()) {
-                router.push(`/shop/search?q=${encodeURIComponent(searchQuery)}`);
-                setSearchQuery('');
-                setShowSearchResults(false);
-                setShowMobileSearch(false);
-            }
+    const handleSearchKey = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && searchQuery.trim()) {
+            router.push(`/shop/search?q=${encodeURIComponent(searchQuery)}`);
+            setSearchQuery(''); setShowSearchResults(false); setShowMobileSearch(false);
         }
     };
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-                setShowSearchResults(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
     const handleResultClick = (slug: string) => {
         router.push(`/shop/${slug}`);
-        setSearchQuery('');
-        setShowSearchResults(false);
-        setShowMobileSearch(false);
-        setMobileMenuOpen(false);
+        setSearchQuery(''); setShowSearchResults(false);
+        setShowMobileSearch(false); setMobileMenuOpen(false);
     };
 
     const handleSignOut = async () => {
         await signOut({ redirect: false });
         setMobileMenuOpen(false);
-        router.push('/');
-        router.refresh();
+        router.push('/'); router.refresh();
     };
 
-    const getUserDisplayName = () => {
-        if (!session?.user?.name) return 'User';
-        return session.user.name.split(' ')[0];
-    };
-
-    const getRoleBadgeColor = (role: string) => {
-        switch (role) {
-            case 'admin': return 'bg-red-600 text-white';
-            case 'moderator': return 'bg-blue-600 text-white';
-            default: return 'bg-gray-600 text-white';
-        }
-    };
+    const isItemActive = (item: NavigationItem) =>
+        pathname === item.slug || (item.children?.some(c => pathname === c.slug) ?? false);
 
     const getDashboardLinks = () => {
         if (!session?.user?.role) return [];
-        const links = [];
-        if (session.user.role === 'admin') {
-            links.push({ name: 'Admin Dashboard', href: '/admin-dashboard', icon: <FaTachometerAlt /> });
-            links.push({ name: 'Manage Products', href: '/admin-dashboard/shop/all-products', icon: <FaBox /> });
-        } else if (session.user.role === 'moderator') {
-            links.push({ name: 'Moderator Panel', href: '/moderator-dashboard', icon: <FaTachometerAlt /> });
-        }
-        return links;
+        if (session.user.role === 'admin') return [
+            { name: 'Admin Dashboard', href: '/admin-dashboard', icon: <FaTachometerAlt /> },
+            { name: 'Manage Products', href: '/admin-dashboard/shop/all-products', icon: <FaBox /> },
+        ];
+        if (session.user.role === 'moderator') return [
+            { name: 'Moderator Panel', href: '/moderator-dashboard', icon: <FaTachometerAlt /> },
+        ];
+        return [];
     };
 
-    // Desktop navigation render
+    // ── Desktop nav item ──────────────────────────────────────────────────────
     const renderDesktopItem = (item: NavigationItem) => {
         if (!item.isActive) return null;
         const hasChildren = item.children && item.children.length > 0;
-        const isDropdownOpen = activeDropdown === item._id;
+        const isOpen = activeDropdown === item._id;
         const isActive = isItemActive(item);
 
+        const baseCls = `relative flex items-center text-[13px] font-semibold px-3 py-2.5 rounded-lg transition-all duration-200 tracking-wide`;
+        const activeCls = isActive || isOpen
+            ? 'text-gray-900 bg-white shadow-sm'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-white/80';
+
         return (
-            <div key={item._id} className="relative nav-dropdown">
+            <div key={item._id} className="relative">
                 {hasChildren ? (
                     <>
-                        <button
-                            onClick={() => toggleDropdown(item._id)}
-                            className={`flex items-center text-[13px] font-medium px-3 py-2.5 rounded-lg transition-all duration-200 nav-dropdown-button group ${isActive || isDropdownOpen
-                                ? 'text-gray-900 bg-white shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-white/80'
-                                }`}
-                        >
+                        <button onClick={() => setActiveDropdown(isOpen ? null : item._id)}
+                            className={`${baseCls} ${activeCls}`}>
                             <span className="relative">
                                 {item.title}
+                                {/* ✅ active underline */}
                                 {isActive && (
-                                    <motion.span
-                                        layoutId="activeIndicator"
-                                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-800 to-gray-600 rounded-full"
-                                    />
+                                    <span className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-gray-800 rounded-full" />
                                 )}
                             </span>
-                            <span className={`ml-1.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}>
-                                <FiChevronDown className="w-3.5 h-3.5" />
-                            </span>
+                            <FiChevronDown className={`ml-1.5 w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                         </button>
                         <AnimatePresence>
-                            {isDropdownOpen && hasChildren && (
+                            {isOpen && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    initial={{ opacity: 0, y: 8, scale: 0.97 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200/80 py-2 z-[100]"
+                                    exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute top-full left-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-[100] overflow-hidden"
                                 >
-                                    <div className="absolute -top-2 left-6 w-4 h-4 bg-white border-l border-t border-gray-200/80 transform rotate-45"></div>
-                                    {item.children!.map((child) => (
-                                        <Link
-                                            key={child._id}
-                                            href={child.slug}
+                                    {item.children!.map(child => (
+                                        <Link key={child._id} href={child.slug}
                                             onClick={() => setActiveDropdown(null)}
-                                            className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                        >
+                                            className={`flex items-center px-4 py-2.5 text-sm transition-colors ${pathname === child.slug ? 'text-gray-900 font-semibold bg-gray-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}>
                                             {child.title}
+                                            {pathname === child.slug && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gray-800" />}
                                         </Link>
                                     ))}
                                 </motion.div>
@@ -289,67 +249,62 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                         </AnimatePresence>
                     </>
                 ) : (
-                    <Link
-                        href={item.slug}
-                        className={`relative text-[13px] font-medium px-3 py-2.5 rounded-lg transition-all duration-200 ${isActive
-                            ? 'text-gray-900 bg-white shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-white/80'
-                            }`}
-                    >
-                        {item.title}
-                        {isActive && (
-                            <motion.span
-                                layoutId="activeIndicator"
-                                className="absolute -bottom-1 left-3 right-3 h-0.5 bg-gradient-to-r from-gray-800 to-gray-600 rounded-full"
-                            />
-                        )}
+                    <Link href={item.slug} className={`${baseCls} ${activeCls}`}>
+                        <span className="relative">
+                            {item.title}
+                            {isActive && (
+                                <span className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-gray-800 rounded-full" />
+                            )}
+                        </span>
                     </Link>
                 )}
             </div>
         );
     };
 
-    // Mobile navigation render
-    const renderMobileItem = (item: NavigationItem, level: number = 0) => {
+    // ── Mobile nav item ───────────────────────────────────────────────────────
+    const renderMobileItem = (item: NavigationItem, level = 0) => {
         if (!item.isActive) return null;
         const hasChildren = item.children && item.children.length > 0;
-        const isDropdownOpen = activeDropdown === item._id;
+        const isOpen = activeDropdown === item._id;
         const isActive = pathname === item.slug;
 
         return (
-            <div key={item._id} className="space-y-0.5">
-                <div className="flex items-center justify-between">
+            <div key={item._id}>
+                <div className={`flex items-center justify-between rounded-xl transition-colors ${isActive ? 'bg-gray-50' : 'hover:bg-gray-50'} ${level > 0 ? 'ml-4' : ''}`}>
                     {hasChildren ? (
-                        <button
-                            onClick={() => toggleDropdown(item._id)}
-                            className={`flex-1 py-3 text-left ${level > 0 ? 'pl-6' : 'pl-0'} ${isActive ? 'text-gray-900 font-medium' : 'text-gray-700'}`}
-                        >
-                            {item.title}
+                        <button onClick={() => setActiveDropdown(isOpen ? null : item._id)}
+                            className={`flex-1 text-left px-4 py-3 text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-700'}`}>
+                            <span className="flex items-center gap-2">
+                                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-gray-800 flex-shrink-0" />}
+                                {item.title}
+                            </span>
                         </button>
                     ) : (
-                        <Link
-                            href={item.slug}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={`flex-1 py-3 ${level > 0 ? 'pl-6' : 'pl-0'} ${isActive ? 'text-gray-900 font-medium' : 'text-gray-700'}`}
-                        >
-                            {item.title}
+                        <Link href={item.slug} onClick={() => setMobileMenuOpen(false)}
+                            className={`flex-1 px-4 py-3 text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-700'}`}>
+                            <span className="flex items-center gap-2">
+                                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-gray-800 flex-shrink-0" />}
+                                {item.title}
+                            </span>
                         </Link>
                     )}
                     {hasChildren && (
-                        <button onClick={() => toggleDropdown(item._id)} className="p-2">
-                            <FiChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                        <button onClick={() => setActiveDropdown(isOpen ? null : item._id)} className="px-3 py-3">
+                            <FiChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                         </button>
                     )}
                 </div>
                 <AnimatePresence>
-                    {hasChildren && isDropdownOpen && item.children && (
+                    {hasChildren && isOpen && item.children && (
                         <motion.div
-                            initial={{ height: 0 }}
-                            animate={{ height: 'auto' }}
-                            exit={{ height: 0 }}
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
                             className="overflow-hidden"
                         >
-                            <div className="pl-6 border-l border-gray-200 ml-2">
+                            <div className="ml-4 pl-3 border-l-2 border-gray-100 my-1 space-y-0.5">
                                 {item.children.map(child => renderMobileItem(child, level + 1))}
                             </div>
                         </motion.div>
@@ -359,278 +314,275 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
         );
     };
 
-    if (loading) {
-        return <div className="h-16 bg-gray-100" />;
-    }
+    // ── Search results UI ─────────────────────────────────────────────────────
+    const SearchResults = () => (
+        <AnimatePresence>
+            {showSearchResults && (
+                <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden z-[99999]"
+                >
+                    {isSearching ? (
+                        <div className="p-6 flex flex-col items-center gap-2">
+                            <div className="w-6 h-6 border-2 border-gray-800 border-t-transparent rounded-full animate-spin" />
+                            <p className="text-sm text-gray-500 font-medium">Searching…</p>
+                        </div>
+                    ) : searchResults.length > 0 ? (
+                        <>
+                            <div className="divide-y divide-gray-50 max-h-[360px] overflow-y-auto">
+                                {searchResults.map(p => (
+                                    <div key={p._id} onClick={() => handleResultClick(p.slug)}
+                                        className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors group">
+                                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 bg-gray-50">
+                                            <Image src={p.mainImage} alt={p.mainImageAlt} width={48} height={48} className="object-cover w-full h-full" />
+                                            {p.availability !== 'InStock' && (
+                                                <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+                                                    <span className="text-[9px] font-bold text-red-600 bg-white/90 px-1 rounded">OUT</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-gray-700">{p.title}</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">{p.category.name}</p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                            <span className="text-sm font-bold text-gray-900">৳{p.bdtPrice.toLocaleString()}</span>
+                                            <FiArrowRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-600 transition-colors" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                        </>
+                    ) : searchQuery.trim() ? (
+                        <div className="p-6 text-center">
+                            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <FaSearch className="text-gray-400 text-sm" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-700">No results for {searchQuery}</p>
+                            <p className="text-xs text-gray-400 mt-1">Try different keywords</p>
+                        </div>
+                    ) : null}
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+
+    if (loading) return <NavbarSkeleton />;
 
     return (
         <>
-            {/* Desktop Navbar */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
+            {/* DESKTOP NAVBAR                                                  */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
             <div className="hidden lg:block">
                 <motion.nav
                     animate={{ top: isNavbarVisible ? 64 : 0 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-gray-100/95 backdrop-blur-sm border-b border-gray-200/50 fixed left-0 right-0 w-full z-40 shadow-lg hidden lg:block"
+                    className="bg-gray-100/95 backdrop-blur-sm border-b border-gray-200/50 fixed left-0 right-0 w-full z-40 shadow-sm"
                 >
                     <div className="max-w-7xl mx-auto px-4 lg:px-8">
-                        <div className="flex items-center justify-between h-16">
-                            <div className="flex items-center space-x-1">
+                        <div className="flex items-center justify-between h-16 gap-4">
+
+                            {/* Left: logo (only when scrolled up) + nav items */}
+                            <div className="flex items-center gap-1 flex-shrink-0">
                                 {!isNavbarVisible && (
-                                    <Link href="/" className="flex items-center mr-6 hover:opacity-90 transition-opacity">
-                                        <div className="w-40 h-10 md:w-48 md:h-12 lg:w-56 lg:h-14 relative flex items-center">
-                                            {/* Loog and Text */}
-                                            <Image
-                                                src="/sooqraone.png"  // তোমার 250×100 SVG
-                                                alt="Sooqra One"
-                                                width={200}    // Original: 250px → 80% scale
-                                                height={80}    // Original: 100px → 80% scale
-                                                className="object-contain w-full h-full select-none pointer-events-none"
-                                                priority
-                                                draggable={false}
-                                                onContextMenu={(e) => e.preventDefault()}
-                                                onDragStart={(e) => e.preventDefault()}
-                                            />
-                                        </div>
+                                    <Link href="/" className="mr-4 flex-shrink-0">
+                                        <Image src="/sooqraone.png" alt="Sooqra One" width={160} height={52}
+                                            className="object-contain h-12 w-auto select-none pointer-events-none"
+                                            priority draggable={false}
+                                            onContextMenu={e => e.preventDefault()}
+                                            onDragStart={e => e.preventDefault()} />
                                     </Link>
                                 )}
                                 {navigation.map(renderDesktopItem)}
-                                <Link
-                                    href="/shop"
-                                    className={`flex items-center text-[13px] font-medium px-3 py-2.5 rounded-lg transition-all ${pathname.startsWith('/shop') ? 'text-gray-900 bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-white/80'}`}
-                                >
+                                {/* Shop link */}
+                                <Link href="/shop"
+                                    className={`relative flex items-center text-[13px] font-semibold px-3 py-2.5 rounded-lg transition-all tracking-wide ${pathname.startsWith('/shop') ? 'text-gray-900 bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-white/80'}`}>
                                     <FiShoppingBag className="w-3.5 h-3.5 mr-1.5" />
-                                    Shop
+                                    <span className="relative">
+                                        Shop
+                                        {pathname.startsWith('/shop') && (
+                                            <span className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-gray-800 rounded-full" />
+                                        )}
+                                    </span>
                                 </Link>
                             </div>
 
-                            {/* Search Shopping Badge and Number Condition */}
-
-
-                            <div className="flex items-center gap-4">
+                            {/* Right: search + cart / phone */}
+                            <div className="flex items-center gap-3">
                                 {!isNavbarVisible ? (
                                     <>
-                                        {/* Search Bar (Desktop only) - যোগ করেছি Shopping Icon এর আগে */}
-                                        <div className="hidden lg:block flex-1 max-w-2xl relative" ref={searchRef}>
-                                            <div className="relative">
-                                                <input
-                                                    ref={searchInputRef}
-                                                    type="text"
-                                                    value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                    onKeyPress={handleSearchKeyPress}
-                                                    onFocus={() => {
-                                                        if (searchQuery.trim()) {
-                                                            setShowSearchResults(true);
-                                                        }
-                                                    }}
-                                                    placeholder="Search Sooqra One"
-                                                    className="w-full px-4 pl-12 py-2.5 bg-white border-2 border-gray-300 rounded-full text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-gray-800 transition-all duration-300 shadow-sm text-sm"
-                                                />
-                                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-600">
-                                                    <FaSearch className="text-sm" />
-                                                </div>
-                                            </div>
-                                            {/* Desktop Search Results Dropdown */}
-                                            <AnimatePresence>
-                                                {showSearchResults && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: -10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        exit={{ opacity: 0, y: -10 }}
-                                                        className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden z-[99999] max-h-[400px] overflow-y-auto"
-                                                    >
-
-                                                        {isSearching ? (
-                                                            <div className="p-4 text-center">
-                                                                <div className="inline-block w-6 h-6 border-2 border-gray-800 border-t-transparent rounded-full animate-spin"></div>
-                                                                <p className="text-gray-600 mt-2 text-sm font-medium">Searching...</p>
-                                                            </div>
-                                                        ) : searchResults.length > 0 ? (
-                                                            <div className="divide-y divide-gray-100">
-                                                                {searchResults.map((product) => (
-                                                                    <div
-                                                                        key={product._id}
-                                                                        onClick={() => handleResultClick(product.slug)}
-                                                                        className="flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors"
-                                                                    >
-                                                                        {/* Product Image */}
-                                                                        <div className="w-12 h-12 relative flex-shrink-0 mr-3 rounded-md overflow-hidden border border-gray-200">
-                                                                            <Image
-                                                                                src={product.mainImage}
-                                                                                alt={product.mainImageAlt}
-                                                                                width={48}
-                                                                                height={48}
-                                                                                className="object-cover"
-                                                                            />
-                                                                            {product.availability !== 'InStock' && (
-                                                                                <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-                                                                                    <span className="text-[10px] font-bold text-red-600 bg-white/90 px-1 rounded">OUT</span>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-
-                                                                        {/* Product Details */}
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <p className="text-gray-900 text-sm font-semibold truncate">{product.title}</p>
-                                                                            <div className="flex items-center justify-between mt-1">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
-                                                                                        {product.category.name}
-                                                                                    </span>
-
-                                                                                </div>
-                                                                                <span className="text-sm font-bold text-gray-900">
-                                                                                    ৳{product.bdtPrice.toLocaleString()}
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : searchQuery.trim() ? (
-                                                            <div className="p-4 text-center">
-                                                                <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
-                                                                    <FaSearch className="text-gray-500" />
-                                                                </div>
-                                                                <p className="text-gray-800 font-medium mb-1">No products found</p>
-                                                                <p className="text-gray-600 text-sm">Try different keywords</p>
-                                                            </div>
-                                                        ) : null}
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
+                                        {/* ✅ Search bar — desktop */}
+                                        <div className="relative w-64 xl:w-80" ref={searchRef}>
+                                            <input
+                                                ref={searchInputRef}
+                                                type="text"
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                                onKeyDown={handleSearchKey}
+                                                onFocus={() => searchQuery.trim() && setShowSearchResults(true)}
+                                                placeholder="Search products…"
+                                                className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-full text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent transition-all shadow-sm"
+                                            />
+                                            <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                                            <SearchResults />
                                         </div>
 
-                                        {/* Shopping Cart Button */}
-                                        <button
-                                            onClick={() => setIsCartOpen(true)}
-                                            className="relative p-2 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 group"
-                                            aria-label="Open Cart"
-                                        >
-                                            <FaShoppingBag className="w-4 h-4 text-white group-hover:text-yellow-300 transition-colors duration-300" />
+                                        {/* Cart */}
+                                        <button onClick={() => setIsCartOpen(true)}
+                                            className="relative p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 transition-all group shadow-sm"
+                                            aria-label="Cart">
+                                            <FaShoppingBag className="w-4 h-4 text-white" />
                                             {cartCount > 0 && (
-                                                <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1.5 flex items-center justify-center bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 text-xs font-extrabold rounded-full shadow-lg ring-2 ring-white animate-bounce hover:animate-none">
+                                                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 flex items-center justify-center bg-amber-400 text-gray-900 text-[10px] font-extrabold rounded-full ring-2 ring-white">
                                                     {cartCount > 99 ? '99+' : cartCount}
                                                 </span>
                                             )}
                                         </button>
                                     </>
                                 ) : (
-                                    <a href={`tel:${contactNumber.replace(/\s+/g, '')}`} className="flex items-center gap-3">
-                                        <div className="w-9 h-9 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full flex items-center justify-center">
-                                            <FiPhone className="w-5 h-5 text-white" />
+                                    /* Phone (when scrolled to top) */
+                                    <a href={`tel:${contactNumber.replace(/\s+/g, '')}`} className="flex items-center gap-2.5 group">
+                                        <div className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center group-hover:bg-gray-700 transition-colors">
+                                            <FiPhone className="w-4 h-4 text-white" />
                                         </div>
                                         <div className="hidden xl:block">
-                                            <p className="text-xs text-gray-500">Call Support</p>
-                                            <p className="font-bold text-gray-900">{contactNumber}</p>
+                                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Call Support</p>
+                                            <p className="text-sm font-bold text-gray-800">{contactNumber}</p>
                                         </div>
                                     </a>
                                 )}
                             </div>
-
-
-
                         </div>
                     </div>
                 </motion.nav>
             </div>
 
-            {/* Mobile & Tablet Navbar */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
+            {/* MOBILE & TABLET NAVBAR                                          */}
+            {/* ═══════════════════════════════════════════════════════════════ */}
             <div className="lg:hidden">
+                {/* Fixed top bar */}
+                <nav className="bg-white border-b border-gray-100 fixed top-0 left-0 right-0 z-50 h-16 shadow-sm">
+                    <div className="flex items-center justify-between h-full px-4">
+                        {/* Logo */}
+                        <Link href="/" className="flex-shrink-0">
+                            <Image src="/sooqraone.png" alt="Sooqra One" width={140} height={44}
+                                className="h-10 w-auto select-none pointer-events-none"
+                                priority draggable={false}
+                                onContextMenu={e => e.preventDefault()}
+                                onDragStart={e => e.preventDefault()} />
+                        </Link>
 
+                        {/* Right icons */}
+                        <div className="flex items-center gap-2">
+                            {/* Search icon */}
+                            <button
+                                onClick={() => { setShowMobileSearch(p => !p); setMobileMenuOpen(false); }}
+                                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${showMobileSearch ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                aria-label="Search">
+                                <FaSearch className="text-sm" />
+                            </button>
 
-                {/* Mobile & Tablet Navbar */}
-                <div className="lg:hidden">
-                    <nav className="bg-gradient-to-r from-gray-100 to-gray-50 shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50 h-16">
-                        <div className="container mx-auto px-4 flex items-center justify-between h-16">
+                            {/* Cart */}
+                            <button onClick={() => setIsCartOpen(true)}
+                                className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors"
+                                aria-label="Cart">
+                                <FiShoppingBag className="w-4 h-4 text-white" />
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-amber-400 text-gray-900 text-[10px] font-extrabold rounded-full ring-2 ring-white">
+                                        {cartCount > 99 ? '99+' : cartCount}
+                                    </span>
+                                )}
+                            </button>
 
-
-                            {/* Logo mobile and TabletF */}
-                            <Link href="/" className="flex-shrink-0">
-                                <Image
-                                    src="/sooqraone.png"
-                                    alt="SOOQRA ONE"
-                                    width={250}
-                                    height={58}
-                                    className="h-14 w-auto md:h-16 lg:hidden select-none pointer-events-none"  /* Mobile: 56px, Tablet: 64px */
-                                    priority
-                                    draggable={false}
-                                    onContextMenu={(e) => e.preventDefault()}
-                                    onDragStart={(e) => e.preventDefault()}
-                                />
-                            </Link>
-
-                            {/* Icons - Right Side */}
-                            <div className="flex items-center space-x-4">
-                                <button onClick={() => { setShowMobileSearch(prev => !prev); setMobileMenuOpen(false); }}>
-                                    <FaSearch className="text-xl text-gray-700" />
-                                </button>
-                                <button
-                                    onClick={() => setIsCartOpen(true)}
-                                    className="relative p-2 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all duration-300 group"
-                                    aria-label="Open Cart"
-                                >
-                                    <FaShoppingBag className="w-3 h-3 text-white group-hover:text-yellow-300 transition-colors duration-300" />
-
-                                    {cartCount > 0 && (
-                                        <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 text-xs font-extrabold rounded-full shadow-md ring-3 ring-white animate-bounce hover:animate-none [animation-duration:1s]">
-                                            {cartCount > 99 ? '99+' : cartCount}
-                                        </span>
-                                    )}
-                                </button>
-                                <button onClick={() => { setMobileMenuOpen(prev => !prev); setShowMobileSearch(false); }}>
-                                    {mobileMenuOpen ? <FaTimes className="text-2xl" /> : <FaBars className="text-2xl" />}
-                                </button>
-                            </div>
+                            {/* Hamburger */}
+                            <button
+                                onClick={() => { setMobileMenuOpen(p => !p); setShowMobileSearch(false); }}
+                                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${mobileMenuOpen ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                aria-label="Menu">
+                                {mobileMenuOpen ? <FaTimes className="text-sm" /> : <FaBars className="text-sm" />}
+                            </button>
                         </div>
-                    </nav>
+                    </div>
+                </nav>
 
-                    {/* ... Rest of your mobile code ... */}
-                </div>
-
-                {/* Mobile Search */}
+                {/* ── Mobile search panel ──────────────────────────────────── */}
                 <AnimatePresence>
                     {showMobileSearch && (
                         <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="fixed top-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-[99999]"
+                            transition={{ duration: 0.2 }}
+                            className="fixed top-16 left-0 right-0 bg-white border-b border-gray-100 shadow-lg z-[200] overflow-hidden"
                         >
-                            <div className="container mx-auto px-4 py-3">
+                            <div className="px-4 py-3" ref={searchRef}>
                                 <div className="relative">
                                     <input
                                         ref={searchInputRef}
                                         type="text"
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && router.push(`/shop/search?q=${encodeURIComponent(searchQuery)}`)}
-                                        placeholder="Search Sooqra One..."
-                                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-300 rounded-full focus:outline-none focus:border-gray-800"
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        onKeyDown={handleSearchKey}
+                                        placeholder="Search products…"
+                                        className="w-full pl-10 pr-10 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-800 focus:border-transparent transition-all"
                                     />
-                                    <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                                    <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                                    {searchQuery && (
+                                        <button onClick={() => { setSearchQuery(''); setShowSearchResults(false); }}
+                                            className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 text-gray-500 hover:bg-gray-300 transition-colors">
+                                            <FaTimes className="text-[10px]" />
+                                        </button>
+                                    )}
                                 </div>
+
+                                {/* Mobile search results */}
                                 <AnimatePresence>
                                     {showSearchResults && (
-                                        <motion.div className="mt-3 bg-white rounded-xl shadow-2xl border border-gray-200 max-h-96 overflow-y-auto">
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -8 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0 }}
+                                            className="mt-2 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden"
+                                        >
                                             {isSearching ? (
-                                                <div className="p-6 text-center">Searching...</div>
+                                                <div className="py-6 flex flex-col items-center gap-2">
+                                                    <div className="w-5 h-5 border-2 border-gray-800 border-t-transparent rounded-full animate-spin" />
+                                                    <p className="text-xs text-gray-400">Searching…</p>
+                                                </div>
                                             ) : searchResults.length > 0 ? (
-                                                searchResults.map((p) => (
-                                                    <div key={p._id} onClick={() => handleResultClick(p.slug)} className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b last:border-0">
-                                                        <div className="w-12 h-12 rounded overflow-hidden mr-3 border">
-                                                            <Image src={p.mainImage} alt={p.mainImageAlt} width={48} height={48} className="object-cover" />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <p className="font-medium text-sm truncate">{p.title}</p>
-                                                            <p className="text-xs text-gray-600">{p.category.name} • {p.brand}</p>
-                                                            <p className="font-bold text-sm mt-1">৳{p.bdtPrice.toLocaleString()}</p>
-                                                        </div>
+                                                <>
+                                                    <div className="max-h-72 overflow-y-auto divide-y divide-gray-50">
+                                                        {searchResults.map(p => (
+                                                            <div key={p._id} onClick={() => handleResultClick(p.slug)}
+                                                                className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer active:bg-gray-100 transition-colors">
+                                                                <div className="w-11 h-11 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 bg-gray-50">
+                                                                    <Image src={p.mainImage} alt={p.mainImageAlt} width={44} height={44} className="object-cover w-full h-full" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-semibold text-gray-900 truncate">{p.title}</p>
+                                                                    <p className="text-xs text-gray-400 mt-0.5">{p.category.name}</p>
+                                                                </div>
+                                                                <span className="text-sm font-bold text-gray-900 flex-shrink-0">৳{p.bdtPrice.toLocaleString()}</span>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))
-                                            ) : (
-                                                <div className="p-6 text-center text-gray-500">No products found</div>
-                                            )}
+                                                    {/* <button onClick={() => { router.push(`/shop/search?q=${encodeURIComponent(searchQuery)}`); setShowSearchResults(false); setShowMobileSearch(false); }}
+                                                        className="w-full py-3 text-xs font-semibold text-gray-500 hover:text-gray-800 border-t border-gray-50 flex items-center justify-center gap-1.5 transition-colors">
+                                                        See all results <FiArrowRight className="w-3.5 h-3.5" />
+                                                    </button> */}
+                                                </>
+                                            ) : searchQuery.trim() ? (
+                                                <div className="py-6 text-center">
+                                                    <p className="text-sm font-medium text-gray-600">No results found</p>
+                                                    <p className="text-xs text-gray-400 mt-1">Try different keywords</p>
+                                                </div>
+                                            ) : null}
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -639,169 +591,138 @@ export default function Navbar({ contactNumber = '+880 1571-083401' }: { contact
                     )}
                 </AnimatePresence>
 
-                {/* Mobile Menu */}
+                {/* ── Mobile menu drawer ───────────────────────────────────── */}
                 <AnimatePresence>
                     {mobileMenuOpen && (
                         <>
-                            {/* Backdrop Overlay */}
+                            {/* Backdrop */}
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 onClick={() => setMobileMenuOpen(false)}
-                                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99998] lg:hidden"
+                                className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[300] lg:hidden"
                             />
 
-                            {/* Menu Panel */}
+                            {/* Drawer */}
                             <motion.div
-                                initial={{ opacity: 0, x: '100%' }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: '100%' }}
-                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                className="fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-white shadow-2xl z-[99999] lg:hidden"
+                                initial={{ x: '100%' }}
+                                animate={{ x: 0 }}
+                                exit={{ x: '100%' }}
+                                transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                                className="fixed top-0 right-0 bottom-0 w-[82%] max-w-[340px] bg-white z-[400] flex flex-col shadow-2xl lg:hidden"
                             >
-                                {/* Menu Header */}
-                                <div className="sticky top-0 z-10 bg-white border-b border-gray-100">
-                                    <div className="flex items-center justify-between p-4">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center">
-                                                <FaStore className="text-white" />
-                                            </div>
-                                            <span className="text-lg font-bold text-gray-900">Menu</span>
-                                        </div>
-                                        <button
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                                        >
-                                            <FaTimes className="text-xl text-gray-600" />
-                                        </button>
-                                    </div>
+                                {/* Drawer header */}
+                                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                                    <span className="text-base font-bold text-gray-900">Menu</span>
+                                    <button onClick={() => setMobileMenuOpen(false)}
+                                        className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
+                                        <FaTimes className="text-sm text-gray-600" />
+                                    </button>
                                 </div>
 
-                                {/* Menu Content */}
-                                <div className="h-[calc(100vh-64px)] overflow-y-auto pb-24">
-                                    {/* User Profile Section */}
-                                    <div className="p-4 border-b border-gray-100">
+                                {/* Scrollable content */}
+                                <div className="flex-1 overflow-y-auto">
+
+                                    {/* ── User section ──────────────────────── */}
+                                    <div className="px-4 py-4 border-b border-gray-50">
                                         {session?.user ? (
-                                            <>
-                                                <div className="flex items-center space-x-3 mb-4">
-                                                    <div className="relative">
-                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                                                            <FaUser className="text-xl text-gray-700" />
-                                                        </div>
-                                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full" />
+                                            <div className="space-y-3">
+                                                {/* User info */}
+                                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
+                                                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                                        <FaUser className="text-gray-500 text-sm" />
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <p className="font-bold text-gray-900 text-lg">{getUserDisplayName()}</p>
-                                                        <p className="text-xs text-gray-600 truncate">{session.user.email}</p>
-                                                        <span className={`inline-block mt-1 px-3 py-1 text-xs font-medium rounded-lg ${getRoleBadgeColor(session.user.role || 'user')}`}>
-                                                            {session.user.role?.toUpperCase() || 'USER'}
-                                                        </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-gray-900 text-sm truncate">
+                                                            {session.user.name?.split(' ')[0] || 'User'}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400 truncate">{session.user.email}</p>
                                                     </div>
+                                                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-lg flex-shrink-0 ${session.user.role === 'admin' ? 'bg-red-100 text-red-700' :
+                                                            session.user.role === 'moderator' ? 'bg-blue-100 text-blue-700' :
+                                                                'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                        {(session.user.role || 'user').toUpperCase()}
+                                                    </span>
                                                 </div>
 
-                                                {/* Quick Actions */}
-                                                <div className="grid grid-cols-2 gap-2 mb-4">
-                                                    <Link
-                                                        href="/account"
-                                                        onClick={() => setMobileMenuOpen(false)}
-                                                        className="flex flex-col items-center justify-center p-3 bg-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
-                                                    >
-                                                        <FaUser className="text-gray-700 mb-1" />
-                                                        <span className="text-xs font-medium">Profile</span>
+                                                {/* Quick actions */}
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Link href="/account" onClick={() => setMobileMenuOpen(false)}
+                                                        className="flex flex-col items-center gap-1.5 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                                                        <FaUser className="text-gray-600 text-base" />
+                                                        <span className="text-xs font-semibold text-gray-700">Profile</span>
                                                     </Link>
-                                                    <button
-                                                        onClick={handleSignOut}
-                                                        className="flex flex-col items-center justify-center p-3 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
-                                                    >
-                                                        <FaSignOutAlt className="text-red-600 mb-1" />
-                                                        <span className="text-xs font-medium text-red-600">Sign Out</span>
+                                                    <button onClick={handleSignOut}
+                                                        className="flex flex-col items-center gap-1.5 p-3 bg-red-50 rounded-xl hover:bg-red-100 transition-colors">
+                                                        <FaSignOutAlt className="text-red-500 text-base" />
+                                                        <span className="text-xs font-semibold text-red-600">Sign Out</span>
                                                     </button>
                                                 </div>
 
-                                                {/* Dashboard Links */}
-                                                {getDashboardLinks().length > 0 && (
-                                                    <div className="space-y-2">
-                                                        {getDashboardLinks().map((link) => (
-                                                            <Link
-                                                                key={link.name}
-                                                                href={link.href}
-                                                                onClick={() => setMobileMenuOpen(false)}
-                                                                className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-lg hover:shadow-lg transition-shadow"
-                                                            >
-                                                                {link.icon}
-                                                                <span className="font-medium">{link.name}</span>
-                                                            </Link>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </>
+                                                {/* Dashboard links */}
+                                                {getDashboardLinks().map(link => (
+                                                    <Link key={link.name} href={link.href} onClick={() => setMobileMenuOpen(false)}
+                                                        className="flex items-center gap-3 px-4 py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors">
+                                                        <span className="text-sm">{link.icon}</span>
+                                                        <span className="text-sm font-semibold">{link.name}</span>
+                                                        <FiArrowRight className="ml-auto w-4 h-4 opacity-60" />
+                                                    </Link>
+                                                ))}
+                                            </div>
                                         ) : (
-                                            <Link
-                                                href="/auth/signin"
-                                                onClick={() => setMobileMenuOpen(false)}
-                                                className="flex items-center justify-center space-x-2 py-3 px-4 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl font-semibold hover:shadow-lg transition-shadow"
-                                            >
-                                                <FaUser className="text-lg" />
-                                                <span>Sign In / Register</span>
-                                            </Link>
+                                            /* Not signed in */
+                                            <div className="space-y-2">
+                                                <Link href="/auth/signin" onClick={() => setMobileMenuOpen(false)}
+                                                    className="flex items-center justify-center gap-2 w-full py-3 bg-gray-800 text-white rounded-xl font-semibold text-sm hover:bg-gray-700 transition-colors">
+                                                    <FaUser className="text-sm" />
+                                                    Sign In
+                                                </Link>
+                                                <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}
+                                                    className="flex items-center justify-center gap-2 w-full py-3 bg-gray-100 text-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors">
+                                                    Register
+                                                </Link>
+                                            </div>
                                         )}
                                     </div>
 
-                                    {/* Navigation Items */}
-                                    <div className="p-4">
-                                        <div className="space-y-1">
-                                            {navigation.map((item) => renderMobileItem(item))}
+                                    {/* ── Navigation links ───────────────────── */}
+                                    <div className="px-3 py-3 space-y-0.5">
+                                        {navigation.map(item => renderMobileItem(item))}
 
-                                            <Link
-                                                href="/shop"
-                                                onClick={() => setMobileMenuOpen(false)}
-                                                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                                            >
-                                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                                    <FiShoppingBag className="text-white" />
-                                                </div>
-                                                <span className="font-medium text-gray-900">Shop</span>
-                                                <span className="ml-auto text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                                                    New
-                                                </span>
-                                            </Link>
-                                        </div>
+                                        {/* Shop link */}
+                                        <Link href="/shop" onClick={() => setMobileMenuOpen(false)}
+                                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${pathname.startsWith('/shop') ? 'bg-gray-50 text-gray-900' : 'text-gray-700 hover:bg-gray-50'}`}>
+                                            <FiShoppingBag className="w-4 h-4 flex-shrink-0" />
+                                            <span className="text-sm font-medium flex-1">Shop</span>
+                                            {pathname.startsWith('/shop') && <span className="w-1.5 h-1.5 rounded-full bg-gray-800" />}
+                                        </Link>
                                     </div>
 
-                                    {/* Contact Section */}
-                                    <div className="p-4 mt-2
-                  ">
-                                        <a
-                                            href={`tel:${contactNumber.replace(/\s+/g, '')}`}
-                                            className="flex items-center gap-3"
-                                        >
-                                            <div className="w-9 h-9 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full flex items-center justify-center">
-                                                <FiPhone className="w-5 h-5 text-white" />
+                                    {/* ── Contact ────────────────────────────── */}
+                                    <div className="px-4 py-4 mt-2 border-t border-gray-50">
+                                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Contact</p>
+                                        <a href={`tel:${contactNumber.replace(/\s+/g, '')}`}
+                                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                                            <div className="w-9 h-9 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
+                                                <FiPhone className="w-4 h-4 text-white" />
                                             </div>
-
-                                            <div className="block lg:hidden">
-                                                <p className="text-xs text-gray-500">Call</p>
-                                                <p className="font-bold text-gray-900 text-sm">{contactNumber}</p>
-                                            </div>
-
-                                            <div className="hidden lg:block">
-                                                <p className="text-xs text-gray-500">Call Support</p>
-                                                <p className="font-bold text-gray-900">{contactNumber}</p>
+                                            <div>
+                                                <p className="text-[10px] text-gray-400">Call Support</p>
+                                                <p className="text-sm font-bold text-gray-800">{contactNumber}</p>
                                             </div>
                                         </a>
                                     </div>
-
-
                                 </div>
                             </motion.div>
                         </>
                     )}
                 </AnimatePresence>
-            </div>
 
-            {/* Padding for fixed navbar */}
-            <div className="h-16 lg:hidden" />
+                {/* Spacer for fixed navbar */}
+                <div className="h-16" />
+            </div>
 
             {/* Cart Slider */}
             <div className="relative z-[9999]">

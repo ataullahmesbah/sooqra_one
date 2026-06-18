@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiPlus, FiMinus, FiShoppingCart, FiTruck, FiCreditCard, FiPackage, FiRefreshCw, FiHeadphones } from 'react-icons/fi';
 import { FaWhatsapp, FaPhoneAlt } from 'react-icons/fa';
 
@@ -23,191 +23,231 @@ export default function FAQSection() {
 
     const leftQuestions: FAQItem[] = [
         {
-            q: 'How do I place an order on Sooqra One?',
-            a: 'You can place an order by browsing our products, adding items to your cart, and proceeding to checkout. Create an account for faster checkout and order tracking.',
-        },
-        {
             q: 'কীভাবে অর্ডার করতে পারি?',
             a: `আপনি ৪টি পদ্ধতিতে অর্ডার করতে পারেন:
-        <br>১. <strong>ওয়েবসাইটের মাধ্যমে:</strong> sooqraone.com ভিজিট করে পণ্য নির্বাচন করুন এবং চেকআউট করুন
-        <br>২. <strong>ফেসবুক পেজের মাধ্যমে:</strong> আমাদের ফেসবুক পেজে মেসেজ দিয়ে অর্ডার করুন
-        <br>৩. <strong>হেল্পলাইনে কল করে:</strong> +880 1571-083401 নম্বরে কল করুন
-        <br>৪. <strong>হোয়াটসঅ্যাপের মাধ্যমে:</strong> প্রোডাক্ট লিঙ্ক বা নাম পাঠিয়ে অর্ডার কনফার্ম করুন`,
+            <br>১. <strong>ওয়েবসাইটের মাধ্যমে:</strong> sooqraone.com ভিজিট করে পণ্য নির্বাচন করুন এবং চেকআউট করুন
+            <br>২. <strong>ফেসবুক পেজের মাধ্যমে:</strong> আমাদের ফেসবুক পেজে মেসেজ দিয়ে অর্ডার করুন
+            <br>৩. <strong>হেল্পলাইনে কল করে:</strong> <a href="tel:+8801571083401" class="text-gray-600 hover:text-gray-800 underline">+880 1571-083401</a> নম্বরে কল করুন
+            <br>৪. <strong>হোয়াটসঅ্যাপের মাধ্যমে:</strong> প্রোডাক্ট লিঙ্ক বা নাম পাঠিয়ে অর্ডার কনফার্ম করুন`
         },
         {
-            q: 'What payment methods do you accept?',
-            a: 'We accept Cash on Delivery (COD), Credit/Debit Cards, bKash, Nagad, and bank transfers. All online payments are secured with SSL encryption.',
+            q: 'কি কি পেমেন্ট পদ্ধতি আছে?',
+            a: `আমরা নিম্নলিখিত পেমেন্ট পদ্ধতি গ্রহণ করি:
+            <br>• <strong>ক্যাশ অন ডেলিভারি (COD)</strong> - পণ্য হাতে পেয়ে টাকা দিন
+            <br>• <strong>বিকাশ / নগদ / রকেট</strong> - মোবাইল ব্যাংকিং
+            <br>• <strong>ক্রেডিট/ডেবিট কার্ড</strong> - ভিসা, মাস্টারকার্ড
+            <br>• <strong>ব্যাংক ট্রান্সফার</strong> - সরাসরি ব্যাংকে পেমেন্ট
+            <br><br>সব অনলাইন পেমেন্ট SSL এনক্রিপশনের মাধ্যমে সুরক্ষিত।`
         },
         {
-            q: 'How long does delivery take?',
-            a: 'Delivery typically takes 2-7 business days within Dhaka and 5-10 business days outside Dhaka, depending on your location and product availability.',
+            q: 'ডেলিভারি কতদিন সময় লাগে?',
+            a: `আমরা সারা বাংলাদেশে ডেলিভারি দেই:
+            <br>• <strong>ঢাকার ভিতরে:</strong> ২-৩ কর্মদিবস
+            <br>• <strong>ঢাকার বাইরে (বড় শহর):</strong> ৩-৫ কর্মদিবস
+            <br>• <strong>রিমোট এরিয়া:</strong> ৫-৭ কর্মদিবস
+            <br><br>অর্ডার কনফার্মেশনের পর ট্র্যাকিং নম্বর SMS/ইমেইলে পাঠানো হবে।`
         },
         {
-            q: 'Do you deliver outside Dhaka?',
-            a: 'Yes, we deliver nationwide across Bangladesh through reliable courier services like Sundarban, SA Paribahan, and Pathao.',
+            q: 'ডেলিভারি চার্জ কত?',
+            a: `ডেলিভারি চার্জ আপনার লোকেশনের উপর নির্ভর করে:
+            <br>• <strong>ঢাকা সিটি কর্পোরেশন এলাকা:</strong> ৬০ টাকা
+            <br>• <strong>ঢাকার আশেপাশে (সাভার, গাজীপুর):</strong> ৮০ টাকা
+            <br>• <strong>ঢাকার বাইরে (বিভাগীয় শহর):</strong> ১২০ টাকা
+            <br>• <strong>জেলা ও থানা সদর:</strong> ১৫০ টাকা
+            <br><br><strong>ফ্রি ডেলিভারি:</strong> ২০০০ টাকার উপরে অর্ডার করলে ডেলিভারি চার্জ ফ্রি!`
         },
         {
-            q: 'আমি কি ঢাকার বাইরে অর্ডার করতে পারবো?',
-            a: `হ্যাঁ, আমরা পুরো বাংলাদেশে ডেলিভারি প্রদান করি:
-        <br>• <strong>ঢাকার ভিতরে:</strong> ২-৩ দিন
-        <br>• <strong>ঢাকার বাইরে:</strong> ৩-৫ দিন
-        <br>• <strong>রিমোট এরিয়া:</strong> ৫-৭ দিন
-        <br>ডেলিভারি চার্জ আপনার লোকেশনের উপর নির্ভর করে`,
+            q: 'কিভাবে অর্ডার ট্র্যাক করবো?',
+            a: `অর্ডার ট্র্যাক করার ৩টি উপায়:
+            <br>১. <strong>ওয়েবসাইটে লগইন করুন:</strong> "My Orders" সেকশন থেকে ট্র্যাক করুন
+            <br>২. <strong>SMS/ইমেইল চেক করুন:</strong> অর্ডার ডিসপ্যাচের সময় ট্র্যাকিং লিংক পাঠানো হয়
+            <br>৩. <strong>হেল্পলাইনে কল করুন:</strong> <a href="tel:+8801571083401" class="text-gray-600 hover:text-gray-800 underline">+880 1571-083401</a>
+            <br><br>কুরিয়ার কোম্পানির ট্র্যাকিং নম্বর দিয়ে সরাসরি ট্র্যাক করতে পারবেন।`
         },
         {
-            q: 'Is my personal information secure?',
-            a: 'Yes, we use industry-standard SSL encryption to protect your personal and payment information. Read our <a href="/privacy-policy" class="text-gray-600 hover:underline font-medium">Privacy Policy</a> for details.',
+            q: 'পণ্য ফেরত বা প্রতিস্থাপন নীতি কী?',
+            a: `আমাদের "৭ দিনের রিটার্ন পলিসি" আছে:
+            <br>• <strong>ভুল পণ্য পাঠানো হলে:</strong> সম্পূর্ণ টাকা ফেরত অথবা রিপ্লেসমেন্ট
+            <br>• <strong>পণ্য নষ্ট বা ক্ষতিগ্রস্ত হলে:</strong> ডেলিভারির ৪৮ ঘন্টার মধ্যে জানাতে হবে
+            <br>• <strong>পণ্যের মানে সন্তুষ্ট না হলে:</strong> ৭ দিনের মধ্যে ফেরত দিতে পারবেন
+            <br><br><strong>শর্ত:</strong> পণ্য অবশ্যই অমূলক অবস্থায় থাকতে হবে এবং প্যাকেট খোলা থাকলে চলবে না।`
         },
     ];
 
     const rightQuestions: FAQItem[] = [
         {
-            q: 'How do I create an account?',
-            a: 'Click on "Sign Up" at the top right corner, enter your email and password, and verify your email address. You can also sign up with Google for faster registration.',
-        },
-        {
             q: 'অর্ডার বাতিল কিভাবে করবো?',
             a: `পণ্য অর্ডার করার ১ ঘন্টার মধ্যে আমাদের হেল্পলাইনে কল করে অর্ডার বাতিল করতে পারবেন:
-        <br>• হেল্পলাইন: <a href="tel:+8801571083401" class="text-gray-600 hover:underline font-medium">+880 1571-083401</a>
-        <br>• হোয়াটসঅ্যাপ: <a href="https://wa.me/8801571083401" class="text-gray-600 hover:underline font-medium">WhatsApp</a>
-        <br>• ইমেইল: <a href="mailto:contact@sooqraone.com" class="text-gray-600 hover:underline font-medium">contact@sooqraone.com</a>
-        <br><em>১ ঘন্টার পর অর্ডার প্রসেসিং শুরু হয়ে যায়, তাই দ্রুত যোগাযোগ করুন</em>`,
+            <br>• <strong>হেল্পলাইন:</strong> <a href="tel:+8801571083401" class="text-gray-600 hover:text-gray-800 underline">+880 1571-083401</a>
+            <br>• <strong>হোয়াটসঅ্যাপ:</strong> <a href="https://wa.me/8801571083401" class="text-gray-600 hover:text-gray-800 underline">+880 1571-083401</a>
+            <br>• <strong>ইমেইল:</strong> <a href="mailto:contact@sooqraone.com" class="text-gray-600 hover:text-gray-800 underline">contact@sooqraone.com</a>
+            <br><br><em>১ ঘন্টার পর অর্ডার প্রসেসিং শুরু হয়ে যায়, তাই দ্রুত যোগাযোগ করুন।</em>
+            <br><br>অর্ডার ডিসপ্যাচ হয়ে গেলে বাতিল করা সম্ভব নয়।`
         },
         {
-            q: 'Can I modify or cancel my order?',
-            a: 'You can modify or cancel your order within 1 hour of placing it by contacting our support team at <a href="tel:+8801571083401" class="text-gray-600 hover:underline font-medium">+880 1571-083401</a> or via WhatsApp.',
+            q: 'কিভাবে অ্যাকাউন্ট তৈরি করবো?',
+            a: `অ্যাকাউন্ট তৈরি করা খুবই সহজ:
+            <br>১. <strong>সাইন আপ করুন:</strong> ওয়েবসাইটের উপরের ডান দিকের "Sign Up" বাটনে ক্লিক করুন
+            <br>২. <strong>ইনফর্মেশন দিন:</strong> নাম, ইমেইল, ফোন নম্বর এবং পাসওয়ার্ড দিন
+            <br>৩. <strong>ভেরিফাই করুন:</strong> ইমেইলে পাঠানো লিংকে ক্লিক করে অ্যাকাউন্ট ভেরিফাই করুন
+            <br><br>আপনি <strong>Google অথবা Facebook</strong> দিয়েও লগইন করতে পারবেন।`
         },
         {
-            q: 'What should I do if I receive a damaged or wrong product?',
-            a: 'Immediately contact our support team within 48 hours with photos/videos of the product. We will arrange a replacement or refund as per our return policy.',
+            q: 'বিকাশে পেমেন্টের নিয়ম কী?',
+            a: `বিকাশে পেমেন্ট করার নিয়ম:
+            <br>• <strong>"Send Money" খরচ:</strong> আপনাকে দিতে হবে না, আমরা বহন করবো
+            <br>• <strong>ক্যাশ আউট খরচ:</strong> যদি আমরা টাকা সেন্ড করি এবং আপনাকে ক্যাশ আউট করতে হয়, সেক্ষেত্রে আপনাকে খরচ বহন করতে হবে
+            <br>• <strong>সবচেয়ে ভালো উপায়:</strong> ডিরেক্ট পেমেন্ট করুন অথবা Cash on Delivery (COD) সিলেক্ট করুন
+            <br><br><strong>বিকাশ নম্বর:</strong> ০১৭XXXXXXXX (অর্ডার কনফার্মেশনের সময় নম্বর দেওয়া হবে)`
         },
         {
-            q: 'অর্ডার কনফার্মেশন কীভাবে পাবো?',
-            a: `অর্ডার করার পর আপনি ৩টি ভাবে কনফার্মেশন পাবেন:
-        <br>১. <strong>অটো কনফার্মেশন:</strong> অর্ডার সফল হলে একটি কনফার্মেশন মেসেজ পাবেন
-        <br>২. <strong>কলের মাধ্যমে:</strong> আমাদের প্রতিনিধি আপনাকে কল করে ফাইনাল কনফার্ম করবেন
-        <br>৩. <strong>ইমেইল/SMS:</strong> ডিটেইলস সহ কনফার্মেশন ইমেইল/SMS পাবেন
-        <br><strong>কনফার্মেশন না পেলে:</strong> হেল্পলাইনে কল করুন বা WhatsApp এ মেসেজ দিন`,
+            q: 'কিভাবে ডিসকাউন্ট কোড ব্যবহার করবো?',
+            a: `ডিসকাউন্ট কোড ব্যবহার করার নিয়ম:
+            <br>১. চেকআউট পেজে "Promo Code" ফিল্ডটি খুঁজুন
+            <br>২. আপনার ডিসকাউন্ট কোডটি লিখুন
+            <br>৩. "Apply" বাটনে ক্লিক করুন
+            <br>৪. ডিসকাউন্ট স্বয়ংক্রিয়ভাবে total থেকে কেটে নেওয়া হবে
+            <br><br><strong>নোট:</strong> একটি অর্ডারে শুধুমাত্র একটি কোড ব্যবহার করা যাবে।`
         },
         {
-            q: 'How do I apply a discount code?',
-            a: 'Enter your discount code in the "Promo Code" field during checkout. The discount will be automatically applied to your order total.',
+            q: 'পাইকারি মূল্যে পণ্য কেনার সুযোগ আছে কি?',
+            a: `হ্যাঁ, আমরা পাইকারি ক্রেতাদের জন্য বিশেষ মূল্য অফার করি:
+            <br>• <strong>ন্যূনতম অর্ডার:</strong> ৫০০০ টাকা বা নির্দিষ্ট পণ্যের ক্ষেত্রে ১০ পিস
+            <br>• <strong>ডিসকাউন্ট:</strong> পাইকারি অর্ডারে ১০%-৩০% পর্যন্ত ডিসকাউন্ট
+            <br>• <strong>ডেলিভারি:</strong> বড় অর্ডারে ফ্রি ডেলিভারি
+            <br><br><strong>যোগাযোগ করুন:</strong> পাইকারি অর্ডারের জন্য আমাদের সেলস টিমে যোগাযোগ করুন <a href="tel:+8801571083401" class="text-gray-600 hover:text-gray-800 underline">+880 1571-083401</a>`
         },
         {
-            q: 'বিকাশে পেমেন্টের খরচ কে দেবে?',
-            a: `বিকাশে পেমেন্টের ক্ষেত্রে:
-        <br>• <strong>সেন্ড মানি/পেমেন্টের খরচ:</strong> আপনাকে দিতে হবে না, আমরা বহন করবো
-        <br>• <strong>ক্যাশ আউট খরচ:</strong> আপনাকে বহন করতে হবে (যদি আমরা টাকা সেন্ড করি এবং আপনাকে ক্যাশ আউট করতে হয়)
-        <br>• <strong>সবচেয়ে ভালো উপায়:</strong> ডিরেক্ট পেমেন্ট করুন অথবা Cash on Delivery (COD) সিলেক্ট করুন
-        <br><em>কোন সমস্যা হলে হেল্পলাইনে কল করুন</em>`,
+            q: 'কিভাবে যোগাযোগ করবো?',
+            a: `আমরা ২৪/৭ আপনার জন্য উন্মুক্ত:
+            <br>• <strong>হটলাইন:</strong> <a href="tel:+8801571083401" class="text-gray-600 hover:text-gray-800 underline">+880 1571-083401</a>
+            <br>• <strong>হোয়াটসঅ্যাপ:</strong> <a href="https://wa.me/8801571083401" class="text-gray-600 hover:text-gray-800 underline">+880 1571-083401</a>
+            <br>• <strong>ইমেইল:</strong> <a href="mailto:contact@sooqraone.com" class="text-gray-600 hover:text-gray-800 underline">contact@sooqraone.com</a>
+            <br>• <strong>ফেসবুক:</strong> <a href="https://facebook.com/sooqraone" class="text-gray-600 hover:text-gray-800 underline" target="_blank">facebook.com/sooqraone</a>
+            <br><br><strong>অফিস সময়:</strong> রবিবার থেকে বৃহস্পতিবার, সকাল ১০টা - সন্ধ্যা ৭টা`
         },
     ];
 
-    // Schema Markup for FAQ
-    const schema = {
+    // ✅ Schema তৈরি করুন (ক্লায়েন্ট সাইডে রেন্ডার হবে না)
+    const getFaqSchema = () => ({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [...leftQuestions, ...rightQuestions].map((item) => ({
+            "@type": "Question",
+            "name": item.q,
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": item.a.replace(/<[^>]+>/g, '')
+            }
+        }))
+    });
+
+    const getBreadcrumbSchema = () => ({
         '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: [...leftQuestions, ...rightQuestions].map((item) => ({
-            '@type': 'Question',
-            name: item.q,
-            acceptedAnswer: {
-                '@type': 'Answer',
-                text: item.a.replace(/<[^>]+>/g, ''),
-            },
-        })),
-    };
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://sooqraone.com/' },
+            { '@type': 'ListItem', position: 2, name: 'FAQ', item: 'https://sooqraone.com/faq' },
+        ],
+    });
+
+    const getOrganizationSchema = () => ({
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'Sooqra One',
+        url: 'https://sooqraone.com',
+        logo: 'https://sooqraone.com/logo.png',
+        contactPoint: {
+            '@type': 'ContactPoint',
+            telephone: '+8801571083401',
+            contactType: 'customer service',
+            availableLanguage: ['Bengali', 'English'],
+            areaServed: 'BD',
+        },
+        sameAs: ['https://facebook.com/sooqraone', 'https://instagram.com/sooqraone'],
+    });
 
     return (
         <>
-            <section className="bg-gray-50 text-gray-800 py-16 px-4 sm:px-6 lg:px-8">
+            <section className="bg-gray-50 py-12 md:py-20 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}
-                    <div className="text-center mb-16">
-                        <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-600 to-gray-600 mb-4">
-                            Frequently Asked Questions
+                    <div className="text-center mb-12 md:mb-16">
+                        <div className="inline-flex items-center gap-2 bg-gray-100 px-3 md:px-4 py-1.5 md:py-2 rounded-full mb-4">
+                            <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-600 rounded-full"></div>
+                            <span className="text-gray-600 text-xs md:text-sm font-medium uppercase tracking-wide">
+                                জেনে নিন
+                            </span>
+                        </div>
+
+                        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 md:mb-4">
+                            সাধারণ জিজ্ঞাসা
                         </h1>
-                        <p className="text-gray-600 text-lg max-w-3xl mx-auto mb-8">
-                            Find quick answers to common questions about shopping at Sooqra One
+
+                        <div className="w-20 md:w-24 h-1 bg-gray-600 mx-auto rounded-full"></div>
+
+                        <p className="text-gray-500 text-sm md:text-base max-w-2xl mx-auto mt-4 md:mt-6">
+                            অর্ডার, ডেলিভারি, পেমেন্ট এবং আরও অনেক কিছু সম্পর্কে জানুন
                         </p>
 
                         {/* Quick Help Icons */}
-                        <div className="flex flex-wrap justify-center gap-6 mb-12">
-                            <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
-                                    <FiShoppingCart className="w-6 h-6 text-gray-600" />
+                        <div className="flex flex-wrap justify-center gap-4 md:gap-6 mt-8 md:mt-12">
+                            {[
+                                { icon: FiShoppingCart, label: 'অর্ডার করা' },
+                                { icon: FiTruck, label: 'ডেলিভারি' },
+                                { icon: FiCreditCard, label: 'পেমেন্ট' },
+                                { icon: FiRefreshCw, label: 'রিটার্ন' },
+                                { icon: FiHeadphones, label: 'সাপোর্ট' },
+                            ].map((item, idx) => (
+                                <div key={idx} className="flex flex-col items-center group cursor-pointer">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:shadow-md transition-all">
+                                        <item.icon className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
+                                    </div>
+                                    <span className="text-xs md:text-sm text-gray-600">{item.label}</span>
                                 </div>
-                                <span className="text-sm text-gray-600">Ordering</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
-                                    <FiTruck className="w-6 h-6 text-blue-600" />
-                                </div>
-                                <span className="text-sm text-gray-600">Delivery</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-2">
-                                    <FiCreditCard className="w-6 h-6 text-purple-600" />
-                                </div>
-                                <span className="text-sm text-gray-600">Payment</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-2">
-                                    <FiRefreshCw className="w-6 h-6 text-yellow-600" />
-                                </div>
-                                <span className="text-sm text-gray-600">Returns</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mb-2">
-                                    <FiHeadphones className="w-6 h-6 text-cyan-600" />
-                                </div>
-                                <span className="text-sm text-gray-600">Support</span>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                    {/* FAQ Grid - 2 Columns */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                         {/* Left Column */}
-                        <div className="space-y-4">
+                        <div className="space-y-3 md:space-y-4">
                             {leftQuestions.map((item, index) => {
                                 const isActive = leftActiveIndex === index;
                                 return (
                                     <div
                                         key={`faq-left-${index}`}
-                                        className="bg-white rounded-xl overflow-hidden border border-gray-200 transition-all duration-300 hover:border-gray-300 hover:shadow-lg"
+                                        className="bg-white rounded-xl md:rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-md"
                                     >
                                         <button
                                             onClick={() => toggleFAQ('left', index)}
-                                            className={`w-full flex justify-between items-center p-5 text-left transition-all duration-300 ${isActive ? 'bg-gray-50' : 'hover:bg-gray-50'
+                                            className={`w-full flex justify-between items-center p-4 md:p-5 text-left transition-all duration-300 ${isActive ? 'bg-gray-50' : 'hover:bg-gray-50'
                                                 }`}
                                             aria-expanded={isActive}
-                                            aria-controls={`faq-answer-left-${index}`}
                                             aria-label={`Toggle ${item.q}`}
                                         >
-                                            <span className="text-gray-800 font-semibold text-sm sm:text-base mr-4 text-left">
+                                            <span className="text-gray-800 font-semibold text-sm md:text-base leading-relaxed pr-3 md:pr-4">
                                                 {item.q}
                                             </span>
-                                            <div className="flex-shrink-0 ml-2">
-                                                <div
-                                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-600'
-                                                        }`}
-                                                >
+                                            <div className="flex-shrink-0">
+                                                <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-500'
+                                                    }`}>
                                                     {isActive ? (
-                                                        <FiMinus className="w-4 h-4" />
+                                                        <FiMinus className="w-4 h-4 md:w-5 md:h-5" />
                                                     ) : (
-                                                        <FiPlus className="w-4 h-4" />
+                                                        <FiPlus className="w-4 h-4 md:w-5 md:h-5" />
                                                     )}
                                                 </div>
                                             </div>
                                         </button>
-                                        <div
-                                            id={`faq-answer-left-${index}`}
-                                            className={`overflow-hidden transition-all duration-300 ${isActive ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                                                }`}
-                                            role="region"
-                                            aria-labelledby={`faq-left-${index}`}
-                                        >
-                                            <div className="p-5 pt-0">
-                                                <div className="text-gray-600 text-sm sm:text-base leading-relaxed pt-4 border-t border-gray-200" dangerouslySetInnerHTML={{ __html: item.a }} />
+
+                                        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isActive ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                                            }`}>
+                                            <div className="p-4 md:p-5 pt-0">
+                                                <div className="text-gray-600 text-sm md:text-base leading-relaxed pt-4 border-t border-gray-100"
+                                                    dangerouslySetInnerHTML={{ __html: item.a }}
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -216,47 +256,42 @@ export default function FAQSection() {
                         </div>
 
                         {/* Right Column */}
-                        <div className="space-y-4">
+                        <div className="space-y-3 md:space-y-4">
                             {rightQuestions.map((item, index) => {
                                 const isActive = rightActiveIndex === index;
                                 return (
                                     <div
                                         key={`faq-right-${index}`}
-                                        className="bg-white rounded-xl overflow-hidden border border-gray-200 transition-all duration-300 hover:border-gray-300 hover:shadow-lg"
+                                        className="bg-white rounded-xl md:rounded-2xl overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-md"
                                     >
                                         <button
                                             onClick={() => toggleFAQ('right', index)}
-                                            className={`w-full flex justify-between items-center p-5 text-left transition-all duration-300 ${isActive ? 'bg-gray-50' : 'hover:bg-gray-50'
+                                            className={`w-full flex justify-between items-center p-4 md:p-5 text-left transition-all duration-300 ${isActive ? 'bg-gray-50' : 'hover:bg-gray-50'
                                                 }`}
                                             aria-expanded={isActive}
-                                            aria-controls={`faq-answer-right-${index}`}
                                             aria-label={`Toggle ${item.q}`}
                                         >
-                                            <span className="text-gray-800 font-semibold text-sm sm:text-base mr-4 text-left">
+                                            <span className="text-gray-800 font-semibold text-sm md:text-base leading-relaxed pr-3 md:pr-4">
                                                 {item.q}
                                             </span>
-                                            <div className="flex-shrink-0 ml-2">
-                                                <div
-                                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-600'
-                                                        }`}
-                                                >
+                                            <div className="flex-shrink-0">
+                                                <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-500'
+                                                    }`}>
                                                     {isActive ? (
-                                                        <FiMinus className="w-4 h-4" />
+                                                        <FiMinus className="w-4 h-4 md:w-5 md:h-5" />
                                                     ) : (
-                                                        <FiPlus className="w-4 h-4" />
+                                                        <FiPlus className="w-4 h-4 md:w-5 md:h-5" />
                                                     )}
                                                 </div>
                                             </div>
                                         </button>
-                                        <div
-                                            id={`faq-answer-right-${index}`}
-                                            className={`overflow-hidden transition-all duration-300 ${isActive ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                                                }`}
-                                            role="region"
-                                            aria-labelledby={`faq-right-${index}`}
-                                        >
-                                            <div className="p-5 pt-0">
-                                                <div className="text-gray-600 text-sm sm:text-base leading-relaxed pt-4 border-t border-gray-200" dangerouslySetInnerHTML={{ __html: item.a }} />
+
+                                        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isActive ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                                            }`}>
+                                            <div className="p-4 md:p-5 pt-0">
+                                                <div className="text-gray-600 text-sm md:text-base leading-relaxed pt-4 border-t border-gray-100"
+                                                    dangerouslySetInnerHTML={{ __html: item.a }}
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -266,75 +301,69 @@ export default function FAQSection() {
                     </div>
 
                     {/* Contact Section */}
-                    <div className="mt-16 bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
-                        <div className="text-center mb-6">
-                            <h3 className="text-2xl font-bold text-gray-800 mb-2">Still Have Questions?</h3>
-                            <p className="text-gray-600">Our customer support team is here to help you 24/7</p>
+                    <div className="mt-12 md:mt-16 bg-white rounded-xl md:rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm">
+                        <div className="text-center mb-6 md:mb-8">
+                            <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">
+                                এখনও প্রশ্ন থেকে গেছে?
+                            </h3>
+                            <p className="text-gray-500 text-sm md:text-base">
+                                আমাদের কাস্টমার সাপোর্ট টিম ২৪/৭ আপনাকে সাহায্য করতে প্রস্তুত
+                            </p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-
-                            <div className="bg-gray-50 p-6 rounded-xl text-center border border-gray-100 hover:border-green-200 transition-colors">
-                                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <FaWhatsapp className="w-6 h-6 text-green-600" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            <div className="bg-gray-50 p-4 md:p-6 rounded-xl text-center border border-gray-200 hover:border-green-300 transition-all hover:shadow-md">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                                    <FaWhatsapp className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                 </div>
-                                <h4 className="text-lg font-semibold text-gray-800 mb-2">WhatsApp</h4>
-                                <p className="text-gray-600 text-sm mb-3">Fastest response time</p>
-                                <a
-                                    href="https://wa.me/8801571083401"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-                                >
-                                    Chat Now
-                                </a>
+                                <h4 className="text-base md:text-lg font-semibold text-gray-800 mb-1">হোয়াটসঅ্যাপ</h4>
+                                <p className="text-gray-500 text-xs md:text-sm mb-3">সবচেয়ে দ্রুত সাড়া</p>
+                                <a href="https://wa.me/8801571083401" target="_blank" rel="noopener noreferrer" className="inline-block bg-gray-800 hover:bg-gray-900 text-white font-medium text-sm md:text-base py-2 px-4 md:px-6 rounded-lg transition-colors">চ্যাট করুন</a>
                             </div>
 
-
-
-                            <div className="bg-gray-50 p-6 rounded-xl text-center border border-gray-100 hover:border-blue-200 transition-colors">
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <FaPhoneAlt className="w-6 h-6 text-blue-600" />
+                            <div className="bg-gray-50 p-4 md:p-6 rounded-xl text-center border border-gray-200 hover:border-blue-300 transition-all hover:shadow-md">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                                    <FaPhoneAlt className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                 </div>
-                                <h4 className="text-lg font-semibold text-gray-800 mb-2">Phone Support</h4>
-                                <p className="text-gray-600 text-sm mb-3">10 AM - 10 PM (Daily)</p>
-                                <a
-                                    href="tel:+8801571083401"
-                                    className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-                                >
-                                    Call Now
-                                </a>
+                                <h4 className="text-base md:text-lg font-semibold text-gray-800 mb-1">ফোন সাপোর্ট</h4>
+                                <p className="text-gray-500 text-xs md:text-sm mb-3">সকাল ১০টা - রাত ১০টা</p>
+                                <a href="tel:+8801571083401" className="inline-block bg-gray-800 hover:bg-gray-900 text-white font-medium text-sm md:text-base py-2 px-4 md:px-6 rounded-lg transition-colors">কল করুন</a>
                             </div>
 
-                            <div className="bg-gray-50 p-6 rounded-xl text-center border border-gray-100 hover:border-purple-200 transition-colors">
-                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <FiHeadphones className="w-6 h-6 text-purple-600" />
+                            <div className="bg-gray-50 p-4 md:p-6 rounded-xl text-center border border-gray-200 hover:border-purple-300 transition-all hover:shadow-md">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+                                    <FiHeadphones className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
                                 </div>
-                                <h4 className="text-lg font-semibold text-gray-800 mb-2">Email Support</h4>
-                                <p className="text-gray-600 text-sm mb-3">24/7 email support</p>
-                                <a
-                                    href="mailto:contact@sooqraone.com"
-                                    className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-                                >
-                                    Email Us
-                                </a>
+                                <h4 className="text-base md:text-lg font-semibold text-gray-800 mb-1">ইমেইল সাপোর্ট</h4>
+                                <p className="text-gray-500 text-xs md:text-sm mb-3">২৪/৭ ইমেইল সাপোর্ট</p>
+                                <a href="mailto:contact@sooqraone.com" className="inline-block bg-gray-800 hover:bg-gray-900 text-white font-medium text-sm md:text-base py-2 px-4 md:px-6 rounded-lg transition-colors">ইমেইল করুন</a>
                             </div>
                         </div>
 
-                        <div className="text-center mt-8 pt-6 border-t border-gray-200">
-                            <p className="text-gray-600 text-sm">
-                                <strong>Business Hours:</strong> Sunday to Thursday, 10:00 AM - 07:00 PM
+                        <div className="text-center mt-6 md:mt-8 pt-6 border-t border-gray-100">
+                            <p className="text-gray-500 text-xs md:text-sm">
+                                <strong>অফিস সময়:</strong> রবিবার থেকে বৃহস্পতিবার, সকাল ১০:০০টা - সন্ধ্যা ০৭:০০টা
                                 <br />
-                                <strong>Emergency Support:</strong> Available 24/7 via WhatsApp
+                                <strong>জরুরি সাপোর্ট:</strong> হোয়াটসঅ্যাপে ২৪/৭ যোগাযোগ করুন
                             </p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Schema Markup */}
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+            {/* ✅ Schema Scripts - useEffect ছাড়া সরাসরি রেন্ডার করা হয়েছে (কোনো error হবে না) */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(getFaqSchema()) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(getBreadcrumbSchema()) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(getOrganizationSchema()) }}
+            />
         </>
     );
 }

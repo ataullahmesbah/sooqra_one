@@ -1,3 +1,5 @@
+// src/types/index.ts
+
 export interface Price {
     currency: string;
     amount: number;
@@ -46,6 +48,7 @@ export interface Product {
     metaTitle: string;
     metaDescription: string;
     keywords?: string[];
+     tags?: string[];
     faqs?: Array<{
         question: string;
         answer: string;
@@ -76,4 +79,5 @@ export interface Product {
     createdAt?: string;
     updatedAt?: string;
     hasVariants?: boolean;
+    total_sales?: number;
 }

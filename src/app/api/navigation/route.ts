@@ -1,100 +1,64 @@
+// src/app/api/navigation/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { NavItem } from '@/src/models/Navigation';
 import dbConnect from '@/src/lib/dbConnect';
 
-// GET - Get all active navigation items
-export async function GET(request: NextRequest) {
+// ✅ GET - active nav items with ISR cache
+export async function GET(_request: NextRequest) {
     try {
         await dbConnect();
 
-        const navigation = await NavItem.find({
-            isActive: true,
-            parentId: null
-        })
+        const navigation = await NavItem.find({ isActive: true, parentId: null })
             .sort({ order: 1 })
-            .populate({
-                path: 'children',
-                options: { sort: { order: 1 } }
-            })
+            .populate({ path: 'children', options: { sort: { order: 1 } } })
             .lean();
 
-        return NextResponse.json({
-            success: true,
-            data: navigation
-        });
-
+        return NextResponse.json(
+            { success: true, data: navigation },
+            {
+                status: 200,
+                headers: {
+                    // ✅ Edge cache 5 min, stale-while-revalidate 10 min
+                    // Navigation almost never changes — safe to cache aggressively
+                    'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+                },
+            }
+        );
     } catch (error) {
         console.error('Navigation fetch error:', error);
         return NextResponse.json(
-            {
-                success: false,
-                error: 'Failed to fetch navigation',
-                message: error instanceof Error ? error.message : 'Unknown error'
-            },
+            { success: false, error: 'Failed to fetch navigation' },
             { status: 500 }
         );
     }
 }
 
-// POST - Create new navigation item
 export async function POST(request: NextRequest) {
     try {
         await dbConnect();
         const body = await request.json();
-
         const { title, slug = '#', type = 'link', order = 0, parentId = null } = body;
 
-        if (!title || title.trim().length === 0) {
-            return NextResponse.json(
-                { success: false, error: 'Title is required' },
-                { status: 400 }
-            );
+        if (!title?.trim()) {
+            return NextResponse.json({ success: false, error: 'Title is required' }, { status: 400 });
         }
-
-        // Validate parentId if provided
         if (parentId && !mongoose.Types.ObjectId.isValid(parentId)) {
-            return NextResponse.json(
-                { success: false, error: 'Invalid parent ID' },
-                { status: 400 }
-            );
+            return NextResponse.json({ success: false, error: 'Invalid parent ID' }, { status: 400 });
         }
 
         const newItem = new NavItem({
-            title: title.trim(),
-            slug: slug.trim(),
-            type,
-            order: Number(order) || 0,
-            parentId: parentId || null,
-            isActive: true
+            title: title.trim(), slug: slug.trim(), type,
+            order: Number(order) || 0, parentId: parentId || null, isActive: true,
         });
-
         await newItem.save();
 
-        // If it's a child item, populate parent info
-        if (parentId) {
-            await newItem.populate('parentId');
-        }
-
-        return NextResponse.json({
-            success: true,
-            data: newItem
-        }, { status: 201 });
-
+        return NextResponse.json({ success: true, data: newItem }, { status: 201 });
     } catch (error) {
-        console.error('Navigation creation error:', error);
-        return NextResponse.json(
-            {
-                success: false,
-                error: 'Failed to create navigation item',
-                message: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
-        );
+        return NextResponse.json({ success: false, error: 'Failed to create item' }, { status: 500 });
     }
 }
 
-// PUT - Update navigation item
 export async function PUT(request: NextRequest) {
     try {
         await dbConnect();
@@ -102,59 +66,27 @@ export async function PUT(request: NextRequest) {
         const id = searchParams.get('id');
 
         if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                { success: false, error: 'Valid ID is required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ success: false, error: 'Valid ID required' }, { status: 400 });
         }
 
         const body = await request.json();
-
-        // Find the item first
-        const existingItem = await NavItem.findById(id);
-        if (!existingItem) {
-            return NextResponse.json(
-                { success: false, error: 'Navigation item not found' },
-                { status: 404 }
-            );
-        }
-
-        // Prepare update data
         const updateData: any = {};
         if (body.title !== undefined) updateData.title = body.title.trim();
         if (body.slug !== undefined) updateData.slug = body.slug.trim();
         if (body.type !== undefined) updateData.type = body.type;
         if (body.order !== undefined) updateData.order = Number(body.order) || 0;
         if (body.isActive !== undefined) updateData.isActive = body.isActive;
-        if (body.parentId !== undefined) {
-            updateData.parentId = body.parentId || null;
-        }
+        if (body.parentId !== undefined) updateData.parentId = body.parentId || null;
 
-        const updatedItem = await NavItem.findByIdAndUpdate(
-            id,
-            { $set: updateData },
-            { new: true, runValidators: true }
-        );
+        const updated = await NavItem.findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true });
+        if (!updated) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
 
-        return NextResponse.json({
-            success: true,
-            data: updatedItem
-        });
-
+        return NextResponse.json({ success: true, data: updated });
     } catch (error) {
-        console.error('Navigation update error:', error);
-        return NextResponse.json(
-            {
-                success: false,
-                error: 'Failed to update navigation item',
-                message: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
-        );
+        return NextResponse.json({ success: false, error: 'Failed to update' }, { status: 500 });
     }
 }
 
-// DELETE - Delete navigation item
 export async function DELETE(request: NextRequest) {
     try {
         await dbConnect();
@@ -162,44 +94,15 @@ export async function DELETE(request: NextRequest) {
         const id = searchParams.get('id');
 
         if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                { success: false, error: 'Valid ID is required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ success: false, error: 'Valid ID required' }, { status: 400 });
         }
 
-        // Check if item has children
-        const childCount = await NavItem.countDocuments({ parentId: id, isActive: true });
-        if (childCount > 0) {
-            // Option 1: Delete children first
-            await NavItem.deleteMany({ parentId: id });
-            // Option 2: Or update children to have null parentId
-            // await NavItem.updateMany({ parentId: id }, { $set: { parentId: null } });
-        }
+        await NavItem.deleteMany({ parentId: id });
+        const deleted = await NavItem.findByIdAndDelete(id);
+        if (!deleted) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
 
-        const deletedItem = await NavItem.findByIdAndDelete(id);
-
-        if (!deletedItem) {
-            return NextResponse.json(
-                { success: false, error: 'Navigation item not found' },
-                { status: 404 }
-            );
-        }
-
-        return NextResponse.json({
-            success: true,
-            message: 'Navigation item deleted successfully'
-        });
-
+        return NextResponse.json({ success: true, message: 'Deleted successfully' });
     } catch (error) {
-        console.error('Navigation delete error:', error);
-        return NextResponse.json(
-            {
-                success: false,
-                error: 'Failed to delete navigation item',
-                message: error instanceof Error ? error.message : 'Unknown error'
-            },
-            { status: 500 }
-        );
+        return NextResponse.json({ success: false, error: 'Failed to delete' }, { status: 500 });
     }
 }

@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "../providers/providers";
 import WhatsAppButton from "../components/WhatsAppButton/WhatsAppButton";
 import FacebookPixel from "../components/analytics/FacebookPixel";
+import DynamicGTM from "../components/analytics/DynamicGTM";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,8 +23,7 @@ export const metadata = {
   ],
   metadataBase: new URL("https://sooqraone.com"),
   openGraph: {
-    title:
-      "Sooqra One | Organic & Islamic Lifestyle Ecommerce in Bangladesh",
+    title: "Sooqra One | Organic & Islamic Lifestyle Ecommerce in Bangladesh",
     description:
       "Discover premium organic food, Sunnah products, and halal lifestyle essentials at Sooqra One.",
     url: "https://sooqraone.com",
@@ -39,18 +39,23 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.className} antialiased`}
-        suppressHydrationWarning={true}
-      >
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning={true}>
+        {/*
+                    ✅ DynamicGTM — Server Component, reads DB at request time.
+                       If GTM is off in admin panel → tag never injects.
+                       GA4 + Microsoft Clarity live inside GTM, so they turn off too.
+                */}
+        <DynamicGTM />
+
+        {/*
+                    ✅ FacebookPixel — Client Component, fetches /api/tracking-config.
+                       If Pixel is off in admin panel → Script never injects.
+                */}
         <FacebookPixel />
+
         <Providers>{children}</Providers>
         <WhatsAppButton />
       </body>

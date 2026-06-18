@@ -1,3 +1,5 @@
+// src/app/api/categories/search/route.ts
+
 import dbConnect from '@/src/lib/dbConnect';
 import Category from '@/src/models/Category';
 import { NextRequest, NextResponse } from 'next/server';

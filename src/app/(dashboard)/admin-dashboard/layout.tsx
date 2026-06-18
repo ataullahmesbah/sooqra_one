@@ -98,11 +98,20 @@ const AdminDashboardLayout = ({ children }: AdminDashboardLayoutProps) => {
                 { label: 'ALL Products', link: '/admin-dashboard/shop/all-products' },
                 { label: 'Order Status', link: '/admin-dashboard/shop/order-status' },
                 { label: 'Add Product', link: '/admin-dashboard/shop/create-products' },
+                { label: 'Top Selling', link: '/admin-dashboard/shop/top-selling-manage' },
                 { label: 'Banner Shop', link: '/admin-dashboard/shop/shop-banner' },
                 { label: 'Shipping Charges', link: '/admin-dashboard/shop/shipping-charges' },
                 { label: 'Coupons Code', link: '/admin-dashboard/shop/coupons' },
                 { label: 'Global Coupon', link: '/admin-dashboard/shop/global-coupon' },
                 { label: 'Shop Ads', link: '/admin-dashboard/shop/shop-ads' },
+                { label: 'Product Promotion', link: '/admin-dashboard/shop/product-promotion' },
+            ],
+        },
+        {
+            label: 'SETTINGS',
+            children: [
+                { label: 'Tracking System', link: '/admin-dashboard/settings/tracking' },
+
             ],
         },
         {

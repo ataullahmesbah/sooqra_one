@@ -369,6 +369,14 @@ export async function POST(request: NextRequest) {
             couponCode,
         });
 
+        // ✅ ADD THIS: Increment total_sales for each product
+        for (const item of products) {
+            await Products.findByIdAndUpdate(
+                item.productId,
+                { $inc: { total_sales: item.quantity } }
+            );
+        }
+
         if (couponCode) {
             await UsedCoupon.create({
                 couponCode,

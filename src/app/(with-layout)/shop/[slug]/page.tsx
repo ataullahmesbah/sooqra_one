@@ -1,11 +1,9 @@
 // src/app/shop/[slug]/page.tsx
+
 import ProductDetailsClient from '@/src/components/Share/Shop/ProductDetailsClient/ProductDetailsClient';
 import { Suspense } from 'react';
 import { Metadata } from 'next';
-
-type Params = {
-    slug: string;
-};
+import Link from 'next/link';
 
 type Product = {
     _id: string;
@@ -35,41 +33,40 @@ type Product = {
     targetCity?: string;
     targetCountry?: string;
     affiliateLink?: string;
+    hasVariants?: boolean;
 };
 
 export const dynamic = 'force-dynamic';
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-    // Await the params promise
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
     const { slug } = await params;
-
     try {
-        const res = await fetch(`${process.env.NEXTAUTH_URL}/api/products/slug/${slug}`, {
-            cache: 'no-store',
-        });
-
-        if (!res.ok) {
-            return {
-                title: 'Product Not Found | Sooqra One',
-                description: 'The product you are looking for does not exist.',
-            };
-        }
+        const res = await fetch(
+            `${process.env.NEXTAUTH_URL}/api/products/slug/${slug}`,
+            { cache: 'no-store' }
+        );
+        if (!res.ok) return { title: 'Product Not Found | Sooqra One' };
 
         const product: Product = await res.json();
-
         return {
             title: product.metaTitle || `${product.title} - Sooqra One`,
             description:
                 product.metaDescription ||
                 product.shortDescription ||
-                product.description.slice(0, 160),
+                product.description?.slice(0, 160),
             keywords: product.keywords?.join(', ') || undefined,
             alternates: {
+                // ✅ canonical points to /shop/
                 canonical: `${process.env.NEXTAUTH_URL}/shop/${slug}`,
             },
             openGraph: {
                 title: product.metaTitle || product.title,
-                description: product.shortDescription || product.description.slice(0, 160),
+                description:
+                    product.shortDescription || product.description?.slice(0, 160),
                 url: `${process.env.NEXTAUTH_URL}/shop/${slug}`,
                 images: [
                     {
@@ -81,50 +78,50 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
                 ],
             },
         };
-    } catch (error) {
-        return {
-            title: 'Error | Sooqra One',
-            description: 'An error occurred while loading the product.',
-        };
+    } catch {
+        return { title: 'Error | Sooqra One' };
     }
 }
 
-async function getProduct(slugOrId: string): Promise<Product> {
-    const res = await fetch(
-        `${process.env.NEXTAUTH_URL}/api/products/slug/${slugOrId}`,
-        { cache: 'no-store' }
-    );
-
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Product not found');
+async function getProduct(slug: string): Promise<Product | null> {
+    try {
+        const res = await fetch(
+            `${process.env.NEXTAUTH_URL}/api/products/slug/${slug}`,
+            { cache: 'no-store' }
+        );
+        if (!res.ok) return null;
+        return res.json();
+    } catch {
+        return null;
     }
-
-    return res.json();
 }
 
 async function getLatestProducts(): Promise<Product[]> {
-    const res = await fetch(
-        `${process.env.NEXTAUTH_URL}/api/products?sort=createdAt&order=desc&limit=5`,
-        { next: { revalidate: 60 } }
-    );
-    if (!res.ok) return [];
-    return res.json();
+    try {
+        const res = await fetch(
+            `${process.env.NEXTAUTH_URL}/api/products?sort=createdAt&order=desc&limit=5`,
+            { next: { revalidate: 60 } }
+        );
+        if (!res.ok) return [];
+        return res.json();
+    } catch {
+        return [];
+    }
 }
 
-export default async function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
-    // Await the params promise
+export default async function ShopProductDetailsPage({
+    params,
+}: {
+    params: Promise<{ slug: string }>;
+}) {
     const { slug } = await params;
 
-    let product: Product | null = null;
-    let latestProducts: Product[] = [];
+    const [product, latestProducts] = await Promise.all([
+        getProduct(slug),
+        getLatestProducts(),
+    ]);
 
-    try {
-        [product, latestProducts] = await Promise.all([
-            getProduct(slug),
-            getLatestProducts(),
-        ]);
-    } catch (error: any) {
+    if (!product) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
                 <div className="text-center max-w-md">
@@ -134,13 +131,13 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
                         </svg>
                     </div>
                     <h1 className="text-2xl font-bold text-gray-800 mb-3">Product Not Found</h1>
-                    <p className="text-gray-600 mb-6">{error.message}</p>
-                    <a
+                    <p className="text-gray-500 mb-6 text-sm">The product you are looking for does not exist or has been removed.</p>
+                    <Link
                         href="/shop"
-                        className="inline-block px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium"
+                        className="inline-block px-6 py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-900 transition-colors font-medium text-sm"
                     >
                         ← Back to Shop
-                    </a>
+                    </Link>
                 </div>
             </div>
         );
@@ -148,7 +145,12 @@ export default async function ProductDetailsPage({ params }: { params: Promise<{
 
     return (
         <Suspense fallback={<LoadingSkeleton />}>
-            <ProductDetailsClient product={product} latestProducts={latestProducts} />
+            {/* ✅ basePath='/shop' — breadcrumb: Home / Shop / title */}
+            <ProductDetailsClient
+                product={product}
+                latestProducts={latestProducts}
+                basePath="/shop"
+            />
         </Suspense>
     );
 }
@@ -157,7 +159,6 @@ function LoadingSkeleton() {
     return (
         <div className="container mx-auto py-12 px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Image Skeleton */}
                 <div className="space-y-4">
                     <div className="bg-gray-200 h-[400px] lg:h-[500px] rounded-xl animate-pulse" />
                     <div className="grid grid-cols-5 gap-3">
@@ -166,23 +167,15 @@ function LoadingSkeleton() {
                         ))}
                     </div>
                 </div>
-
-                {/* Details Skeleton */}
                 <div className="space-y-6">
-                    <div className="h-8 bg-gray-200 rounded-lg w-3/4 animate-pulse mb-4" />
+                    <div className="h-8 bg-gray-200 rounded-lg w-3/4 animate-pulse" />
                     <div className="h-5 bg-gray-200 rounded-lg w-1/2 animate-pulse" />
-
                     <div className="h-12 bg-gray-200 rounded-lg animate-pulse" />
-
-                    <div className="space-y-3">
-                        <div className="h-4 bg-gray-200 rounded-lg w-32 animate-pulse" />
-                        <div className="flex gap-2">
-                            {[...Array(4)].map((_, i) => (
-                                <div key={i} className="h-10 bg-gray-200 rounded-lg w-16 animate-pulse" />
-                            ))}
-                        </div>
+                    <div className="flex gap-2">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="h-10 bg-gray-200 rounded-lg w-16 animate-pulse" />
+                        ))}
                     </div>
-
                     <div className="flex gap-4">
                         <div className="h-12 bg-gray-200 rounded-lg w-32 animate-pulse" />
                         <div className="h-12 bg-gray-200 rounded-lg w-32 animate-pulse" />
