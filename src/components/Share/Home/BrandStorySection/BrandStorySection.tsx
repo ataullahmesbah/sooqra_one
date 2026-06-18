@@ -12,19 +12,46 @@ interface BrandStoryProps {
     contactNumber?: string;
 }
 
+// ✅ Framer Motion compatible easing (cubic-bezier arrays)
+const easeOut = [0.4, 0, 0.2, 1]; // standard ease-out
+const easeOutCubic = [0.33, 1, 0.68, 1]; // ease-out cubic
+
+// ✅ Updated variants with array easing
 const fadeLeft = {
     hidden: { opacity: 0, x: -20 },
-    show: { opacity: 1, x: 0, transition: { duration: 0.55, ease: 'easeOut' } },
+    show: {
+        opacity: 1,
+        x: 0,
+        transition: {
+            duration: 0.55,
+            ease: easeOut
+        }
+    },
 };
+
 const fadeRight = {
     hidden: { opacity: 0, x: 20 },
-    show: { opacity: 1, x: 0, transition: { duration: 0.55, delay: 0.15, ease: 'easeOut' } },
+    show: {
+        opacity: 1,
+        x: 0,
+        transition: {
+            duration: 0.55,
+            delay: 0.15,
+            ease: easeOut
+        }
+    },
 };
+
 const fadeUp = {
     hidden: { opacity: 0, y: 14 },
     show: (i: number) => ({
-        opacity: 1, y: 0,
-        transition: { duration: 0.4, delay: i * 0.07, ease: 'easeOut' },
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.4,
+            delay: i * 0.07,
+            ease: easeOutCubic
+        },
     }),
 };
 
@@ -75,9 +102,7 @@ export default function BrandStorySection({
                             </div>
                         </div>
 
-                        {/* Features grid
-                            ✅ mobile: 1 col, sm+: 2 col
-                            ✅ pl-[52px] বাদ — description সরাসরি নিচে */}
+                        {/* Features grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {features.map(({ icon: Icon, title, desc }, i) => (
                                 <motion.div
@@ -97,7 +122,6 @@ export default function BrandStorySection({
                                             {title}
                                         </h3>
                                     </div>
-                                    {/* ✅ pl বাদ দিলাম — mobile-এ overflow হতো */}
                                     <p className="text-gray-400 text-xs leading-relaxed">
                                         {desc}
                                     </p>
@@ -149,7 +173,6 @@ export default function BrandStorySection({
                                     আমাদের গল্প
                                 </span>
                             </div>
-                            {/* ✅ text-2xl mobile-এ ঠিক, break-words যোগ */}
                             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight break-words">
                                 SOOQRA ONE —{' '}
                                 <span className="text-gray-600">
@@ -174,9 +197,7 @@ export default function BrandStorySection({
 
                         <div className="border-t border-gray-100" />
 
-                        {/* CTA card
-                            ✅ phone number: text-sm সব screen-এ, break-all যোগ
-                            ✅ whitespace-nowrap বাদ — long number মোবাইলে কাটে না */}
+                        {/* CTA card */}
                         <div className="bg-gray-900 rounded-2xl p-4 md:p-6 overflow-hidden relative">
                             <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full border border-white/5 pointer-events-none" />
                             <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full border border-white/5 pointer-events-none" />
@@ -205,7 +226,6 @@ export default function BrandStorySection({
                                     "
                                 >
                                     <FaPhoneAlt className="text-gray-600 text-xs shrink-0 group-hover:scale-110 transition-transform" />
-                                    {/* ✅ break-all দিলাম — overflow হবে না */}
                                     <span className="break-all">{contactNumber}</span>
                                 </a>
                             </div>
@@ -217,8 +237,7 @@ export default function BrandStorySection({
                             </div>
                         </div>
 
-                        {/* Quick links
-                            ✅ flex-wrap + text-xs — সব screen-এ ফিট */}
+                        {/* Quick links */}
                         <div className="flex flex-wrap gap-2">
                             {[
                                 { label: 'সব পণ্য দেখুন', href: '/shop' },
