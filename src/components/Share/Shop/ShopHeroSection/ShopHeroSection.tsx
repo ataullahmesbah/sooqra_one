@@ -106,43 +106,45 @@ const ShopHeroSection = () => {
     const isCenter = slide.textPosition === 'center';
     const isImgLoaded = loadedImages.has(slide._id);
 
+    // ✅ FIXED: ease বাদ দিয়ে শুধু duration ও delay রাখা হয়েছে
     const slideVariants = {
         enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 40 : -40 }),
-        center: { opacity: 1, x: 0, transition: { duration: 0.5, ease: 'easeOut' } },
-        exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -40 : 40, transition: { duration: 0.3 } }),
+        center: {
+            opacity: 1,
+            x: 0,
+            transition: {
+                duration: 0.5
+                // ✅ ease বাদ
+            }
+        },
+        exit: (dir: number) => ({
+            opacity: 0,
+            x: dir > 0 ? -40 : 40,
+            transition: {
+                duration: 0.3
+                // ✅ ease বাদ
+            }
+        }),
     };
 
+    // ✅ FIXED: ease বাদ দিয়ে শুধু delay ও duration রাখা হয়েছে
     const textChild = {
         hidden: { opacity: 0, y: 12 },
         show: (i: number) => ({
-            opacity: 1, y: 0,
-            transition: { delay: 0.15 + i * 0.08, duration: 0.45, ease: 'easeOut' },
+            opacity: 1,
+            y: 0,
+            transition: {
+                delay: 0.15 + i * 0.08,
+                duration: 0.45
+                // ✅ ease বাদ
+            },
         }),
     };
 
     return (
-        /*
-         * ✅ aspect-ratio: 1920/600 সব screen-এ fix।
-         * container সবসময় এই ratio-তে থাকবে।
-         * Mobile-এ 360px wide হলে height = 360*(600/1920) = 112px।
-         * Image fill + object-contain → পুরো 1920×600 image দেখা যাবে, crop হবে না।
-         * Text absolute + overflow-hidden → container-এর বাইরে যাবে না।
-         * Text mobile-এ শুধু offer badge + title দেখাবে (subtitle hidden)।
-         */
         <div
             className="relative w-full overflow-hidden bg-gray-900"
             style={{
-                /*
-                 * ✅ 320–374px  → 1920/850  → height ~95px  — too short for text
-                 * Solution: CSS clamp দিয়ে minimum height enforce করি
-                 * aspect-ratio রেখে min-height দিলে image aspect maintain হয়
-                 * object-contain আছে তাই image কোনো দিকেই crop হবে না
-                 *
-                 * 320px → natural h = 100px → clamp to 140px
-                 * 375px → natural h = 117px → clamp to 140px
-                 * 425px → natural h = 133px → fine, text fits
-                 * 768px+ → natural h = 240px+ → perfect
-                 */
                 aspectRatio: '1920 / 600',
                 minHeight: 'clamp(140px, 31.25vw, 9999px)',
             }}
@@ -164,11 +166,6 @@ const ShopHeroSection = () => {
                         <div className="absolute inset-0 bg-gray-800 animate-pulse" />
                     )}
 
-                    {/*
-                     * ✅ object-contain — পুরো image দেখাবে, crop নেই।
-                     * aspect ratio container match করায় image perfectly fit হবে।
-                     * bg-gray-900 দেওয়া আছে যাতে letterbox দেখালে gray থাকে।
-                     */}
                     <Image
                         src={slide.image}
                         alt={slide.title || 'Shop Banner'}
@@ -299,7 +296,6 @@ const ShopHeroSection = () => {
                                                         lg:text-base lg:px-5 lg:py-2.5 lg:rounded-xl
                                                         hover:bg-gray-100
                                                     "
-                                                    // ✅ button hover animation
                                                     whileHover={{ scale: 1.06, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
                                                     whileTap={{ scale: 0.96 }}
                                                     transition={{ type: 'spring', stiffness: 300, damping: 20 }}
@@ -308,7 +304,6 @@ const ShopHeroSection = () => {
                                                     <motion.svg
                                                         className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5"
                                                         fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                                        // ✅ arrow moves right on hover
                                                         whileHover={{ x: 3 }}
                                                         transition={{ type: 'spring', stiffness: 400 }}
                                                     >
