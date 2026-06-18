@@ -12,19 +12,15 @@ interface BrandStoryProps {
     contactNumber?: string;
 }
 
-// ✅ Framer Motion compatible easing (cubic-bezier arrays)
-const easeOut = [0.4, 0, 0.2, 1]; // standard ease-out
-const easeOutCubic = [0.33, 1, 0.68, 1]; // ease-out cubic
-
-// ✅ Updated variants with array easing
+// ✅ সবচেয়ে সহজ সমাধান - ease বাদ দিয়ে শুধু duration রাখুন
 const fadeLeft = {
     hidden: { opacity: 0, x: -20 },
     show: {
         opacity: 1,
         x: 0,
         transition: {
-            duration: 0.55,
-            ease: easeOut
+            duration: 0.55
+            // ✅ ease বাদ
         }
     },
 };
@@ -36,8 +32,8 @@ const fadeRight = {
         x: 0,
         transition: {
             duration: 0.55,
-            delay: 0.15,
-            ease: easeOut
+            delay: 0.15
+            // ✅ ease বাদ
         }
     },
 };
@@ -49,8 +45,8 @@ const fadeUp = {
         y: 0,
         transition: {
             duration: 0.4,
-            delay: i * 0.07,
-            ease: easeOutCubic
+            delay: i * 0.07
+            // ✅ ease বাদ
         },
     }),
 };
